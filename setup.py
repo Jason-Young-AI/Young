@@ -49,10 +49,12 @@ except FileNotFoundError:
 # Required Packages and Optional Packages
 # Required
 REQUIRED = [
-        'tqdm',
-        'cupy',
         'numpy',
+        'cupy',
         'chainer',
+        'chainerui',
+        'tqdm',
+        'pyhocon',
         ]
 
 # Optional
