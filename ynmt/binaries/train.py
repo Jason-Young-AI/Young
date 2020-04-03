@@ -11,7 +11,7 @@
 
 import cupy
 
-def cli_main():
+def main():
     parser = options.get_generation_parser(default_task='document_translation')
     youngseq_options.add_document_generation_args(parser)
     args = options.parse_args_and_arch(parser)
@@ -19,4 +19,4 @@ def cli_main():
 
 
 if __name__ == '__main__':
-    cli_main()
+    main()
