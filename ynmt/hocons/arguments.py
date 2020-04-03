@@ -11,9 +11,7 @@
 
 import os
 import pyhocon
-
-
-DEFAULT_HOCON_DIR = os.path.abspath(os.path.dirname(__file__))
+import argparse
 
 
 class HOCONArguments(object):
@@ -83,15 +81,47 @@ class HOCONArguments(object):
             raise ValueError(f'Argument name(\'{name}\') must match obj.name(\'{self.name}\').')
 
 
-def get_train_arguments(hocon_filepath=None):
-    pass
+DEFAULT_HOCON_DIR = os.path.abspath(os.path.dirname(__file__))
+DEFAULT_HOCON_PATH = os.path.join(DEFAULT_HOCON_DIR, 'default.hocon')
+DEFAULT_HOCON = pyhocon.ConfigFactory.parse_file(DEFAULT_HOCON_PATH)
+
+def load_hocon(hocon_abs_path):
+    return pyhocon.ConfigFactory.parse_file(hocon_abs_path)
 
 
-def load_default_arguments():
-    default_hocon = pyhocon.ConfigFactory.parse_file(os.path.join(DEFAULT_HOCON_DIR, 'default.hocon'))
-    default_binary_arguments = HOCONArguments(default_hocon, 'binary')
-    default_model_arguments = HOCONArguments(default_hocon, 'model')
-    return {
-        'binary': default_binary_arguments,
-        'model': default_model_arguments,
-    }
+def get_default_arguments(name):
+    default_arguments = HOCONArguments(DEFAULT_HOCON, name)
+    return default_arguments
+
+
+def get_user_arguments(name, user_hocon=None):
+    default_arguments = get_default_arguments(name)
+    if user_hocon is not None:
+        user_arguments = default_arguments.update(user_hocon, name)
+    else:
+        user_arguments = default_arguments
+    return user_arguments
+
+
+def get_command_line_argument_parser():
+    argument_parser = argparse.ArgumentParser(allow_abbrev=False)
+    argument_parser.add_argument(
+        '--config-load-path',
+        metavar='PATH',
+        default='',
+        help='The path of configuration file to be loaded',
+    )
+     argument_parser.add_argument(
+        '--config-save-path',
+        metavar='PATH',
+        default='',
+        help='The path of configuration file to be saved',
+    )
+     argument_parser.add_argument(
+        '--config-save-type',
+        metavar='TYPE',
+        default='',
+        choices=['hocon', 'json', 'yaml', 'properties']
+        help='The type of configuration file to be saved',
+    )
+    return argument_parser
