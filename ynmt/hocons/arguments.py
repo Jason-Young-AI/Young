@@ -80,6 +80,9 @@ class HOCONArguments(object):
         else:
             raise ValueError(f'Argument name(\'{name}\') must match obj.name(\'{self.name}\').')
 
+    def save(self, path):
+        pass
+
 
 DEFAULT_HOCON_DIR = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_HOCON_PATH = os.path.join(DEFAULT_HOCON_DIR, 'default.hocon')
@@ -106,22 +109,28 @@ def get_user_arguments(name, user_hocon=None):
 def get_command_line_argument_parser():
     argument_parser = argparse.ArgumentParser(allow_abbrev=False)
     argument_parser.add_argument(
-        '--config-load-path',
-        metavar='PATH',
+        '--config-filename',
+        metavar='NAME',
         default='',
-        help='The path of configuration file to be loaded',
+        help='The name of configuration file to be loaded/saved',
     )
-     argument_parser.add_argument(
-        '--config-save-path',
-        metavar='PATH',
-        default='',
-        help='The path of configuration file to be saved',
-    )
-     argument_parser.add_argument(
-        '--config-save-type',
+    argument_parser.add_argument(
+        '--config-filetype',
         metavar='TYPE',
-        default='',
-        choices=['hocon', 'json', 'yaml', 'properties']
-        help='The type of configuration file to be saved',
+        default='hocon',
+        choices=['hocon', 'json', 'yaml', 'properties'],
+        help='The type of configuration file to be loaded/saved',
+    )
+    argument_parser.add_argument(
+        '--config-load-dir',
+        metavar='PATH',
+        default='.',
+        help='The dir of configuration file to be loaded',
+    )
+    argument_parser.add_argument(
+        '--config-save-dir',
+        metavar='PATH',
+        default='.',
+        help='The dir of configuration file to be saved',
     )
     return argument_parser
