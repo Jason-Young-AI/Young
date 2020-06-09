@@ -18,9 +18,9 @@ import setuptools
 PACKAGE_INFO = {}
 
 PACKAGE_INFO['Name'] = 'YoungNMT'
-PACKAGE_INFO['Version']: '0.1.0'
-PACKAGE_INFO['Author']: 'Jason-Young-AI'
-PACKAGE_INFO['EMail']: 'AI.Jason.Young@gmail.com'
+PACKAGE_INFO['Version'] = '0.1.0'
+PACKAGE_INFO['Author'] = 'Jason-Young-AI'
+PACKAGE_INFO['EMail'] = 'AI.Jason.Young@gmail.com'
 PACKAGE_INFO['Source_URL'] = 'https://github.com/Jason-Young-AI/YoungNMT.git'
 PACKAGE_INFO['Description'] = 'Young Neural Machine Translation System'
 
@@ -50,9 +50,8 @@ except FileNotFoundError:
 # Required
 REQUIRED = [
         'numpy',
-        'cupy',
-        'chainer',
-        'chainerui',
+        'torch',
+        'visdom',
         'tqdm',
         'pyhocon',
         ]
@@ -131,9 +130,9 @@ def setup_my_package():
         },
         entry_points={
             'console_scripts': [
-                'ynmt-preprocess = ynmt_cli.default.preprocess:cli_main',
-                'ynmt-train = ynmt_cli.default.train:cli_main',
-                'ynmt-generate = ynmt_cli.default.generate:cli_main',
+                'ynmt-preprocess = ynmt_cli.default.preprocess:main',
+                'ynmt-train = ynmt_cli.default.train:main',
+                'ynmt-generate = ynmt_cli.default.generate:main',
             ],
         },
     )
