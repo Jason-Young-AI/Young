@@ -9,98 +9,87 @@
 # This source code is licensed under the Apache-2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import os
 import pyhocon
 import argparse
+import collections
+
+
+from ynmt.pedestal.constant import Constant
 
 
 class HOCONArguments(object):
-    def __init__(self, hocon, name):
+    def __init__(self, hocon):
         if isinstance(hocon, pyhocon.config_tree.ConfigTree):
-            if name in hocon:
-                self.__name = name
-                self.__succeed_names = []
+            self.__names = []
+            for name in hocon:
+                self.__names.append(name)
                 if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
-                    self.__value = None
-                    for succeed_name in hocon[name]:
-                        self.__succeed_names.append(succeed_name)
-                        setattr(self, succeed_name, HOCONArguments(hocon[name], succeed_name))
+                    setattr(self, name, HOCONArguments(hocon[name]))
                 else:
-                    self.__value = hocon[name]
-            else:
-                raise ValueError(f'Hocon(\'{hocon}\') does not have name(\'{name}\').')
+                    setattr(self, name, hocon[name])
         else:
             raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
 
-    def __setattr__(self, key, value):
-        if key in ['_HOCONArguments__name', '_HOCONArguments__succeed_names']:
-            if key in self.__dict__:
-                raise AttributeError(f'Can not modify Reserved Attribute \'{key}\'.')
+    @property
+    def dictionary(self):
+        dictionary = {}
+        for name in self.__names:
+            if isinstance(getattr(self, name), HOCONArguments):
+                dictionary[name] = getattr(self, name).dictionary
             else:
-                self.__dict__[key] = value
-        elif key in self.__succeed_names:
-            if key in self.__dict__:
-                raise AttributeError(f'Can not rewrite HOCONArguments object attribute \'{key}\'.')
-            else:
-                self.__dict__[key] = value
-        elif key in ['_HOCONArguments__value',]:
-            self.__dict__[key] = value
-        else:
-            raise AttributeError(f'This Attribute: \'{key}\' does not exist.')
+                dictionary[name] = getattr(self, name)
+        dictionary = collections.OrderedDict(sorted(dictionary.items(), key=lambda x: x[0]))
+        return dictionary
 
     @property
-    def name(self):
-        return self.__name
+    def hocon(self):
+        hocon = pyhocon.ConfigFactory().from_dict(self.dictionary)
+        return hocon
 
-    @property
-    def value(self):
-        return self.__value
-
-    def update_value(self, new_value):
-        self.__value == new_value
-
-    def update(self, hocon, name):
-        if name == self.name:
-            if isinstance(hocon, pyhocon.config_tree.ConfigTree):
-                if name in hocon:
+    def update(self, hocon):
+        if isinstance(hocon, pyhocon.config_tree.ConfigTree):
+            for name in hocon:
+                if name in self.__names:
                     if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
-                        for succeed_name in hocon[name]:
-                            if succeed_name in self.__succeed_names:
-                                succeed = getattr(self, succeed_name)
-                                succeed.update(hocon[name], succeed_name)
-                            else:
-                                self.__succeed_names.append(succeed_name)
-                                setattr(self, succeed_name, HOCONArguments(hocon[name], succeed_name))
+                        getattr(self, name).update(hocon[name])
                     else:
-                        self.update_value(hocon[name])
+                        setattr(self, name, hocon[name])
                 else:
-                    raise ValueError(f'Hocon(\'{hocon}\') does not have name(\'{name}\').')
-            else:
-                raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
+                    setattr(self, name, HOCONArguments(hocon[name]))
         else:
-            raise ValueError(f'Argument name(\'{name}\') must match obj.name(\'{self.name}\').')
+            raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
 
-    def save(self, path):
-        pass
+    def save(self, output_path, output_type='hocon'):
+        output_string = pyhocon.converter.HOCONConverter.convert(self.hocon, output_type)
+        with open(output_path, 'w', encoding='utf-8') as output_file:
+            output_file.write(output_string)
 
 
-DEFAULT_HOCON_DIR = os.path.abspath(os.path.dirname(__file__))
-DEFAULT_HOCON_PATH = os.path.join(DEFAULT_HOCON_DIR, 'default.hocon')
-DEFAULT_HOCON = pyhocon.ConfigFactory.parse_file(DEFAULT_HOCON_PATH)
+constant = Constant()
+constant.DEFAULT_HOCON_DIR = os.path.abspath(os.path.dirname(__file__))
+constant.DEFAULT_HOCON_PATH = os.path.join(constant.DEFAULT_HOCON_DIR, 'default.hocon')
+constant.DEFAULT_HOCON = pyhocon.ConfigFactory.parse_file(constant.DEFAULT_HOCON_PATH)
+
 
 def load_hocon(hocon_abs_path):
     return pyhocon.ConfigFactory.parse_file(hocon_abs_path)
 
 
 def get_default_arguments(name):
-    default_arguments = HOCONArguments(DEFAULT_HOCON, name)
-    return default_arguments
+    default_arguments = HOCONArguments(constant.DEFAULT_HOCON)
+    name_list = name.split('.')
+    arguments = default_arguments
+    for name in name_list:
+        arguments = getattr(arguments, name)
+    return arguments
 
 
 def get_user_arguments(name, user_hocon=None):
     default_arguments = get_default_arguments(name)
     if user_hocon is not None:
-        user_arguments = default_arguments.update(user_hocon, name)
+        user_arguments = default_arguments.update(user_hocon)
     else:
         user_arguments = default_arguments
     return user_arguments
@@ -111,7 +100,7 @@ def get_command_line_argument_parser():
     argument_parser.add_argument(
         '--config-filename',
         metavar='NAME',
-        default='',
+        default='user.hocon',
         help='The name of configuration file to be loaded/saved',
     )
     argument_parser.add_argument(
