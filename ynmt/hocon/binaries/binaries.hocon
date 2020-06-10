@@ -1,0 +1,3 @@
+{
+    preprocess = { "preprocess/preprocess.hocon" }
+}
