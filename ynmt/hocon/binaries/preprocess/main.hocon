@@ -3,19 +3,19 @@ logging_path = ""
 number_worker = 16
 number_slice = 4
 language = {
-    source = "zh"
-    target = "en"
+    source = "en"
+    target = "de"
 }
 train_corpora_path{
-    source = "train.zh-en.zh"
-    target = "train.zh-en.en"
+    source = "Corpora/train.en-de.en"
+    target = "Corpora/train.en-de.de"
 }
 valid_corpora_path{
-    source = "valid.zh-en.zh"
-    target = "valid.zh-en.en"
+    source = "Corpora/valid.en-de.en"
+    target = "Corpora/valid.en-de.de"
 }
 vocabulary: {
-    share = False
+    share = True
     size = 32768
     source_size = 32768
     target_size = 32768
