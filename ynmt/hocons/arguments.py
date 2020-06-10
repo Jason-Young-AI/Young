@@ -20,10 +20,13 @@ from ynmt.pedestal.constant import Constant
 
 
 class HOCONArguments(object):
+    RESERVED_NAME = set({ '_HOCONArguments__names', 'dictionary', 'hocon', 'update', 'save' })
     def __init__(self, hocon):
         if isinstance(hocon, pyhocon.config_tree.ConfigTree):
             self.__names = []
             for name in hocon:
+                if name in HOCONArguments.RESERVED_NAME:
+                    raise ValueError(f'Invalid hocon attribute name(\'{name}\')')
                 self.__names.append(name)
                 if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
                     setattr(self, name, HOCONArguments(hocon[name]))
@@ -51,12 +54,15 @@ class HOCONArguments(object):
     def update(self, hocon):
         if isinstance(hocon, pyhocon.config_tree.ConfigTree):
             for name in hocon:
+                if name in HOCONArguments.RESERVED_NAME:
+                    raise ValueError(f'Invalid hocon attribute name(\'{name}\')')
                 if name in self.__names:
                     if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
                         getattr(self, name).update(hocon[name])
                     else:
                         setattr(self, name, hocon[name])
                 else:
+                    self.__names.append(name)
                     setattr(self, name, HOCONArguments(hocon[name]))
         else:
             raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
@@ -77,49 +83,77 @@ def load_hocon(hocon_abs_path):
     return pyhocon.ConfigFactory.parse_file(hocon_abs_path)
 
 
-def get_default_arguments(name):
+def get_default_arguments():
     default_arguments = HOCONArguments(constant.DEFAULT_HOCON)
-    name_list = name.split('.')
-    arguments = default_arguments
-    for name in name_list:
-        arguments = getattr(arguments, name)
-    return arguments
+    return default_arguments
 
 
-def get_user_arguments(name, user_hocon=None):
-    default_arguments = get_default_arguments(name)
+def get_user_arguments(user_hocon=None):
+    default_arguments = get_default_arguments()
     if user_hocon is not None:
-        user_arguments = default_arguments.update(user_hocon)
-    else:
-        user_arguments = default_arguments
+        default_arguments.update(user_hocon)
+    user_arguments = default_arguments
     return user_arguments
 
 
 def get_command_line_argument_parser():
-    argument_parser = argparse.ArgumentParser(allow_abbrev=False)
+    argument_parser = argparse.ArgumentParser(allow_abbrev=True, formatter_class=argparse.RawTextHelpFormatter)
     argument_parser.add_argument(
-        '--config-filename',
-        metavar='NAME',
-        default='user.hocon',
-        help='The name of configuration file to be loaded/saved',
+        '-l',
+        '--config-load-path',
+        metavar='PATH',
+        default='',
+        help=('The path of configuration file to be loaded,\n'
+              ' default configuration will be loaded if set to \'\'.\n'
+              'DEFAULT=\'\''),
     )
     argument_parser.add_argument(
-        '--config-filetype',
+        '-s',
+        '--config-save-path',
+        metavar='PATH',
+        default='',
+        help=('The path of configuration file to be saved,\n'
+              'configuration file will not be saved if set to \'\'.\n'
+              'DEFAULT=\'\''),
+    )
+    argument_parser.add_argument(
+        '-t',
+        '--config-type',
         metavar='TYPE',
         default='hocon',
         choices=['hocon', 'json', 'yaml', 'properties'],
-        help='The type of configuration file to be loaded/saved',
-    )
-    argument_parser.add_argument(
-        '--config-load-dir',
-        metavar='PATH',
-        default='.',
-        help='The dir of configuration file to be loaded',
-    )
-    argument_parser.add_argument(
-        '--config-save-dir',
-        metavar='PATH',
-        default='.',
-        help='The dir of configuration file to be saved',
+        help=('The type of configuration file to be loaded/saved.\n'
+              'Choices=[\'hocon\', \'json\', \'yaml\', \'properties\']\n'
+              'DEFAULT=\'hocon\''),
     )
     return argument_parser
+
+
+def get_arguments(name=None):
+    command_line_argument_parser = get_command_line_argument_parser()
+    command_line_arguments = command_line_argument_parser.parse_args()
+
+    config_load_path = command_line_arguments.config_load_path
+    config_save_path = command_line_arguments.config_save_path
+    config_type = command_line_arguments.config_type
+    if os.path.isfile(config_load_path):
+        print('User configuration found -> Using user configuration.')
+        user_hocon = load_hocon(config_load_path)
+        user_arguments = get_user_arguments(user_hocon)
+    else:
+        print('No user configuration found -> Using default configuration.')
+        user_arguments = get_user_arguments()
+
+    if config_save_path == '':
+        print('Configuration saving path not specified ! Saving no configuration.')
+    else:
+        user_arguments.save(config_save_path, output_type=config_type)
+        print(f'Saving user configuration file: {config_save_path}, type={config_type}')
+
+    arguments = user_arguments
+    if name is not None:
+        name_list = name.split('.')
+        for sub_name in name_list:
+            arguments = getattr(arguments, sub_name)
+
+    return arguments
