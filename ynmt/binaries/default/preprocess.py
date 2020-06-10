@@ -165,12 +165,13 @@ def preprocess(args):
     logger.info('Building vocabulary ...')
     source_vocabulary, target_vocabulary = build_vocabulary(args, args.train_corpora_path.source, args.train_corpora_path.target, args.number_worker, logger)
 
-    logger.info(' * Saving vocabulary ...')
-    source_vocab_path = os.path.join(data_directory, f'{source_language}.vocab')
-    target_vocab_path = os.path.join(data_directory, f'{target_language}.vocab')
+    logger.info(' > Saving vocabulary ...')
+    source_vocab_path = os.path.join(data_directory, f'{source_language}-{target_language}.{source_language}.vocab')
+    target_vocab_path = os.path.join(data_directory, f'{source_language}-{target_language}.{target_language}.vocab')
     save_data_objects(source_vocab_path, [source_vocabulary, ])
+    logger.info(f' > Saved {source_vocab_path} !')
     save_data_objects(target_vocab_path, [target_vocabulary, ])
-    logger.info(' * Saved !')
+    logger.info(f' > Saved {target_vocab_path} !')
 
     logger.info('Building training dataset ...')
     training_dataset = build_dataset(args, 'train',
@@ -179,11 +180,11 @@ def preprocess(args):
                                      args.number_worker, args.number_slice,
                                      logger)
 
-    logger.info(' * Saving training dataset ...')
+    logger.info(' > Saving training dataset ...')
     training_dataset_name = f'train.{source_language}-{target_language}.dataset'
     training_dataset_path = os.path.join(data_directory, training_dataset_name)
     save_data_objects(training_dataset_path, training_dataset)
-    logger.info(' * Saved !')
+    logger.info(f' > Saved {training_dataset_path} !')
 
     logger.info('Building validation dataset ...')
     validation_dataset = build_dataset(args, 'valid',
@@ -192,38 +193,17 @@ def preprocess(args):
                                        1, 1,
                                        logger)
 
-    logger.info(' * Saving validation dataset ...')
+    logger.info(' > Saving validation dataset ...')
     validation_dataset_name = f'valid.{source_language}-{target_language}.dataset'
     validation_dataset_path = os.path.join(data_directory, validation_dataset_name)
     save_data_objects(validation_dataset_path, validation_dataset)
-
-    logger.info(' * Saved !')
+    logger.info(f' > Saved {validation_dataset_path} !')
 
     logger.info(' = Finished !')
 
 
 def main():
-    command_line_argument_parser = harg.get_command_line_argument_parser()
-    command_line_arguments = command_line_argument_parser.parse_args()
-
-    config_filename = command_line_arguments.config_filename
-    config_filetype = command_line_arguments.config_filetype
-
-    config_load_dir = command_line_arguments.config_load_dir
-    assert os.path.isdir(config_load_dir), 'The configuration load directory does not exist!'
-    config_save_dir = command_line_arguments.config_save_dir
-    assert os.path.isdir(config_save_dir), 'The configuration save directory does not exist!'
-
-    config_load_filepath = os.path.join(config_load_dir, config_filename)
-    config_save_filepath = os.path.join(config_save_dir, config_filename)
-
-    args = harg.get_default_arguments('binaries.preprocess')
-    if os.path.isfile(config_load_filepath):
-        user_hocon = harg.load_hocon(config_load_filepath)
-        args.update(user_hocon['binaries.preprocess'])
-    if os.path.isfile(config_load_filepath):
-        args.save(config_save_filepath)
-
+    args = harg.get_arguments('binaries.preprocess')
     preprocess(args)
 
 
