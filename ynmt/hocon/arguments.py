@@ -129,7 +129,7 @@ def get_command_line_argument_parser():
     return argument_parser
 
 
-def get_arguments(name=None):
+def get_arguments():
     command_line_argument_parser = get_command_line_argument_parser()
     command_line_arguments = command_line_argument_parser.parse_args()
 
@@ -150,10 +150,14 @@ def get_arguments(name=None):
         user_arguments.save(config_save_path, output_type=config_type)
         print(f'Saving user configuration file: {config_save_path}, type={config_type}')
 
-    arguments = user_arguments
+    return user_arguments
+
+
+def get_partial_arguments(arguments, name=None):
+    partial_arguments = arguments
     if name is not None:
         name_list = name.split('.')
         for sub_name in name_list:
-            arguments = getattr(arguments, sub_name)
+            partial_arguments = getattr(partial_arguments, sub_name)
 
-    return arguments
+    return partial_arguments

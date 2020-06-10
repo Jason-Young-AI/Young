@@ -203,8 +203,9 @@ def preprocess(args):
 
 
 def main():
-    args = harg.get_arguments('binaries.preprocess')
-    preprocess(args)
+    args = harg.get_arguments()
+    preprocess_args = harg.get_partial_arguments(args, 'binaries.preprocess')
+    preprocess(preprocess_args)
 
 
 if __name__ == '__main__':
