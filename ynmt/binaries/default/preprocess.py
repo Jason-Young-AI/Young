@@ -15,7 +15,7 @@ import collections
 import multiprocessing
 
 
-import ynmt.hocons.arguments as harg
+import ynmt.hocon.arguments as harg
 import ynmt.utilities.logging as logging
 from ynmt.data.vocabulary import Vocabulary
 from ynmt.data.instance import Instance
