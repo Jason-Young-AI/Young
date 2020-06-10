@@ -163,7 +163,7 @@ def preprocess(args):
     logger.info(f'target language: {target_language}')
 
     logger.info('Building vocabulary ...')
-    source_vocabulary, target_vocabulary = build_vocabulary(args, args.train_corpora_path.source, args.train_corpora_path.target, args.number_worker, logger)
+    source_vocabulary, target_vocabulary = build_vocabulary(args, args.corpora.train_path.source, args.corpora.train_path.target, args.number_worker, logger)
 
     logger.info(' > Saving vocabulary ...')
     source_vocab_path = os.path.join(data_directory, f'{source_language}-{target_language}.{source_language}.vocab')
@@ -175,7 +175,7 @@ def preprocess(args):
 
     logger.info('Building training dataset ...')
     training_dataset = build_dataset(args, 'train',
-                                     args.train_corpora_path.source, args.train_corpora_path.target,
+                                     args.corpora.train_path.source, args.corpora.train_path.target,
                                      source_vocabulary, target_vocabulary,
                                      args.number_worker, args.number_slice,
                                      logger)
@@ -188,7 +188,7 @@ def preprocess(args):
 
     logger.info('Building validation dataset ...')
     validation_dataset = build_dataset(args, 'valid',
-                                       args.valid_corpora_path.source, args.valid_corpora_path.target,
+                                       args.corpora.valid_path.source, args.corpora.valid_path.target,
                                        source_vocabulary, target_vocabulary,
                                        1, 1,
                                        logger)

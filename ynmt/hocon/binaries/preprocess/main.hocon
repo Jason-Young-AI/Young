@@ -1,4 +1,5 @@
 data_directory = "Data"
+random_seed = 1234
 logging_path = ""
 number_worker = 16
 number_slice = 4
@@ -6,13 +7,15 @@ language = {
     source = "en"
     target = "de"
 }
-train_corpora_path{
-    source = "Corpora/train.en-de.en"
-    target = "Corpora/train.en-de.de"
-}
-valid_corpora_path{
-    source = "Corpora/valid.en-de.en"
-    target = "Corpora/valid.en-de.de"
+corpora = {
+    train_path = {
+        source = "Corpora/train.en-de.en"
+        target = "Corpora/train.en-de.de"
+    }
+    valid_path = {
+        source = "Corpora/valid.en-de.en"
+        target = "Corpora/valid.en-de.de"
+    }
 }
 vocabulary: {
     share = True
