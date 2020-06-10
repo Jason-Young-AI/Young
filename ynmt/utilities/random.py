@@ -10,8 +10,25 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import torch
+import numpy
+import random
+
+
 def shuffled(sequence):
     indices = range(len(iterable_object))
     random.shuffle(indices)
     shuffled_sequence = [ sequence[index] for index in indices ]
     return shuffled_sequence
+
+
+def fix_random_procedure(seed):
+    assert 0 < seed, 'Seed must > 0 .'
+
+    random.seed(seed)
+    numpy.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
