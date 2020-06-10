@@ -1,0 +1,22 @@
+data_directory = "Data"
+logging_path = ""
+number_worker = 16
+number_slice = 4
+language = {
+    source = "zh"
+    target = "en"
+}
+train_corpora_path{
+    source = "train.zh-en.zh"
+    target = "train.zh-en.en"
+}
+valid_corpora_path{
+    source = "valid.zh-en.zh"
+    target = "valid.zh-en.en"
+}
+vocabulary: {
+    share = False
+    size = 32768
+    source_size = 32768
+    target_size = 32768
+}

@@ -1,0 +1,9 @@
+preprocess = {
+    include file("preprocess/main.hocon") 
+}
+train = {
+    include file("train/main.hocon") 
+}
+generate = {
+    include file("generate/main.hocon") 
+}
