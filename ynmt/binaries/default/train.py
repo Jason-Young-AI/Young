@@ -9,13 +9,22 @@
 # This source code is licensed under the Apache-2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 
-import cupy
+import ynmt.hocon.arguments as harg
+import ynmt.utilities.logging as logging
+
+
+from ynmt.utilities.random import fix_random_procedure
+
+
+def train(train_args):
+    pass
+
 
 def main():
-    parser = options.get_generation_parser(default_task='document_translation')
-    youngseq_options.add_document_generation_args(parser)
-    args = options.parse_args_and_arch(parser)
-    main(args)
+    args = harg.get_arguments()
+    fix_random_procedure(args.seed)
+    train_args = harg.get_partial_arguments(args, 'binaries.train')
+    train(train_args)
 
 
 if __name__ == '__main__':

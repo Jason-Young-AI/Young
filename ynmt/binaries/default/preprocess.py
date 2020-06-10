@@ -17,11 +17,14 @@ import multiprocessing
 
 import ynmt.hocon.arguments as harg
 import ynmt.utilities.logging as logging
+
+
 from ynmt.data.vocabulary import Vocabulary
 from ynmt.data.instance import Instance
 from ynmt.data.dataset import Dataset
 from ynmt.utilities.file import file_slice_edges, get_coedges, save_data_objects
 from ynmt.utilities.line import numericalize
+from ynmt.utilities.random import fix_random_procedure
 
 
 def get_partial_token_counter(file_path, edge_start, edge_end):
@@ -204,6 +207,7 @@ def preprocess(args):
 
 def main():
     args = harg.get_arguments()
+    fix_random_procedure(args.seed)
     preprocess_args = harg.get_partial_arguments(args, 'binaries.preprocess')
     preprocess(preprocess_args)
 
