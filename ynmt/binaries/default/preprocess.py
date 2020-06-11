@@ -118,11 +118,10 @@ def get_partial_dataset(source_path, target_path,
                                           source_edges[edge_index], target_edges[edge_index],
                                           source_vocabulary, target_vocabulary,
                                           structure,
-                                      ),
-                                      callback=add_instances)
+                                      ))
             results.append(result)
         for result in results:
-            result.get()
+            add_instances(result.get())
 
     return partial_dataset
 
