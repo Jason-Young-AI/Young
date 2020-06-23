@@ -1,9 +1,6 @@
-{
-    seed = 1234
-    binaries = {
-        include file("binaries/main.hocon")
-    }
-    models = {
-        include file("models/main.hocon")
-    }
+binaries = {
+    include file("binaries/main.hocon")
+}
+models = {
+    include file("models/main.hocon")
 }
