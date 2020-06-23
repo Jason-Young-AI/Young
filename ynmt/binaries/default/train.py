@@ -37,7 +37,8 @@ def get_device_descriptor(device, process_index):
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank, logger):
-    if rank == 0:
+    is_station = rank == 0
+    if is_station:
         logger.disabled = False
     else:
         logger.disabled = True
@@ -75,17 +76,18 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank,
 
     logger.info(' * Building Model ...')
     build_model = importlib.import_module(f'ynmt.models.build_{args.model.name}')
-    model = build_model(args.model, vocabularies, checkpoint['model'])
+    model = build_model(args.model, vocabularies, checkpoint)
+    model.to(device_descriptor)
     logger.info('   Model Architecture:\n{model}')
 
     logger.info(' * Building Optimizer ...')
     build_optimizer = importlib.import_module(f'ynmt.optimizers.build_{args.optimizer.name}')
-    optimizer = build_optimizer(args.optimizer, checkpoint['optimizer'])
+    optimizer = build_optimizer(args.optimizer, model, checkpoint)
     logger.info('   Optimizer {args.optimizer.name} built.')
 
     logger.info(' * Building Trainer ...')
     build_trainer = importlib.import_module(f'ynmt.trainers.build_{args.trainer.name}')
-    trainer = build_trainer(args.trainer)
+    trainer = build_trainer(args.trainer, model, optimizer, is_station)
     logger.info('   Trainer {args.trainer.name} built.')
 
     trainer.train(
