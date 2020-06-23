@@ -1,0 +1,57 @@
+data = {
+    name = "default_en-de"
+    directory = "Data"
+    sides = ["source", "target"]
+    primary_side = "source"
+    languages = {
+        source = "en"
+        target = "de"
+    }
+    filter = {
+        sides = ["source", "target"]
+        source = [0, 100]
+        target = [0, 100]
+        validation = False
+        training = True
+    }
+}
+process_control = {
+    iteration = {
+        traverse_time = 160
+        mode = "shuffle"
+    }
+    distribution = {
+        device = "GPU"
+        master_ip = "127.0.0.1"
+        master_port = "12345"
+        world_size = 4
+        ranks = [0, 1, 2, 3]
+        workshop_capacity = 60
+    }
+    training = {
+        period = 1000
+        batch_size = 4096
+        batch_type = "token"
+    }
+    validation = {
+        period = 1000
+        batch_size = 32
+        batch_type = "sentence"
+    }
+    checkpoint = {
+        directory = "Checkpoint"
+        keep = 100
+    }
+}
+optimizer = {
+    name = "adam"
+    accumulate_time = 2
+    learning_rate = {
+        method = "reverse-square-root"
+    }
+}
+criterion = {
+    name = ""
+}
+random_seed = 1234
+logging_path = ""
