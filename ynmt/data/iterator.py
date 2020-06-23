@@ -10,17 +10,19 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.utilities.random import shuffled, random_state
 from ynmt.data.batch import Batch
+from ynmt.utilities.file import load_data_objects
+from ynmt.utilities.random import shuffled, random_state
 
 
 class Iterator(object):
-    def __init__(self, dataset, batch_size, instance_size_calculator, traverse_time, mode):
+    def __init__(self, dataset_path, batch_size, instance_size_calculator, instance_filter=None, traverse_time=1, mode='preserve'):
         assert mode in {'preserve', 'sort', 'shuffle'}, "Wrong choice of order."
 
-        self.dataset = dataset
+        self.dataset_path = dataset_path
         self.batch_size = batch_size
         self.instance_size_calculator = instance_size_calculator
+        self.instance_filter = instance_filter
         self.traverse_time = traverse_time
         self.mode = mode
         self.iterations = 0
@@ -29,20 +31,26 @@ class Iterator(object):
 
     @property
     def instances(self):
+        original_random_state = random.getstate()
         random.setstate(self.random_state)
-        if self.mode == 'preserve':
-            instances = self.dataset
-        elif self.mode == 'sort':
-            instances = sorted(self.dataset)
-        elif self.mode == 'shuffle':
-            instances = shuffled(self.dataset)
-        return instances
+        for dataset in load_data_objects(self.dataset_path):
+            if self.mode == 'preserve':
+                instances = dataset
+            elif self.mode == 'sort':
+                instances = sorted(dataset)
+            elif self.mode == 'shuffle':
+                instances = shuffled(dataset)
+            yield instances
+
+        random.setstate(original_random_state)
 
     @property
     def batches(self):
         current_instances = list()
         current_instances_size = 0
         for instance in self.instances:
+            if self.instance_filter is not None and self.instance_filter(instance):
+                continue
             current_instances.append(instance)
             current_instances_size += self.instance_size_calculator(instance)
             if current_instances_size < self.batch_size:
