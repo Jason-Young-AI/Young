@@ -1,25 +1,34 @@
-data_directory = "Data"
-random_seed = 1234
-logging_path = ""
-number_worker = 16
-number_slice = 4
-language = {
-    source = "en"
-    target = "de"
+data = {
+    name = "default_en-de"
+    directory = "Data"
+    sides = ["source", "target"]
+    primary_side = "source"
+    languages = {
+        source = "en"
+        target = "de"
+    }
+    number_worker = 16
+    number_slice = 4
 }
-corpora = {
-    train_path = {
+corpus = {
+    train_paths = {
         source = "Corpora/train.en-de.en"
         target = "Corpora/train.en-de.de"
     }
-    valid_path = {
+    valid_paths = {
         source = "Corpora/valid.en-de.en"
         target = "Corpora/valid.en-de.de"
     }
 }
-vocabulary: {
-    share = True
-    size = 32768
-    source_size = 32768
-    target_size = 32768
+vocabulary = {
+    groups = [
+        ["source"],
+        ["target"],
+    ]
+    sizes = [
+        32768,
+        32768,
+    ]
 }
+random_seed = 1234
+logging_path = ""
