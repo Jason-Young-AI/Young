@@ -10,6 +10,21 @@
 # LICENSE file in the root directory of this source tree.
 
 
+def pad_batch(batch, pad_index):
+    for attribute_name in batch.structure:
+        attribute_value = batch[attribute_name]
+        max_instance_length = max([len(instance) for instance in attribute_value])
+        padded_instances = list()
+        instance_lengths = list()
+        for instance in attribute_value:
+            instance_length = len(instance)
+            instance_lengths.append(instance_length)
+            padded_instance = instance + [pad_index] * (max_instance_length - instance_length)
+            padded_instances.append(padded_instance)
+        batch[attribute_name] = (padded_instances, instance_lengths)
+    return batch
+
+
 class Batch(object):
     def __init__(self, structure, instances):
         assert isinstance(structure, set), 'Type of structure should be set().'
@@ -28,6 +43,9 @@ class Batch(object):
 
     def __len__(self):
         return len(self.__structure)
+
+    def __setitem__(self, attribute_name, attribute_value):
+        self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
         return self.__dict__[attribute_name]
