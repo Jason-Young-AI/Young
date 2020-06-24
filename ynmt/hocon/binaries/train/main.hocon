@@ -40,7 +40,7 @@ process_control = {
     }
     checkpoint = {
         directory = "Checkpoint"
-        keep = 100
+        keep_number = 100
     }
 }
 optimizer = {
