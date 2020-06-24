@@ -13,12 +13,20 @@
 import torch
 
 
-from ynmt.modules import xxx
+from ynmt.modules.encoders import TransformerEncoder
+from ynmt.modules.decoders import TransformerDecoder
 
 
-def build_transformer(args, vocabularies):
+def build_transformer(args, vocabularies, checkpoint):
     encoder = 
 
 
 class Transformer(torch.nn.module):
-    pass
+    def __init__(self, ):
+        super(Transformer, self).__init__()
+        self.encoder = TransformerEncoder
+        self.decoder = TransformerDecoder
+
+
+    def forward(self, source, target):
+        pass
