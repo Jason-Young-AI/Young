@@ -68,7 +68,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank,
     logger.info(f' * Loaded Vocabularies: {vocabulary_sizes}')
 
     logger.info(' * Checking already exist checkpoint ...')
-    checkpoint = load_checkpoint(args.checkpoint.directory)
+    checkpoint = load_checkpoint(args.checkpoint.directory, args.data.name)
     if checkpoint is None:
         logger.info('   No checkpoint found in {args.checkpoint.directory}.')
     else:
