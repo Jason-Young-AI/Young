@@ -21,7 +21,7 @@ import ynmt.utilities.logging as logging
 
 from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator
 from ynmt.data.batch import pad_batch
-from ynmt.data.iterator import LazyIterator
+from ynmt.data.iterator import Iterator
 from ynmt.utilities.random import fix_random_procedure
 from ynmt.utilities.distributed import DistributedManager, distributed_main
 
@@ -75,26 +75,54 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank,
         logger.info('   Loaded latest checkpoint from {args.checkpoint.directory} at {checkpoint["step"]} steps')
 
     logger.info(' * Building Model ...')
-    build_model = importlib.import_module(f'ynmt.models.build_{args.model.name}')
+    build_model = importlib.import_module(f'ynmt.models.build_model_{args.model.name}')
     model = build_model(args.model, vocabularies, checkpoint)
     model.to(device_descriptor)
     logger.info('   Model Architecture:\n{model}')
 
+    logger.info(' * Building Training Criterion ...')
+    build_training_criterion = importlib.import_module(
+        f'ynmt.criterions.build_criterion_{args.criterion.training.name}'
+    )
+    training_criterion = build_training_criterion(args.criterion.training, vocabularies['target'])
+    logger.info('   Training Criterion {args.criterion.training.name} built.')
+
+    logger.info(' * Building Validation Criterion ...')
+    build_validation_criterion = importlib.import_module(
+        f'ynmt.criterions.build_criterion_{args.criterion.validation.name}'
+    )
+    validation_criterion = build_criterion(args.criterion.validation, checkpoint)
+    logger.info('   Validation Criterion {args.criterion.validation.name} built.')
+
+    logger.info(' * Building Tester ...')
+    build_tester = importlib.import_module(f'ynmt.tester.build_tester_{args.tester.name}')
+    tester = build_tester(args.tester, checkpoint)
+    logger.info('   Tester {args.tester.name} built.')
+
+    logger.info(' * Building Learning Rate Scheduler ...')
+    build_scheduler = importlib.import_module(f'ynmt.schedulers.build_scheduler_{args.scheduler.name}')
+    scheduler = build_scheduler(args.scheduler, checkpoint)
+    logger.info('   Scheduler {args.scheduler.name} built.')
+
     logger.info(' * Building Optimizer ...')
-    build_optimizer = importlib.import_module(f'ynmt.optimizers.build_{args.optimizer.name}')
-    optimizer = build_optimizer(args.optimizer, model, checkpoint)
+    build_optimizer = importlib.import_module(f'ynmt.optimizers.build_optimizer_{args.optimizer.name}')
+    optimizer = build_optimizer(args.optimizer, scheduler, model, checkpoint)
     logger.info('   Optimizer {args.optimizer.name} built.')
 
     logger.info(' * Building Trainer ...')
-    build_trainer = importlib.import_module(f'ynmt.trainers.build_{args.trainer.name}')
-    trainer = build_trainer(args.trainer, model, optimizer, is_station)
+    build_trainer = importlib.import_module(f'ynmt.trainers.build_trainer_{args.trainer.name}')
+    trainer = build_trainer(args.trainer, model, optimizer, is_station, device_descriptor)
     logger.info('   Trainer {args.trainer.name} built.')
 
-    trainer.train(
+    logger.info(' * Launch Trainer ...')
+    logger.info('   Saving checkpoint every {args.process_control.training.period} steps ...')
+    logger.info('   Validate every {args.process_control.validation.period} steps ...')
+    trainer.launch(
         train_batches,
         args.process_control.training.period,
         valid_batches,
         args.process_control.validation.period,
+        args.checkpoint.directory, args.data.name, args.checkpoint.keep_number
     )
 
 
