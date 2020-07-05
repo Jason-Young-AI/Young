@@ -13,6 +13,38 @@
 import torch
 
 
+def gather_all(data, data_size, device_descriptor):
+    data_size_limit = 256 * 256
+    assert data_size < data_size_limit, 'data_size exceeds data_size_limit'
+
+    world_size = torch.distributed.get_world_size()
+    gathered_datas = list()
+
+    distributed_tensor = torch.ByteTensor(data_size + 2, device=device_descriptor)
+    gathered_tensors = [torch.ByteTensor(data_size + 2, device=device_descriptor) for _ in range(world_size)]
+
+    pickled_data = pickle.dumps(data)
+    pickled_data_size = len(pickled_data)
+    assert pickled_data_size <= data_size, f'data size exceeds data_size: {data_size}'
+
+    quotient, remainder = divmod(pickled_data_size,  256)
+    distributed_tensor[0] = quotient
+    distributed_tensor[1] = remainder
+    distributed_tensor[2:2+pickled_data_size] = torch.ByteTensor(list(pickled_data), device=device_descriptor)
+
+    torch.distributed.all_gather(gathered_tensors, distributed_tensor)
+
+    for gathered_tensor in gathered_tensors:
+        quotient = gathered_tensor[0].item()
+        remainder = gathered_tensor[1].item()
+        pickled_data_size = quotient * 256 + remainder
+        pickled_data = bytes(gathered_tensor[2:2+pickled_data_size].tolist())
+        gathered_data = pickled.loads(pickled_data)
+        gathered_datas.append(gathered_data)
+
+    return gathered_datas
+
+
 def distributed_init(device, master_ip, master_port, world_size, rank)
     backends = {'GPU': torch.distributed.Backend.NCCL, 'CPU': torch.distributed.Backend.GLOO}
     init_method = f'tcp://{master_ip}:{master_port}'
