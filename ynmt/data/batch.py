@@ -10,6 +10,19 @@
 # LICENSE file in the root directory of this source tree.
 
 
+def pack_multi_padded_batch(batch_iterator, pack_size):
+    packed_batch = list()
+
+    for batch in batch_iterator:
+        packed_batch.append(batch)
+        if len(packed_batch) == pack_size:
+            yield packed_batch
+            packed_batch = list()
+
+    if len(packed_batch) != 0:
+        yield packed_batch
+
+
 def pad_batch(batch, pad_index):
     for attribute_name in batch.structure:
         attribute_value = batch[attribute_name]
