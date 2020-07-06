@@ -57,7 +57,8 @@ def get_token_counter(file_path, number_worker):
     return total_token_counter
 
 
-def build_vocabularies(sides, groups, sizes, paths, languages, number_worker, logger):
+def build_vocabularies(sides, groups, sizes, paths, languages, number_worker):
+    logger = logging.get_logger('preprocess')
     token_counters = dict()
     for index, side in enumerate(sides):
         logger.info(f' * No.{index} - {side}')
@@ -126,8 +127,9 @@ def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
     return partial_dataset
 
 
-def build_dataset(dataset_type, primary_side, sides, paths, vocabularies, logger,
+def build_dataset(dataset_type, primary_side, sides, paths, vocabularies,
                   number_worker=1, number_slice=1):
+    logger = logging.get_logger('preprocess')
     primary_path = getattr(paths, primary_side)
     primary_edges = file_slice_edges(primary_path, number_worker * number_slice)
 
@@ -158,7 +160,7 @@ def build_dataset(dataset_type, primary_side, sides, paths, vocabularies, logger
 
 
 def preprocess(args):
-    logger = logging.get_logger(logging_path=args.logging_path)
+    logger = logging.setup_logger(name='preprocess', logging_path=args.logging_path)
 
     fix_random_procedure(args.random_seed)
 
@@ -174,7 +176,6 @@ def preprocess(args):
         args.corpus.train_paths,
         args.data.languages,
         args.data.number_worker,
-        logger
     )
 
     logger.info(' > Saving vocabularies ...')
@@ -189,7 +190,6 @@ def preprocess(args):
         args.data.sides,
         args.corpus.train_paths,
         vocabularies,
-        logger,
         args.data.number_worker,
         args.data.number_slice,
     )
@@ -206,7 +206,6 @@ def preprocess(args):
         args.data.sides,
         args.corpus.valid_paths,
         vocabularies,
-        logger,
     )
 
     logger.info(' > Saving validation dataset ...')

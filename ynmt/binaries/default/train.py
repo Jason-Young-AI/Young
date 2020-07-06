@@ -36,7 +36,8 @@ def get_device_descriptor(device, process_index):
     return torch.device(device_name)
 
 
-def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank, logger):
+def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
+    logger = logging.get_logger('train')
     is_station = rank == 0
     if is_station:
         logger.disabled = False
@@ -194,7 +195,7 @@ def build_batches(args, batch_queues, device_descriptors, workshop_semaphore, wo
 
 
 def train(args):
-    logger = logging.get_logger(logging_path=args.logging_path)
+    logger = logging.setup_logger(name='train', logging_path=args.logging_path)
 
     device = args.process_control.distribution.device
     master_ip = args.process_control.distribution.master_ip
@@ -223,7 +224,7 @@ def train(args):
         device_descriptor = get_device_descriptor(device, process_index)
         batch_queue = torch.multiprocessing.Queue(workshop_capacity)
 
-        main_args = [args, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index], logger]
+        main_args = [args, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index]]
         init_args = [device, master_ip, master_port, world_size, ranks[process_index]]
         consumer = torch.multiprocessing.Process(
             target=distributed_main,
