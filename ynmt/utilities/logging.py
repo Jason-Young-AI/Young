@@ -14,9 +14,14 @@ import logging
 import tempfile
 
 
-def get_logger(logging_path='', logging_level=logging.NOTSET):
+def get_logger(name):
+    logger =  logging.getLogger(name)
+    return logger
+
+
+def setup_logger(name, logging_path='', logging_level=logging.NOTSET):
     logging_formatter = logging.Formatter("[%(asctime)s %(levelname)s] %(message)s")
-    logger = logging.getLogger()
+    logger = logging.getLogger(name)
     logger.setLevel(logging_level)
 
     if logging_path == '':
