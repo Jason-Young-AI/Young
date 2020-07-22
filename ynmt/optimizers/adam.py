@@ -16,7 +16,7 @@ import torch
 from ynmt.optimizers import Optimizer
 
 
-def build_optimizer_adam(args, model, checkpoint):
+def build_optimizer_adam(args, model):
     parameters = (parameter for parameter in model.parameters() if parameter.requires_grad and parameter.is_leaf)
     adam = Adam(
         parameters,
@@ -24,9 +24,6 @@ def build_optimizer_adam(args, model, checkpoint):
         betas=(args.beta1, args.beta2),
         epsilon=args.epsilon
     )
-
-    if checkpoint is not None:
-        adam.load_state_dict(checkpoint['optimizer'], strict=False)
 
     return adam
 

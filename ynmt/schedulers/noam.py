@@ -10,10 +10,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.scheduler import Scheduler
+from ynmt.schedulers import Scheduler
 
 
-def build_scheduler_noam(args, model, checkpoint):
+def build_scheduler_noam(args, model):
     noam = Noam(model.dimension, args.warmup_step)
     return noam
 

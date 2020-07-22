@@ -15,37 +15,65 @@ import torch
 
 from ynmt.modules.encoders import TransformerEncoder
 from ynmt.modules.decoders import TransformerDecoder
+from ynmt.modules.perceptrons import MultilayerPerceptron
 
 
-def build_model_transformer(args, vocabularies, checkpoint):
+def build_model_transformer(args, vocabularies):
     transformer_encoder = TransformerEncoder(
         vocabularies['source'],
-        args.encoder.layer_number, args.dimension, args.feedforward_dimension, args.head_number,
-        args.dropout_probability, args.attention_dropout_probability, args.feedforward_dropout_probability
+        args.encoder.layer_number,
+        args.encoder.dimension,
+        args.encoder.feedforward_dimension,
+        args.encoder.head_number,
+        args.encoder.dropout_probability,
+        args.encoder.attention_dropout_probability,
+        args.encoder.feedforward_dropout_probability,
+        args.encoder.normalize_position
     )
     transformer_decoder = TransformerDecoder(
         vocabularies['target'],
-        args.decoder.layer_number, args.dimension, args.feedforward_dimension, args.head_number,
-        args.dropout_probability, args.attention_dropout_probability, args.feedforward_dropout_probability
+        args.decoder.layer_number,
+        args.decoder.dimension,
+        args.decoder.feedforward_dimension,
+        args.decoder.head_number,
+        args.decoder.dropout_probability,
+        args.decoder.attention_dropout_probability,
+        args.decoder.feedforward_dropout_probability,
+        args.decoder.normalize_position
     )
 
-    transformer = Transformer(transformer_encoder, transformer_decoder)
+    generator = MultilayerPerceptron(args.decoder.dimension, len(vocabularies['target']))
 
-    if checkpoint is not None:
-        transformer.load_state_dict(checkpoint['model'], strict=False)
+    if args.share_enc_dec_embeddings:
+        transformer_decoder.embed_token.weight = transformer_encoder.embed_token.weight
+
+    if args.share_dec_io_embeddings:
+        generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
+
+    transformer = Transformer(args.dimension, transformer_encoder, transformer_decoder, generator)
+
+    for parameter in transformer.parameters():
+        if parameter.dim() > 1:
+            torch.nn.init.xavier_uniform_(parameter)
 
     return transformer
 
 
-class Transformer(torch.nn.module):
-    def __init__(self, encoder, decoder):
+class Transformer(torch.nn.Module):
+    def __init__(self, dimension, encoder, decoder, generator):
         super(Transformer, self).__init__()
+        assert dimension == encoder.dimension
+        assert dimension == decoder.dimension
+        self.dimension = dimension
         self.encoder = encoder
         self.decoder = decoder
+        self.generator = generator
 
     def forward(self, source, target, source_length, target_length):
         codes = self.encoder(source, source_length)
 
-        prediction, _, _ = self.decoder(codes, source_length, target[:-1], target_length)
+        hidden, _, _ = self.decoder(codes, source_length, target, target_length)
+
+        prediction = self.generator(hidden)
 
         return prediction
