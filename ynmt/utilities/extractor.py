@@ -10,10 +10,45 @@
 # LICENSE file in the root directory of this source tree.
 
 
-def get_position(tensor, dim):
-    pass
+import torch
 
 
-def get_mask(attend_scope):
-    position = torch.arange(0, attend_scope.size(1)).repeat(attend_scope.size(0), attend_scope.size(1), 1)
-    mask = torch.ge(position, attend_scope.unsqueeze(-1))
+def get_model_parameters_number(model):
+    parameters_number = dict()
+    for name, parameters in model.named_parameters():
+        root_name = name.split('.')[0]
+        if root_name in parameters_number:
+            parameters_number[root_name] += parameters.numel()
+        else:
+            parameters_number[root_name] = parameters.numel()
+
+    return parameters_number
+
+
+def get_position(tensor):
+    size = list(tensor.size())
+    max_position = size[-1]
+    size[-1] = 1
+    repeat_size = tuple(size)
+    position = torch.arange(0, max_position, device=tensor.device)
+    position = position.repeat(repeat_size)
+    return position
+
+
+def get_attend_mask(attend_emission_length, attend_scope):
+    # attend_scope.size() == [batch_size x attend_scope_length]
+    position = torch.arange(0, attend_scope.size(1), device=attend_scope.device).repeat(attend_scope.size(0), attend_emission_length, 1)
+    mask = torch.ge(position, attend_scope.unsqueeze(1))
+    return mask
+
+
+def count_correct_element_number(tensor, reference_tensor):
+    correct_flag = torch.eq(tensor, reference_tensor)
+    correct_element = torch.sum(correct_flag)
+    return correct_element.item()
+
+
+def count_total_element_number(tensor, ignore_index):
+    valid_flag = torch.ne(tensor, ignore_index)
+    valid_element = torch.sum(valid_flag)
+    return valid_element.item()
