@@ -36,14 +36,16 @@ def find_all_checkpoints(checkpoint_directory, name):
 def load_checkpoint(checkpoint_directory, name):
     checkpoints = find_all_checkpoints(checkpoint_directory, name)
 
-    max_step = max(checkpoints.keys())
-    latest_checkpoint_path = checkpoints[max_step]
-
-    if os.path.isfile(latest_checkpoint_path):
-        latest_checkpoint = torch.load(latest_checkpoint_path, map_location=torch.device('cpu'))
-        assert step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
-    else:
+    if len(checkpoints) == 0:
         latest_checkpoint = None
+    else:
+        max_step = max(checkpoints.keys())
+        latest_checkpoint_path = checkpoints[max_step]
+        if os.path.isfile(latest_checkpoint_path):
+            latest_checkpoint = torch.load(latest_checkpoint_path, map_location=torch.device('cpu'))
+            assert step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
+        else:
+            latest_checkpoint = None
 
     return latest_checkpoint
 
