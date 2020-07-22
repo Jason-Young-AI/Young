@@ -16,7 +16,6 @@ import multiprocessing
 
 
 import ynmt.hocon.arguments as harg
-import ynmt.utilities.logging as logging
 
 
 from ynmt.data.vocabulary import Vocabulary
@@ -25,6 +24,7 @@ from ynmt.data.dataset import Dataset
 from ynmt.utilities.file import file_slice_edges, get_coedges, save_data_objects
 from ynmt.utilities.line import numericalize
 from ynmt.utilities.random import fix_random_procedure
+from ynmt.utilities.logging import setup_logger, get_logger, logging_level
 
 
 def get_partial_token_counter(file_path, edge_start, edge_end):
@@ -58,7 +58,7 @@ def get_token_counter(file_path, number_worker):
 
 
 def build_vocabularies(sides, groups, sizes, paths, languages, number_worker):
-    logger = logging.get_logger('preprocess')
+    logger = get_logger('preprocess')
     token_counters = dict()
     for index, side in enumerate(sides):
         logger.info(f' * No.{index} - {side}')
@@ -129,7 +129,7 @@ def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
 
 def build_dataset(dataset_type, primary_side, sides, paths, vocabularies,
                   number_worker=1, number_slice=1):
-    logger = logging.get_logger('preprocess')
+    logger = get_logger('preprocess')
     primary_path = getattr(paths, primary_side)
     primary_edges = file_slice_edges(primary_path, number_worker * number_slice)
 
@@ -160,7 +160,7 @@ def build_dataset(dataset_type, primary_side, sides, paths, vocabularies,
 
 
 def preprocess(args):
-    logger = logging.setup_logger(name='preprocess', logging_path=args.logging_path)
+    logger = setup_logger(name='preprocess', logging_path=args.logging_path, logging_level=logging_level['INFO'])
 
     fix_random_procedure(args.random_seed)
 

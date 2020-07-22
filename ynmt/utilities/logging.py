@@ -14,8 +14,24 @@ import logging
 import tempfile
 
 
+logging_level = dict(
+    INFO = logging.INFO,
+    WARN = logging.WARN,
+    ERROR = logging.ERROR,
+    DEBUG = logging.DEBUG,
+    FATAL = logging.FATAL,
+    NOTSET = logging.NOTSET
+)
+
+
+logger_dict = dict()
+
+
 def get_logger(name):
-    logger =  logging.getLogger(name)
+    if name in logger_dict:
+        logger = logger_dict[name]
+    else:
+        logger = setup_logger(name)
     return logger
 
 
@@ -41,5 +57,7 @@ def setup_logger(name, logging_path='', logging_level=logging.NOTSET):
     file_handler.setLevel(logging_level)
     file_handler.setFormatter(logging_formatter)
     logger.addHandler(file_handler)
+
+    logger_dict[name] = logger
 
     return logger
