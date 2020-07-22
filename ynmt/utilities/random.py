@@ -16,9 +16,9 @@ import random
 
 
 def shuffled(sequence):
-    indices = range(len(iterable_object))
+    indices = list(range(len(sequence)))
     random.shuffle(indices)
-    shuffled_sequence = [ sequence[index] for index in indices ]
+    shuffled_sequence = ( sequence[index] for index in indices )
     return shuffled_sequence
 
 
