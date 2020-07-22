@@ -11,41 +11,90 @@
 
 
 import torch
+import threading
 
 
-def gather_all(data, data_size, device_descriptor):
+from ynmt.utilities.file import dumps, loads
+
+
+def gather_all(data, device_descriptor, data_size=8 * 1024):
     data_size_limit = 256 * 256
-    assert data_size < data_size_limit, 'data_size exceeds data_size_limit'
+    assert data_size < data_size_limit, 'Error: data_size exceeds data_size_limit'
 
     world_size = torch.distributed.get_world_size()
     gathered_datas = list()
 
-    distributed_tensor = torch.ByteTensor(data_size + 2, device=device_descriptor)
-    gathered_tensors = [torch.ByteTensor(data_size + 2, device=device_descriptor) for _ in range(world_size)]
+    distributed_tensor = torch.zeros(data_size + 2, dtype=torch.uint8, device=device_descriptor)
+    gathered_tensors = [torch.zeros(data_size + 2, dtype=torch.uint8, device=device_descriptor) for _ in range(world_size)]
 
-    pickled_data = pickle.dumps(data)
-    pickled_data_size = len(pickled_data)
-    assert pickled_data_size <= data_size, f'data size exceeds data_size: {data_size}'
 
-    quotient, remainder = divmod(pickled_data_size,  256)
+    serialized_data = dumps(data)
+    serialized_data_size = len(serialized_data)
+    assert serialized_data_size <= data_size, f'Data size exceeds data_size: {data_size}'
+
+    quotient, remainder = divmod(serialized_data_size,  256)
     distributed_tensor[0] = quotient
     distributed_tensor[1] = remainder
-    distributed_tensor[2:2+pickled_data_size] = torch.ByteTensor(list(pickled_data), device=device_descriptor)
+    distributed_tensor[2:2+serialized_data_size] = torch.tensor(list(serialized_data), dtype=torch.uint8, device=device_descriptor)
 
     torch.distributed.all_gather(gathered_tensors, distributed_tensor)
 
     for gathered_tensor in gathered_tensors:
         quotient = gathered_tensor[0].item()
         remainder = gathered_tensor[1].item()
-        pickled_data_size = quotient * 256 + remainder
-        pickled_data = bytes(gathered_tensor[2:2+pickled_data_size].tolist())
-        gathered_data = pickled.loads(pickled_data)
+        serialized_data_size = quotient * 256 + remainder
+        serialized_data = bytes(gathered_tensor[2:2+serialized_data_size].tolist())
+        gathered_data = loads(serialized_data)
         gathered_datas.append(gathered_data)
 
     return gathered_datas
 
 
-def distributed_init(device, master_ip, master_port, world_size, rank)
+def reduce_all(tensors, device_descriptor, data_size=8 * 1024 * 1024):
+    data_size_limit = 128 * 1024 * 1024
+    assert data_size < data_size_limit, 'Error: data_size exceeds data_size_limit'
+
+    tensor_type = tensors[0].dtype
+    for tensor in tensors:
+        assert tensor.dtype == tensor_type, f'All dtype of tensor in tensor has to be the same({tensor_type}).'
+
+    data = torch.zeros(data_size_limit, dtype=tensor_type, device=device_descriptor)
+
+    cache = list()
+    cache_size = 0
+
+    def reduce_all_data():
+        index = 0
+        for tensor in cache:
+            tensor_size = tensor.numel()
+            data[index:index+tensor_size].copy_(tensor.reshape(-1))
+            index += tensor_size
+
+        torch.distributed.all_reduce(data[:index])
+
+        index = 0
+        for tensor in cache:
+            tensor_size = tensor.numel()
+            tensor.reshape(-1).copy_(data[index:index+tensor_size])
+            index += tensor_size
+
+    for tensor in tensors:
+        tensor_size = tensor.numel()
+        if tensor_size > data_size_limit:
+            torch.distributed.all_reduce(tensor)
+            continue
+        if cache_size + tensor_size > data_size_limit:
+            reduce_all_data()
+            cache = list()
+            cache_size = 0
+        cache.append(tensor)
+        cache_size += tensor_size
+
+    if len(cache) != 0:
+        reduce_all_data()
+
+
+def distributed_init(device, master_ip, master_port, world_size, rank):
     backends = {'GPU': torch.distributed.Backend.NCCL, 'CPU': torch.distributed.Backend.GLOO}
     init_method = f'tcp://{master_ip}:{master_port}'
     torch.distributed.init_process_group(
@@ -56,7 +105,7 @@ def distributed_init(device, master_ip, master_port, world_size, rank)
     )
 
 
-def distributed_main(main, main_args, init_args, distributed_manager):
+def distributed_main(main, main_args, init_args, exception_queue):
     try:
         distributed_init(*init_args)
         main(*main_args)
@@ -67,7 +116,8 @@ def distributed_main(main, main_args, init_args, distributed_manager):
         import sys
         import traceback
         exception = "".join(traceback.format_exception(*sys.exc_info()))
-        distributed_manager.send_message(os.getpid(), exception)
+        message = (os.getpid(), exception)
+        exception_queue.put(message)
         sys.exit(1)
 
 
@@ -78,16 +128,16 @@ class DistributedManager(object):
         self.exception_catcher_thread = threading.Thread(
             target=self.exception_catcher,
             args=(),
-            daemon=True
         )
-        self.exception_catcher_thread.start()
 
     def manage(self, process):
         self.processes.append(process)
 
-    def send_message(self, pid, exception):
-        message = (pid, exception)
-        self.exception_queue.put(message)
+    def open(self):
+        self.exception_catcher_thread.start()
+
+    def close(self):
+        self.exception_catcher_thread.join()
 
     def exception_catcher(self):
         pid, exception = self.exception_queue.get()
@@ -96,11 +146,11 @@ class DistributedManager(object):
                 process.terminate()
             process.join()
 
-        exception_message = f'''
-            \n
-            -- Tracebacks above this line can probably be ignored --
-            Process {pid} terminated with the following error:
-            {exception}
-            \n
-        '''
+        exception_message = (
+            f'\n'
+            f'\n\t\t -- Tracebacks above this line can probably be ignored -- '
+            f'\n\t\t    Process {pid} terminated with the following error:'
+            f'\n'
+            f'\n{exception}'
+        )
         raise Exception(exception_message)
