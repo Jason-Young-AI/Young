@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-def InstanceFilter(object):
+class InstanceFilter(object):
     def __init__(self, length_intervals):
         self.length_intervals = length_intervals
 
@@ -24,7 +24,7 @@ def InstanceFilter(object):
                 return True
 
 
-def InstanceSizeCalculator(object):
+class InstanceSizeCalculator(object):
     def __init__(self, calculate_attribute, calculate_type):
         assert calculate_type in {'token', 'sentence'}, "Wrong choice of calculator type."
 
