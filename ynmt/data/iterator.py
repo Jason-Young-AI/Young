@@ -10,9 +10,12 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import random
+
+
 from ynmt.data.batch import Batch
 from ynmt.utilities.file import load_data_objects
-from ynmt.utilities.random import shuffled, random_state
+from ynmt.utilities.random import shuffled
 
 
 class Iterator(object):
@@ -40,7 +43,8 @@ class Iterator(object):
                 instances = sorted(dataset)
             elif self.mode == 'shuffle':
                 instances = shuffled(dataset)
-            yield instances
+            for instance in instances:
+                yield instance
 
         random.setstate(original_random_state)
 
@@ -57,11 +61,11 @@ class Iterator(object):
                 continue
             else:
                 if current_instances_size > self.batch_size:
-                    yield Batch(self.dataset.structure, current_instances[:-1])
+                    yield Batch(instance.structure, current_instances[:-1])
                     current_instances = current_instances[-1:]
                     current_instances_size = self.instance_size_calculator(current_instances[-1])
                 else:
-                    yield Batch(self.dataset.structure, current_instances)
+                    yield Batch(instance.structure, current_instances)
                     current_instances = list()
                     current_instances_size = 0
 
@@ -69,10 +73,10 @@ class Iterator(object):
         for time in range(self.traverse_time):
             if time < self.rounds:
                 continue
-            for index, batch in enumerate(self.batches)):
+            for index, batch in enumerate(self.batches):
                 if index < self.iterations:
                     continue
-                if batch.size == 0:
+                if len(batch) == 0:
                     raise ValueError('Batch size too small, so batching no instance, please size up!')
                 else:
                     yield batch
