@@ -15,21 +15,28 @@ import torch
 
 from ynmt.modules.embeddings import TrigonometricPositionalEmbedding
 from ynmt.modules.attentions import MultiHeadAttention
+from ynmt.modules.perceptrons import PositionWiseFeedForward
+from ynmt.utilities.extractor import get_position, get_attend_mask
 
 
 class TransformerEncoder(torch.nn.Module):
     def __init__(self, vocabulary, 
                  layer_number, dimension, feedforward_dimension, head_number,
-                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability):
+                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                 normalize_position):
         super(TransformerEncoder, self).__init__()
-        self.dropout_probability = dropout_probability
+        self.dimension = dimension
+
+        self.dropout = torch.nn.Dropout(dropout_probability)
+
         self.embed_token = torch.nn.Embedding(len(vocabulary), dimension, padding_idx=vocabulary.pad_index)
-        self.embed_position = TrigonometricPositionalEmbedding(2048, dimension)
+        self.embed_position = TrigonometricPositionalEmbedding(2048, dimension, padding_idx=vocabulary.pad_index)
         self.transformer_encoder_layers = torch.nn.ModuleList(
             [
                 TransformerEncoderLayer(
                     dimension, feedforward_dimension, head_number,
-                    dropout_probability, attention_dropout_probability, feedforward_dropout_probability
+                    dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                    normalize_position
                 )
                 for _ in range(layer_number)
             ]
@@ -37,11 +44,11 @@ class TransformerEncoder(torch.nn.Module):
 
     def embed(self, source):
         token = source
-        position = get_position(source)
+        position = get_position(source.transpose(0, 1)).transpose(0, 1)
         token_embedding = self.embed_token(token)
         position_embedding = self.embed_position(position)
         embedding = token_embedding + position_embedding
-        embedding = torch.nn.functional.dropout(embedding, p=self.dropout_probability, training=self.training)
+        embedding = self.dropout(embedding)
         return embedding
 
     def forward(self, source, source_length):
@@ -50,10 +57,9 @@ class TransformerEncoder(torch.nn.Module):
 
         source_max_length = torch.max(source_length)
         source_attend_scope = source_length.unsqueeze(1).repeat(1, source_max_length)
-        source_attention_weight_mask = get_mask(source_attend_scope, source_length)
-        attention_weight_mask = get_mask(source_length)
+        attention_weight_mask = get_attend_mask(source_max_length, source_attend_scope)
 
-        for transformer_encoder_layer in self.transformer_encoder_layers:
+        for index, transformer_encoder_layer in enumerate(self.transformer_encoder_layers):
             x, attention_weight = transformer_encoder_layer(x, attention_weight_mask)
 
         return x
@@ -61,9 +67,13 @@ class TransformerEncoder(torch.nn.Module):
 
 class TransformerEncoderLayer(torch.nn.Module):
     def __init__(self, dimension, feedforward_dimension, head_number,
-                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability):
+                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                 normalize_position):
         super(TransformerEncoderLayer, self).__init__()
-        self.dropout_probability = dropout_probability
+        assert normalize_position in {'before', 'after'}, 'Only support \'before\' and \'after\' normalize position'
+        self.normalize_position = normalize_position
+
+        self.dropout = torch.nn.Dropout(dropout_probability)
 
         self.self_attention = MultiHeadAttention(dimension, head_number, attention_dropout_probability)
         self.self_attention_normalization = torch.nn.LayerNorm(dimension)
@@ -76,7 +86,7 @@ class TransformerEncoderLayer(torch.nn.Module):
         residual = x
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'before')
         x, attention_weight = self.self_attention(query=x, key=x, value=x, attention_weight_mask=x_mask)
-        x = torch.nn.functional.dropout(x, p=self.dropout_probability, training=self.training)
+        x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'after')
 
@@ -84,7 +94,7 @@ class TransformerEncoderLayer(torch.nn.Module):
         residual = x
         x = layer_normalize(x, self.positionwise_feedforward_normalization, self.normalize_position == 'before')
         x = self.positionwise_feedforward(x)
-        x = torch.nn.functional.dropout(x, p=self.dropout_probability, training=self.training)
+        x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.positionwise_feedforward_normalization, self.normalize_position == 'after')
 
