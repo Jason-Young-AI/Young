@@ -10,8 +10,25 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import io
 import os
+import torch
 import pickle
+
+
+def dumps(data):
+    serailized_data = None
+    bytes_storage = io.BytesIO()
+    torch.save(data, bytes_storage)
+    serialized_data = bytes_storage.getvalue()
+    return serialized_data
+
+
+def loads(serialized_data):
+    data = None
+    bytes_storage = io.BytesIO(serialized_data)
+    data = torch.load(bytes_storage)
+    return data
 
 
 def safely_readline(binary_file_object):
