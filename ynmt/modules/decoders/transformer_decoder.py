@@ -15,21 +15,28 @@ import torch
 
 from ynmt.modules.embeddings import TrigonometricPositionalEmbedding
 from ynmt.modules.attentions import MultiHeadAttention
+from ynmt.modules.perceptrons import PositionWiseFeedForward
+from ynmt.utilities.extractor import get_position, get_attend_mask
 
 
 class TransformerDecoder(torch.nn.Module):
     def __init__(self, vocabulary, 
                  layer_number, dimension, feedforward_dimension, head_number,
-                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability):
+                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                 normalize_position):
         super(TransformerDecoder, self).__init__()
+        self.dimension = dimension
+
         self.dropout = torch.nn.Dropout(dropout_probability)
+
         self.embed_token = torch.nn.Embedding(len(vocabulary), dimension, padding_idx=vocabulary.pad_index)
         self.embed_position = TrigonometricPositionalEmbedding(2048, dimension)
         self.transformer_decoder_layers = torch.nn.ModuleList(
             [
                 TransformerDecoderLayer(
                     dimension, feedforward_dimension, head_number,
-                    dropout_probability, attention_dropout_probability, feedforward_dropout_probability
+                    dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                    normalize_position
                 )
                 for _ in range(layer_number)
             ]
@@ -37,28 +44,28 @@ class TransformerDecoder(torch.nn.Module):
 
     def embed(self, target):
         token = target
-        position = get_position(target)
+        position = get_position(target.transpose(0, 1)).transpose(0, 1)
         token_embedding = self.embed_token(token)
         position_embedding = self.embed_position(position)
         embedding = token_embedding + position_embedding
         embedding = self.dropout(embedding)
         return embedding
 
-    def forward(self, target, target_length, codes, codes_length):
+    def forward(self, codes, codes_length, target, target_length):
         x = self.embed(target)
 
         # calculate self & cross attention weight mask
         target_max_length = torch.max(target_length)
         target_attend_scope = target_length.unsqueeze(1).repeat(1, target_max_length)
-        target_attention_weight_mask = get_mask(target_attend_scope, target_length)
+        target_attention_weight_mask = get_attend_mask(target_max_length, target_attend_scope)
 
         codes_max_length = torch.max(codes_length)
         codes_attend_scope = codes_length.unsqueeze(1).repeat(1, codes_max_length)
-        codes_attention_weight_mask = get_mask(codes_attend_scope, codes_length)
+        codes_attention_weight_mask = get_attend_mask(target_max_length, codes_attend_scope)
 
         # calculate future mask
-        future_attend_scope = torch.arange(1, target_max_length + 1).repeat(len(target_length), 1)
-        future_attention_weight_mask = get_mask(future_attend_scope)
+        future_attend_scope = torch.arange(1, target_max_length + 1, device=target_length.device).repeat(len(target_length), 1)
+        future_attention_weight_mask = get_attend_mask(target_max_length, future_attend_scope)
 
         attention_weight_mask = future_attention_weight_mask | target_attention_weight_mask
 
@@ -70,8 +77,12 @@ class TransformerDecoder(torch.nn.Module):
 
 class TransformerDecoderLayer(torch.nn.Module):
     def __init__(self, dimension, feedforward_dimension, head_number,
-                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability):
+                 dropout_probability, attention_dropout_probability, feedforward_dropout_probability,
+                 normalize_position):
         super(TransformerDecoderLayer, self).__init__()
+        assert normalize_position in {'before', 'after'}, 'Only support \'before\' and \'after\' normalize position'
+        self.normalize_position = normalize_position
+
         self.dropout = torch.nn.Dropout(dropout_probability)
 
         self.self_attention = MultiHeadAttention(dimension, head_number, attention_dropout_probability)
