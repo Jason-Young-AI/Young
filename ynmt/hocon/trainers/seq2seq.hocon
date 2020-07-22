@@ -1,0 +1,3 @@
+name = "seq2seq"
+accumulate_number = 2
+normalization_type = "token"

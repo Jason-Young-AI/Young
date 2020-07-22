@@ -1,0 +1,9 @@
+name = "beam_search"
+beam_size = 4
+n_best = 4
+min_length = 0
+max_length = 200
+penalty = {
+    alpha = 0.6
+    beta = 0.0
+}

@@ -1,0 +1,2 @@
+name = "label_smoothing_cross_entropy"
+label_smoothing_percent = 0.1

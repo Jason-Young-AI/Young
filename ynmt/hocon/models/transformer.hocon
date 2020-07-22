@@ -1,5 +1,24 @@
-name = "Transformer"
+name = "transformer"
+dimension = 512
+share_enc_dec_embeddings = False
+share_dec_io_embeddings = False
 encoder = {
+    layer_number = 6
+    dimension = 512
+    feedforward_dimension = 2048
+    head_number = 8
+    dropout_probability = 0.1
+    attention_dropout_probability = 0.1
+    feedforward_dropout_probability = 0.1
+    normalize_position = "before"
 }
 decoder = {
+    layer_number = 6
+    dimension = 512
+    feedforward_dimension = 2048
+    head_number = 8
+    dropout_probability = 0.1
+    attention_dropout_probability = 0.1
+    feedforward_dropout_probability = 0.1
+    normalize_position = "before"
 }

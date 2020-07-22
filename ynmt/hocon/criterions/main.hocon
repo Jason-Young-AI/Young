@@ -1,0 +1,6 @@
+cross_entropy = {
+    include file("cross_entropy.hocon") 
+}
+label_smoothing_cross_entropy = {
+    include file("label_smoothing_cross_entropy.hocon") 
+}
