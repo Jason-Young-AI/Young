@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-def pack_multi_padded_batch(batch_iterator, pack_size):
+def pack_batch(batch_iterator, pack_size):
     packed_batch = list()
 
     for batch in batch_iterator:
@@ -21,21 +21,6 @@ def pack_multi_padded_batch(batch_iterator, pack_size):
 
     if len(packed_batch) != 0:
         yield packed_batch
-
-
-def pad_batch(batch, pad_index):
-    for attribute_name in batch.structure:
-        attribute_value = batch[attribute_name]
-        max_instance_length = max([len(instance) for instance in attribute_value])
-        padded_instances = list()
-        instance_lengths = list()
-        for instance in attribute_value:
-            instance_length = len(instance)
-            instance_lengths.append(instance_length)
-            padded_instance = instance + [pad_index] * (max_instance_length - instance_length)
-            padded_instances.append(padded_instance)
-        batch[attribute_name] = (padded_instances, instance_lengths)
-    return batch
 
 
 class Batch(object):
