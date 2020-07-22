@@ -10,49 +10,14 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import torch
+from ynmt.optimizers.optimizer import Optimizer
+from ynmt.optimizers.adam import build_optimizer_adam
 
 
-class Optimzier(object):
-    def __init__(self, optimizer):
-        self.current_step = 1
-        self.optimizer = optimizer
+def build_optimizer(args, model, checkpoint):
+    optimizer = globals()[f'build_optimizer_{args.name}'](args, model)
 
-    @property
-    def defaults(self):
-        return self.optimizer.defaults
+    if checkpoint is not None:
+        optimizer.load_state_dict(checkpoint['optimizer'], strict=False)
 
-    @property
-    def parameter_groups(self):
-        return self.optimizer.param_groups
-
-    @property
-    def parameters(self):
-        for parameter_group in self.parameter_groups:
-            parameters = parameter_group['params']
-            for parameter in parameters:
-                yield parameter
-
-    @property
-    def learning_rates(self):
-        learning_rates = dict()
-        for index, parameter_group in enumerate(self.parameter_groups):
-            learning_rates[f'parameter_group-{index}'] = parameter_group['lr'])
-        return learning_rates
-
-    def step(self):
-        self.optimizer.step()
-        self.current_step += 1
-
-    def zero_grad(self):
-        self.optimizer.zero_grad()
-
-    def state_dict(self):
-        state_dict = dict()
-        state_dict['current_step'] = self.current_step
-        state_dict['optimizer'] = self.optimizer.state_dict()
-        return state_dict
-
-    def load_state_dict(self, state_dict):
-        self.current_step = state_dict['current_step']
-        self.optimizer.load_state_dict(state_dict['optimizer'])
+    return optimizer
