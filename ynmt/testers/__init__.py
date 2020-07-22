@@ -4,18 +4,15 @@
 # Copyright (c) Jason Young (杨郑鑫).
 #
 # E-Mail: <AI.Jason.Young@outlook.com>
-# 2020-07-05 18:39
+# 2020-07-05 18:36
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
-import torch
+from ynmt.testers.beam_search import build_tester_beam_search
 
 
-from ynmt.searchers import Searcher
-
-
-class Beam(Searcher):
-    def __init__(self, ):
-        pass
+def build_tester(args, vocabulary):
+    tester = globals()[f'build_tester_{args.name}'](args, vocabulary)
+    return tester
