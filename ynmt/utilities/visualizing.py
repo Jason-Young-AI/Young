@@ -13,17 +13,43 @@
 import os
 import json
 import visdom
+import tempfile
+
+
+visualizer_dict = dict()
+
+
+def get_visualizer(name):
+    if name in visualizer_dict:
+        visualizer = visualizer_dict[name]
+    else:
+        visualizer = setup_visualizer(name)
+
+    return visualizer
+
+
+def setup_visualizer(name, server="http://localhost", port=8097,
+                  username=None, password=None, logging_path=None, offline=True, overwrite=False):
+    visualizer = Visualizer(name, server, port,
+        username, password, logging_path, offline, overwrite
+    )
+    visualizer_dict[name] = visualizer
+
+    return visualizer
 
 
 class Visualizer(object):
-    def __init__(self, name, server, port, username=None, password=None, logging_path=None, overwrite=False):
+    def __init__(self, name, server, port,
+                 username=None, password=None, logging_path=None, offline=False, overwrite=False):
         self.name = name
         self.server = server
         self.port = port
         self.username = username
         self.password = password
-        self.overwrite = overwrite
         self.logging_path = logging_path
+        self.offline = offline
+        self.overwrite = overwrite
+        self.disabled = False
         self.environment = None
         self.windows = set()
         self.window_layout_options = dict(
@@ -37,13 +63,24 @@ class Visualizer(object):
         )
 
     def open(self):
-        self.environment = visdom.Visdom(
-            env=self.name,
-            server=self.server, port=self.port,
-            username=self.username, password=self.password,
-            log_to_filename=self.logging_path)
-
-        self.environment.check_connection()
+        if self.disabled:
+            return
+        if self.offline == True:
+            if self.logging_path is None:
+                sys_temp_dir_path = tempfile.gettempdir()
+                temp_dir_path = tempfile.mkdtemp(dir=sys_temp_dir_path, prefix='ynmt-')
+                _, self.logging_path = tempfile.mkstemp(dir=temp_dir_path)
+            self.environment = visdom.Visdom(env=self.name, log_to_filename=self.logging_path, offline=self.offline)
+        else:
+            self.environment = visdom.Visdom(
+                env=self.name,
+                server=self.server, port=self.port,
+                username=self.username, password=self.password,
+                log_to_filename=self.logging_path
+            )
+            if self.environment.check_connection() == False:
+                import sys
+                sys.exit(1)
 
         if self.logging_path is None:
             return
@@ -62,12 +99,16 @@ class Visualizer(object):
                     self.windows.add(window_name)
 
     def close(self):
+        if self.disabled:
+            return
         if self.environment is None:
             return
         else:
             self.environment.delete_env(self.name)
 
     def visualize(self, visualize_type, visualize_name, visualize_title, **keyword_args):
+        if self.disabled:
+            return
         visualize_method = getattr(self.environment, visualize_type)
 
         visualize_options = dict()
