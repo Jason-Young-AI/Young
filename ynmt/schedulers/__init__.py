@@ -10,6 +10,14 @@
 # LICENSE file in the root directory of this source tree.
 
 
-class Scheduler(object):
-    def learning_rate(self, step):
-        raise NotImplementedError
+from ynmt.schedulers.scheduler import Scheduler
+from ynmt.schedulers.noam import build_scheduler_noam
+
+
+def build_scheduler(args, model, checkpoint):
+    scheduler = globals()[f'build_scheduler_{args.name}'](args, model)
+
+    if checkpoint is not None:
+        scheduler.load_state_dict(checkpoint['model'], strict=False)
+
+    return scheduler
