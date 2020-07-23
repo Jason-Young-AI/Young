@@ -15,7 +15,6 @@ import torch
 
 class Optimizer(object):
     def __init__(self, optimizer):
-        self.current_step = 1
         self.optimizer = optimizer
 
     @property
@@ -42,17 +41,14 @@ class Optimizer(object):
 
     def step(self):
         self.optimizer.step()
-        self.current_step += 1
 
     def zero_grad(self):
         self.optimizer.zero_grad()
 
     def state_dict(self):
         state_dict = dict()
-        state_dict['current_step'] = self.current_step
         state_dict['optimizer'] = self.optimizer.state_dict()
         return state_dict
 
     def load_state_dict(self, state_dict):
-        self.current_step = state_dict['current_step']
         self.optimizer.load_state_dict(state_dict['optimizer'])
