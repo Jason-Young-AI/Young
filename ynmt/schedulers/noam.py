@@ -26,3 +26,13 @@ class Noam(Scheduler):
     def learning_rate(self, step):
         learning_rate = min(step ** (-0.5), step * self.warmup_step ** (-1.5)) * (self.dimension ** (-0.5))
         return learning_rate
+
+    def state_dict(self):
+        state_dict = dict()
+        state_dict['warmup_step'] = self.warmup_step
+        state_dict['dimension'] = self.dimension
+        return state_dict
+
+    def load_state_dict(self, state_dict):
+        self.warmup_step = state_dict['warmup_step']
+        self.dimension = state_dict['dimension']
