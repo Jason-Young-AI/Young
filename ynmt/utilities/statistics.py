@@ -28,10 +28,18 @@ class Statistics(object):
         for attribute_name in self.structure:
             setattr(self, attribute_name, 0)
 
+    def __str__(self):
+        string = str()
+        for attribute_name, attribute_value in self:
+            string += f'{attribute_name}: {attribute_value} '
+        return string
+
     def __len__(self):
         return len(self.__structure)
 
     def __setitem__(self, attribute_name, attribute_value):
+        if attribute_name not in self.__structure:
+            self.__structure.update([attribute_name])
         self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
@@ -46,9 +54,6 @@ class Statistics(object):
     def __iter__(self):
         for attribute_name in self.structure:
             yield (attribute_name, self[attribute_name])
-
-    def __str__(self):
-        return self.__repr__()
 
     def __add__(self, other_statistics):
         result_structure = self.structure | other_statistics.structure
