@@ -138,6 +138,14 @@ class Trainer(object):
         self.logger.info(report_string)
         return report_statistics
 
+    def visualize(self, name, report_statistics):
+        for stat_name, stat_value in report_statistics:
+            options = dict(
+                legend = [stat_name]
+            )
+            stat_name = name + '_' + stat_name
+            self.visualizer.visualize('line', stat_name, stat_name, opts=options, X=[self.step], Y=[stat_value], update="append")
+
     def launch(self, train_batches, training_period, valid_batches, validation_period,
                checkpoint_directory, checkpoint_name, checkpoint_keep_number):
 
@@ -160,6 +168,7 @@ class Trainer(object):
             end_time = self.timer.elapsed_time
             self.update()
             train_report_statistics = self.report('Train', train_statistics, end_time - start_time)
+            self.visualize('Train', train_report_statistics)
             total_statistics += train_statistics
 
             # save checkpoint
@@ -192,6 +201,7 @@ class Trainer(object):
                     self.timer.standby()
                     end_time = self.timer.elapsed_time
                     valid_report_statistics = self.report('Validate', validate_status, end_time - start_time)
+                    self.visualize('Validate', valid_report_statistics)
                 self.model.train(True)
 
         self.report('Final', total_statistics, self.timer.elapsed_time)

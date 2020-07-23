@@ -60,7 +60,7 @@ class Seq2Seq(Trainer):
                                       accumulate_number,
                                       normalization_type,
                                       device_descriptor)
-        self.statistics = Statistics({'tgt_loss', 'tgt_total_item', 'tgt_correct_item', 'src_token', 'tgt_token'})
+        self.statistics = Statistics({'tgt_loss', 'tgt_total_item', 'tgt_correct_item'})
 
     def get_normalization(self, packed_padded_train_batch):
         normalization = 0
@@ -85,7 +85,7 @@ class Seq2Seq(Trainer):
             target_lengths = torch.where(target_lengths > target_max_length - 1, target_max_length - 1, target_lengths)
         return target_input, target_output, target_lengths
 
-    def update_statistics(self, loss, prediction, target_output, source_lengths, target_lengths):
+    def update_statistics(self, loss, prediction, target_output):
         # Statistic
         tgt_pad_index = self.vocabularies['target'].pad_index
         match_item = get_match_item(prediction.max(dim=-1)[1], target_output, tgt_pad_index)
@@ -93,8 +93,6 @@ class Seq2Seq(Trainer):
         self.statistics.tgt_loss += loss.item()
         self.statistics.tgt_total_item += target_output.ne(tgt_pad_index).sum().item()
         self.statistics.tgt_correct_item += match_item.sum().item()
-        self.statistics.src_token += source_lengths.sum().item()
-        self.statistics.tgt_token += target_lengths.sum().item()
 
     def pad_batch(self, batches):
         for batch in batches:
@@ -130,7 +128,7 @@ class Seq2Seq(Trainer):
             prediction = self.model(source, target_input, source_lengths, target_lengths)
             loss, criterion_states = self.training_criterion(prediction, target_output, reduction='sum')
 
-            self.update_statistics(loss, prediction, target_output, source_lengths, target_lengths)
+            self.update_statistics(loss, prediction, target_output)
 
             loss /= normalization
             loss.backward()
@@ -147,6 +145,6 @@ class Seq2Seq(Trainer):
             prediction = self.model(source, target_input, source_lengths, target_lengths)
             loss, criterion_states = self.validation_criterion(prediction, target_output, reduction='sum')
 
-            self.update_statistics(loss, prediction, target_output, source_lengths, target_lengths)
+            self.update_statistics(loss, prediction, target_output)
 
         return self.statistics
