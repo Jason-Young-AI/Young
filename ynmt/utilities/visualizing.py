@@ -12,11 +12,19 @@
 
 import os
 import json
+import pickle
 import visdom
 import tempfile
 
 
+from ynmt.pedestal.constant import Constant
+
+
 visualizer_dict = dict()
+
+
+constant = Constant()
+constant.FLAG = 'YoungNMT-Visualizer-Win-Log'
 
 
 def get_visualizer(name):
@@ -47,6 +55,7 @@ class Visualizer(object):
         self.username = username
         self.password = password
         self.logging_path = logging_path
+        self.logging_win_path = self.logging_path + '-win'
         self.offline = offline
         self.overwrite = overwrite
         self.disabled = False
@@ -92,11 +101,26 @@ class Visualizer(object):
             else:
                 os.mknod(self.logging_path)
 
-            with open(self.logging_path) as logging_file:
+            with open(self.logging_path, 'r', encoding='utf-8') as logging_file:
                 for json_entry in logging_file:
                     endpoint, msg = json.loads(json_entry)
                     window_name = self.environment._send(msg, endpoint, from_log=True)
                     self.windows.add(window_name)
+
+            if os.path.isfile(self.logging_win_path):
+                if self.overwrite:
+                    with open(self.logging_win_path, 'r+', encoding='utf-8') as logging_win_file:
+                        for line in logging_win_file:
+                            window_name = line.strip()
+                            self.environment.close(window_name)
+                        logging_win_file.truncate()
+            else:
+                os.mknod(self.logging_win_path)
+
+            with open(self.logging_win_path, 'w', encoding='utf-8') as logging_win_file:
+                for window_name in self.windows:
+                    line = window_name + '\n'
+                    logging_win_file.writelines(line)
 
     def close(self):
         if self.disabled:
@@ -105,6 +129,12 @@ class Visualizer(object):
             return
         else:
             self.environment.delete_env(self.name)
+
+    def add_window(self, window_name):
+        self.windows.add(window_name)
+        with open(self.logging_win_path, 'a', encoding='utf-8') as logging_win_file:
+            line = window_name + '\n'
+            logging_win_file.writelines(line)
 
     def visualize(self, visualize_type, visualize_name, visualize_title, **keyword_args):
         if self.disabled:
@@ -118,6 +148,6 @@ class Visualizer(object):
         keyword_args['opts'] = visualize_options
 
         visualize_method(env=self.name, win=visualize_name, **keyword_args)
+        self.add_window(visualize_name)
 
-        self.windows.add(visualize_name)
         return visualize_name
