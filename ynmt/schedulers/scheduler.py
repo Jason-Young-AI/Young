@@ -13,3 +13,9 @@
 class Scheduler(object):
     def learning_rate(self, step):
         raise NotImplementedError
+
+    def state_dict(self):
+        raise NotImplementedError
+
+    def load_state_dict(self, state_dict):
+        raise NotImplementedError
