@@ -116,8 +116,8 @@ class Trainer(object):
                 total_item_name = f'{correct_item_name_prefix}total_item'
                 if total_item_name in gathered_statistics:
                     accuracy = correct_item / gathered_statistics[total_item_name]
-                    report_string += f'{correct_item_name_prefix}accuracy: {accuracy:4.2f}; '
-                    report_statistics[f'{correct_item_name_prefix}accuracy'] = accuracy
+                    report_string += f'{correct_item_name_prefix}acc: {accuracy:4.2f}; '
+                    report_statistics[f'{correct_item_name_prefix}acc'] = accuracy
 
                 continue
 
