@@ -17,7 +17,7 @@ from ynmt.optimizers.adam import build_optimizer_adam
 def build_optimizer(args, model, checkpoint):
     optimizer = globals()[f'build_optimizer_{args.name}'](args, model)
 
-    if checkpoint is not None:
-        optimizer.load_state_dict(checkpoint['optimizer'], strict=False)
+    if checkpoint is not None and not args.reset_optimizer:
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     return optimizer
