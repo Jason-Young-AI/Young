@@ -58,4 +58,6 @@ class MultiHeadAttention(torch.nn.Module):
         attention = merge(attention)
         attention = self.attention_linear(attention)
 
+        # attention: [query_length x batch_size x dimension]
+        # attention_weight: [batch_size x head_number x query_length x key_length]
         return attention, attention_weight

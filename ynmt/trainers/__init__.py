@@ -19,7 +19,8 @@ def build_trainer(args,
                   tester,
                   scheduler, optimizer,
                   vocabularies,
-                  device_descritpor):
+                  device_descritpor,
+                  checkpoint):
     trainer = globals()[f'build_trainer_{args.name}'](
         args,
         model, training_criterion, validation_criterion,
@@ -28,4 +29,8 @@ def build_trainer(args,
         vocabularies,
         device_descritpor,
     )
+
+    if checkpoint is not None and not args.reset_step:
+        trainer.step = checkpoint['step']
+
     return trainer

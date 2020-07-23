@@ -16,7 +16,8 @@ import torch
 from ynmt.trainers import Trainer
 from ynmt.data.attribute import pad_attribute
 from ynmt.utilities.distributed import gather_all
-from ynmt.utilities.statistics import perplexity
+from ynmt.utilities.statistics import Statistics
+from ynmt.utilities.extractor import get_match_item
 
 
 def build_trainer_seq2seq(args,
@@ -59,13 +60,15 @@ class Seq2Seq(Trainer):
                                       accumulate_number,
                                       normalization_type,
                                       device_descriptor)
+        self.statistics = Statistics({'tgt_loss', 'tgt_total_item', 'tgt_correct_item', 'src_token', 'tgt_token'})
 
-    def get_normalization(self, packed_batch):
+    def get_normalization(self, packed_padded_train_batch):
         normalization = 0
-        for batch in packed_batch:
+        for batch in packed_padded_train_batch:
             padded_instances, instance_lengths = batch.target
             if self.normalization_type == 'token':
-                normalization += sum(instance_lengths) - len(instance_lengths)
+                valid_token = padded_instances[1:].ne(self.vocabularies['target'].pad_index)
+                normalization += torch.sum(valid_token)
             elif self.normalization_type == 'sentence':
                 normalization += len(instance_lengths)
 
@@ -82,36 +85,43 @@ class Seq2Seq(Trainer):
             target_lengths = torch.where(target_lengths > target_max_length - 1, target_max_length - 1, target_lengths)
         return target_input, target_output, target_lengths
 
-    def pad_batch(self, batch_iterator):
-        for batch in batch_iterator:
+    def update_statistics(self, loss, prediction, target_output, source_lengths, target_lengths):
+        # Statistic
+        tgt_pad_index = self.vocabularies['target'].pad_index
+        match_item = get_match_item(prediction.max(dim=-1)[1], target_output, tgt_pad_index)
+
+        self.statistics.tgt_loss += loss.item()
+        self.statistics.tgt_total_item += target_output.ne(tgt_pad_index).sum().item()
+        self.statistics.tgt_correct_item += match_item.sum().item()
+        self.statistics.src_token += source_lengths.sum().item()
+        self.statistics.tgt_token += target_lengths.sum().item()
+
+    def pad_batch(self, batches):
+        for batch in batches:
             # source side
-            attributes = batch['source']
+            attributes = batch.source
             pad_index = self.vocabularies['source'].pad_index
             (padded_attributes, attribute_lengths) = pad_attribute(attributes, pad_index)
             padded_attributes = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
             padded_attributes = padded_attributes.transpose(0, 1)
             attribute_lengths = torch.tensor(attribute_lengths, dtype=torch.long, device=self.device_descriptor)
-            batch['source'] = (padded_attributes, attribute_lengths)
+            batch.source = (padded_attributes, attribute_lengths)
 
             # target side
-            attributes = batch['target']
+            attributes = batch.target
             pad_index = self.vocabularies['target'].pad_index
             (padded_attributes, attribute_lengths) = pad_attribute(attributes, pad_index)
             padded_attributes = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
             padded_attributes = padded_attributes.transpose(0, 1)
             attribute_lengths = torch.tensor(attribute_lengths, dtype=torch.long, device=self.device_descriptor)
-            batch['target'] = (padded_attributes, attribute_lengths)
+            batch.target = (padded_attributes, attribute_lengths)
 
             yield batch
 
-    def update_optimizer_learning_rate(self, current_step):
-        self.current_learning_rate = self.scheduler.learning_rate(current_step)
-        for parameter_group in self.optimizer.parameter_groups:
-            parameter_group['lr'] = self.current_learning_rate
-
-    def train(self, train_batch_iterator):
-        normalization = self.get_normalization(train_batch_iterator)
-        for index, batch in enumerate(train_batch_iterator):
+    def train(self, packed_padded_train_batch):
+        normalization = self.get_normalization(packed_padded_train_batch)
+        self.statistics.clear()
+        for index, batch in enumerate(packed_padded_train_batch):
             source, source_lengths = batch.source
             target, target_lengths = batch.target
 
@@ -119,16 +129,16 @@ class Seq2Seq(Trainer):
 
             prediction = self.model(source, target_input, source_lengths, target_lengths)
             loss, criterion_states = self.training_criterion(prediction, target_output, reduction='sum')
-            loss = loss / normalization
-            perp = perplexity(loss)
-            loss_data = loss.item()
-            print(loss_data)
-            print(perp)
-            loss.backward()
-            return loss_data
 
-    def validate(self, valid_batch_iterator):
-        for index, batch in enumerate(valid_batch_iterator):
+            self.update_statistics(loss, prediction, target_output, source_lengths, target_lengths)
+
+            loss /= normalization
+            loss.backward()
+        return self.statistics
+
+    def validate(self, padded_valid_batches):
+        self.statistics.clear()
+        for index, batch in enumerate(padded_valid_batches):
             source, source_lengths = batch.source
             target, target_lengths = batch.target
 
@@ -136,3 +146,7 @@ class Seq2Seq(Trainer):
 
             prediction = self.model(source, target_input, source_lengths, target_lengths)
             loss, criterion_states = self.validation_criterion(prediction, target_output, reduction='sum')
+
+            self.update_statistics(loss, prediction, target_output, source_lengths, target_lengths)
+
+        return self.statistics

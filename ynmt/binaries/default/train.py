@@ -151,6 +151,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         scheduler, optimizer,
         vocabularies,
         device_descriptor,
+        checkpoint,
     )
     logger.info(f'   Trainer \'{args.trainer.name}\' built.')
 
