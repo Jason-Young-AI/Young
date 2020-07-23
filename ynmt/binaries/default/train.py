@@ -47,6 +47,8 @@ def get_device_descriptor(device, process_index):
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
+    fix_random_procedure(args.random_seed)
+
     logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
     visualizer = setup_visualizer(
         args.visualizer.name, args.visualizer.server, args.visualizer.port,
@@ -63,8 +65,6 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     else:
         logger.disabled = True
         visualizer.disabled = True
-
-    fix_random_procedure(args.random_seed)
 
     def batch_list_receiver():
         batches = list()
@@ -182,6 +182,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
+    fix_random_procedure(args.random_seed)
     logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
     rank2index = dict()
     for index, rank in enumerate(ranks):

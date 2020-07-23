@@ -34,8 +34,6 @@ class Iterator(object):
 
     @property
     def instances(self):
-        original_random_state = random.getstate()
-        random.setstate(self.random_state)
         for dataset in load_data_objects(self.dataset_path):
             if self.mode == 'preserve':
                 instances = dataset
@@ -45,8 +43,6 @@ class Iterator(object):
                 instances = shuffled(dataset)
             for instance in instances:
                 yield instance
-
-        random.setstate(original_random_state)
 
     @property
     def batches(self):
@@ -70,6 +66,8 @@ class Iterator(object):
                     current_instances_size = 0
 
     def __iter__(self):
+        original_random_state = random.getstate()
+        random.setstate(self.random_state)
         for time in range(self.traverse_time):
             if time < self.rounds:
                 continue
@@ -82,3 +80,5 @@ class Iterator(object):
                     yield batch
                 self.iterations += 1
             self.rounds += 1
+
+        random.setstate(original_random_state)
