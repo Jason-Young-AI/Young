@@ -13,14 +13,6 @@
 import math
 
 
-def prediction_accuracy(correct_prediction, total_prediction):
-    return correct_prediction / total_prediction
-
-
-def per_prediction_cross_entropy(prediction_cross_entropy, total_prediction):
-    return prediction_cross_entropy / total_prediction
-
-
 def perplexity(per_prediction_cross_entropy):
     per_prediction_cross_entropy = min(per_prediction_cross_entropy, 512)
     return math.pow(2, per_prediction_cross_entropy)
@@ -36,11 +28,38 @@ class Statistics(object):
         for attribute_name in self.structure:
             setattr(self, attribute_name, 0)
 
+    def __len__(self):
+        return len(self.__structure)
+
     def __setitem__(self, attribute_name, attribute_value):
         self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
-        return self.__dict__[attribute_name]
+        if attribute_name in self.__structure:
+            return self.__dict__[attribute_name]
+        else:
+            return 0
+
+    def __contains__(self, attribute_name):
+        return attribute_name in self.structure
+
+    def __iter__(self):
+        for attribute_name in self.structure:
+            yield (attribute_name, self[attribute_name])
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __add__(self, other_statistics):
+        result_structure = self.structure | other_statistics.structure
+        result_statistics = Statistics(result_structure)
+        for attribute_name in result_statistics.structure:
+            result_statistics[attribute_name] = self[attribute_name] + other_statistics[attribute_name]
+        return result_statistics
+
+    def clear(self):
+        for attribute_name in self.structure:
+            self[attribute_name] = 0
 
     @property
     def structure(self):
