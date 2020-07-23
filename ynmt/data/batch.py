@@ -48,9 +48,12 @@ class Batch(object):
     def __getitem__(self, attribute_name):
         return self.__dict__[attribute_name]
 
+    def __contains__(self, attribute_name):
+        return attribute_name in self.structure
+
     def __iter__(self):
         for attribute_name in self.structure:
-            yield self.__dict__[attribute_name]
+            yield (attribute_name, self[attribute_name])
 
     @property
     def structure(self):
