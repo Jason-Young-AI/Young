@@ -21,6 +21,9 @@ class Dataset(object):
     def __getitem__(self, index):
         return self.instances[index]
 
+    def __contains__(self, attribute_name):
+        return attribute_name in self.structure
+
     def __iter__(self):
         for instance in self.instances:
             yield instance
