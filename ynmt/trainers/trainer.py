@@ -79,7 +79,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
     def report(self, name, statistics, time_cost):
-        report_string = f'   {name}@{self.step} - '
+        report_string = f'{name}@{self.step} - '
 
         statistics_list = gather_all(statistics, self.device_descriptor)
         gathered_statistics = sum(statistics_list, Statistics(set()))
@@ -133,8 +133,8 @@ class Trainer(object):
             report_statistics['stat_name'] = stat_value
 
 
-        report_string += f'lr: {self.learning_rate: 6.4g}; '
-        report_string += f'{time_cost: 3.0f}s'
+        report_string += f'lr: {self.learning_rate:g}; '
+        report_string += f'{time_cost:.0f}s'
         self.logger.info(report_string)
         return report_statistics
 
