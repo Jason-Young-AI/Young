@@ -14,6 +14,14 @@ import io
 import os
 import torch
 import pickle
+import tempfile
+
+
+def get_temp_file_path(prefix):
+    sys_temp_dir_path = tempfile.gettempdir()
+    temp_dir_path = tempfile.mkdtemp(dir=sys_temp_dir_path, prefix=prefix)
+    logging_file, logging_path = tempfile.mkstemp(dir=temp_dir_path)
+    return logging_file, logging_path
 
 
 def dumps(data):
