@@ -11,7 +11,6 @@
 
 
 import logging
-import tempfile
 
 
 logging_level = dict(
@@ -41,9 +40,7 @@ def setup_logger(name, logging_path='', logging_level=logging.NOTSET):
     logger.setLevel(logging_level)
 
     if logging_path == '':
-        sys_temp_dir_path = tempfile.gettempdir()
-        temp_dir_path = tempfile.mkdtemp(dir=sys_temp_dir_path, prefix='ynmt-')
-        logging_file, logging_path = tempfile.mkstemp(dir=temp_dir_path)
+        _, logging_path = get_temp_file_path('ynmt-')
         print(f'Logging path is not specified, the following path is used for logging: {logging_path}')
 
     logger.handlers.clear()

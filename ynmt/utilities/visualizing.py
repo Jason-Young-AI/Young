@@ -76,9 +76,7 @@ class Visualizer(object):
             return
         if self.offline == True:
             if self.logging_path is None:
-                sys_temp_dir_path = tempfile.gettempdir()
-                temp_dir_path = tempfile.mkdtemp(dir=sys_temp_dir_path, prefix='ynmt-')
-                _, self.logging_path = tempfile.mkstemp(dir=temp_dir_path)
+                _, self.logging_path = get_temp_file_path('ynmt-')
             self.environment = visdom.Visdom(env=self.name, log_to_filename=self.logging_path, offline=self.offline)
         else:
             self.environment = visdom.Visdom(
