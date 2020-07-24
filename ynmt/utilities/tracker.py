@@ -19,7 +19,7 @@ import torch
 import numpy as np
 
 
-class MemoryTracker(object):
+class Tracker(object):
     def __init__(self, frame, detail=True, verbose=False, device=0, path=''):
         assert inspect.isframe(frame), f'#1 Argument should be a Frame object.'
 
