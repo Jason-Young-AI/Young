@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.pedestal.constant import Constant
+from ynmt.utilities.constant import Constant
 
 
 constant = Constant()

@@ -17,7 +17,7 @@ import visdom
 import tempfile
 
 
-from ynmt.pedestal.constant import Constant
+from ynmt.utilities.constant import Constant
 
 
 visualizer_dict = dict()

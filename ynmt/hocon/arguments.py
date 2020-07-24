@@ -16,7 +16,7 @@ import argparse
 import collections
 
 
-from ynmt.pedestal.constant import Constant
+from ynmt.utilities.constant import Constant
 
 
 class HOCONArguments(object):

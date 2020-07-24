@@ -13,7 +13,7 @@
 import time
 
 
-from ynmt.pedestal.constant import Constant
+from ynmt.utilities.constant import Constant
 
 
 constant = Constant()

@@ -13,6 +13,9 @@
 import logging
 
 
+from ynmt.pedestal.file import get_temp_file_path
+
+
 logging_level = dict(
     INFO = logging.INFO,
     WARN = logging.WARN,
