@@ -40,11 +40,9 @@ class Timer(object):
     @property
     def elapsed_time(self):
         if self._status == Timer.INIT_ST:
-            return
-
+            return 0
         if self._status == Timer.SUSP_ST:
             return self._elapsed_time
-
         if self._status == Timer.ACTI_ST:
             return self._elapsed_time + time.perf_counter() - self._time
 
@@ -63,26 +61,34 @@ class Timer(object):
 
     def restart(self):
         current_time = time.perf_counter()
+
+        status_time = self.elapsed_time
         if self._status != Timer.SUSP_ST:
-            return
+            return status_time
         self._time = current_time
         self._lap_time = current_time
 
         self._status = Timer.ACTI_ST
+        return status_time
 
     def standby(self):
         current_time = time.perf_counter()
+
         if self._status != Timer.ACTI_ST:
-            return
+            return self.elapsed_time
+
         self._elapsed_time += current_time - self._time
         self._elapsed_lap_time += current_time - self._lap_time
+        self._time = current_time
+        self._lap_time = current_time
 
         self._status = Timer.SUSP_ST
+        return self.elapsed_time
 
     def lap(self):
         current_time = time.perf_counter()
         if self._status != Timer.ACTI_ST:
-            return
+            return self._elapsed_lap_time
 
         # like standby
         self._elapsed_lap_time += current_time - self._lap_time
