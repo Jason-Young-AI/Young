@@ -15,10 +15,11 @@ import torch
 
 
 class LearnedPositionalEmbedding(torch.nn.Module):
-    def __init__(self, embedding_number, dimension):
+    def __init__(self, embedding_number, dimension, padding_idx=None):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weight = torch.nn.Parameter(torch.Tensor(embedding_number, dimension))
-        torch.nn.init.normal_(self.weight)
 
-    def forward(self, position):
-        torch.index_select(self.weight, 0, position)
+    def forward(self, x):
+        # x: [* x 1] or [* x Dimension]
+        x = x + self.weight[0:x.size(-2)]
+        return x
