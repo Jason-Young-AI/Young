@@ -31,21 +31,13 @@ def get_model_parameters_number(model):
     return parameters_number
 
 
-def get_position(tensor):
-    size = list(tensor.size())
-    max_position = size[-1]
-    size[-1] = 1
-    repeat_size = tuple(size)
-    position = torch.arange(0, max_position, device=tensor.device)
-    position = position.repeat(repeat_size)
-    return position
+def get_future_mask(tensor):
+    dimension = tensor.size(-1)
+    return torch.triu(torch.ones([dimension, dimension], dtype=torch.bool, device=tensor.device), diagonal=1)
 
 
-def get_attend_mask(attend_emission_length, attend_scope):
-    # attend_scope.size() == [batch_size x attend_scope_length]
-    position = torch.arange(0, attend_scope.size(1), device=attend_scope.device).repeat(attend_scope.size(0), attend_emission_length, 1)
-    mask = torch.ge(position, attend_scope.unsqueeze(1))
-    return mask
+def get_padding_mask(tensor, padding_index):
+    return tensor == padding_index
 
 
 def count_correct_element_number(tensor, reference_tensor):
