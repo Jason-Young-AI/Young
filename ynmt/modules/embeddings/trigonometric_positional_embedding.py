@@ -33,9 +33,7 @@ class TrigonometricPositionalEmbedding(torch.nn.Module):
 
         self.register_buffer('weight', weight)
 
-    def forward(self, position):
-        size = list(position.size())
-        size.append(self.dimension)
-        embedded_position = torch.index_select(self.weight, 0, position.reshape(-1))
-        embedded_position = embedded_position.reshape(size)
-        return embedded_position
+    def forward(self, x):
+        # x: [* x 1] or [* x Dimension]
+        x = x + self.weight[0:x.size(-2)]
+        return x
