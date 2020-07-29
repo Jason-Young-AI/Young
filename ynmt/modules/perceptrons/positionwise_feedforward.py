@@ -17,10 +17,11 @@ class PositionWiseFeedForward(torch.nn.Module):
     def __init__(self, dimension, overparameterized_dimension, dropout_probability):
         super(PositionWiseFeedForward, self).__init__()
         self.dimension = dimension
+
         self.dropout = torch.nn.Dropout(dropout_probability)
 
         self.full_connected_input_to_hidden = torch.nn.Linear(dimension, overparameterized_dimension)
-        self.relu = torch.nn.ReLU()
+        self.relu = torch.nn.ReLU(inplace=True)
         self.full_connected_hidden_to_output = torch.nn.Linear(overparameterized_dimension, dimension)
 
     def forward(self, x):
