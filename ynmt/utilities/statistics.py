@@ -11,11 +11,12 @@
 
 
 import math
+import numbers
 
 
 def perplexity(per_prediction_cross_entropy):
     per_prediction_cross_entropy = min(per_prediction_cross_entropy, 512)
-    return math.pow(2, per_prediction_cross_entropy)
+    return math.exp(per_prediction_cross_entropy)
 
 
 class Statistics(object):
@@ -55,16 +56,90 @@ class Statistics(object):
         for attribute_name in self.structure:
             yield (attribute_name, self[attribute_name])
 
-    def __add__(self, other_statistics):
-        result_structure = self.structure | other_statistics.structure
-        result_statistics = Statistics(result_structure)
-        for attribute_name in result_statistics.structure:
-            result_statistics[attribute_name] = self[attribute_name] + other_statistics[attribute_name]
+    def __mul__(self, other):
+        if isinstance(other, numbers.Number):
+            result_structure = self.structure
+            result_statistics = Statistics(result_structure)
+            for attribute_name in self.structure:
+                result_statistics[attribute_name] = self[attribute_name] * other
+        else:
+            result_structure = self.structure & other.structure
+            result_statistics = Statistics(result_structure)
+            for attribute_name in result_statistics.structure:
+                result_statistics[attribute_name] = self[attribute_name] * other[attribute_name]
         return result_statistics
+
+    def __add__(self, other):
+        if isinstance(other, numbers.Number):
+            result_structure = self.structure
+            result_statistics = Statistics(result_structure)
+            for attribute_name in self.structure:
+                result_statistics[attribute_name] = self[attribute_name] + other
+        else:
+            result_structure = self.structure | other.structure
+            result_statistics = Statistics(result_structure)
+            for attribute_name in result_statistics.structure:
+                result_statistics[attribute_name] = self[attribute_name] + other[attribute_name]
+        return result_statistics
+
+    def __lt__(self, other):
+        if isinstance(other, numbers.Number):
+            for attribute_name in self.structure:
+                if self[attribute_name] >= other:
+                    return False
+        elif isinstance(other, Statistics):
+            if self.structure != other.structure:
+                raise ValueError(f"Structure of the operand does not match!")
+            else:
+                for attribute_name in self.structure:
+                    if self[attribute_name] >= other[attribute_name]:
+                        return False
+        else:
+            raise TypeError(f"Wrong type of {other}")
+        return True
+
+    def __gt__(self, other):
+        if isinstance(other, numbers.Number):
+            for attribute_name in self.structure:
+                if self[attribute_name] <= other:
+                    return False
+        elif isinstance(other, Statistics):
+            if self.structure != other.structure:
+                raise ValueError(f"Structure of the operand does not match!")
+            else:
+                for attribute_name in self.structure:
+                    if self[attribute_name] <= other[attribute_name]:
+                        return False
+        else:
+            raise TypeError(f"Wrong type of {other}")
+        return True
+
+    def __eq__(self, other):
+        if isinstance(other, numbers.Number):
+            for attribute_name in self.structure:
+                if self[attribute_name] != other:
+                    return False
+        elif isinstance(other, Statistics):
+            if self.structure != other.structure:
+                raise ValueError(f"Structure of the operand does not match!")
+            else:
+                for attribute_name in self.structure:
+                    if self[attribute_name] != other[attribute_name]:
+                        return False
+        else:
+            raise TypeError(f"Wrong type of {other}")
+        return True
 
     def clear(self):
         for attribute_name in self.structure:
             self[attribute_name] = 0
+
+    def max(self):
+        max_attribute_value = float('-inf')
+        for attribute_name in self.structure:
+            if self[attribute_name] > max_attribute_value:
+                max_attribute_value = self[attribute_name]
+        return max_attribute_value
 
     @property
     def structure(self):
