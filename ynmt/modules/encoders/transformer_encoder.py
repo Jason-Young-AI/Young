@@ -10,13 +10,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import math
 import torch
 
 
 from ynmt.modules.embeddings import TrigonometricPositionalEmbedding
 from ynmt.modules.attentions import MultiHeadAttention
 from ynmt.modules.perceptrons import PositionWiseFeedForward
-from ynmt.utilities.extractor import get_position, get_attend_mask
 
 
 class TransformerEncoder(torch.nn.Module):
@@ -30,7 +30,8 @@ class TransformerEncoder(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout_probability)
 
         self.embed_token = torch.nn.Embedding(len(vocabulary), dimension, padding_idx=vocabulary.pad_index)
-        self.embed_position = TrigonometricPositionalEmbedding(2048, dimension, padding_idx=vocabulary.pad_index)
+        self.embed_position = TrigonometricPositionalEmbedding(5000, dimension, padding_idx=vocabulary.pad_index)
+
         self.transformer_encoder_layers = torch.nn.ModuleList(
             [
                 TransformerEncoderLayer(
@@ -41,27 +42,25 @@ class TransformerEncoder(torch.nn.Module):
                 for _ in range(layer_number)
             ]
         )
+        self.final_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
-    def embed(self, source):
-        token = source
-        position = get_position(source.transpose(0, 1)).transpose(0, 1)
-        token_embedding = self.embed_token(token)
-        position_embedding = self.embed_position(position)
-        embedding = token_embedding + position_embedding
-        embedding = self.dropout(embedding)
-        return embedding
+    def embed(self, x):
+        x = self.embed_token(x)
+        x = x * math.sqrt(self.dimension)
+        x = self.embed_position(x)
+        x = self.dropout(x)
+        return x
 
-    def forward(self, source, source_length):
-        # calculate attention weight mask
-        x = self.embed(source)
+    def forward(self, source, attention_weight_mask):
+        # source: [Batch_Size x Source_Length],
+        # attention_weight_mask: [Batch_Size x Source_Length x Source_Length]
 
-        source_max_length = torch.max(source_length)
-        source_attend_scope = source_length.unsqueeze(1).repeat(1, source_max_length)
-        attention_weight_mask = get_attend_mask(source_max_length, source_attend_scope)
+        x = self.embed(source) # [Batch_Size x Source_Length x Dimension]
 
         for index, transformer_encoder_layer in enumerate(self.transformer_encoder_layers):
-            x, attention_weight = transformer_encoder_layer(x, attention_weight_mask)
+            x = transformer_encoder_layer(x, attention_weight_mask)
 
+        x = self.final_normalization(x)
         return x
 
 
@@ -71,21 +70,23 @@ class TransformerEncoderLayer(torch.nn.Module):
                  normalize_position):
         super(TransformerEncoderLayer, self).__init__()
         assert normalize_position in {'before', 'after'}, 'Only support \'before\' and \'after\' normalize position'
-        self.normalize_position = normalize_position
+        self.dimension = dimension
 
         self.dropout = torch.nn.Dropout(dropout_probability)
 
+        self.normalize_position = normalize_position
+
         self.self_attention = MultiHeadAttention(dimension, head_number, attention_dropout_probability)
         self.self_attention_normalization = torch.nn.LayerNorm(dimension)
+
         self.positionwise_feedforward = PositionWiseFeedForward(dimension, feedforward_dimension, feedforward_dropout_probability)
         self.positionwise_feedforward_normalization = torch.nn.LayerNorm(dimension)
 
-
-    def forward(self, x, x_mask):
+    def forward(self, x, attention_weight_mask):
         # self attention sublayer
         residual = x
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'before')
-        x, attention_weight = self.self_attention(query=x, key=x, value=x, attention_weight_mask=x_mask)
+        x, _ = self.self_attention(query=x, key=x, value=x, attention_weight_mask=attention_weight_mask)
         x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'after')
@@ -98,8 +99,7 @@ class TransformerEncoderLayer(torch.nn.Module):
         x = x + residual
         x = layer_normalize(x, self.positionwise_feedforward_normalization, self.normalize_position == 'after')
 
-        return x, attention_weight
-
+        return x
 
 
 def layer_normalize(x, normalization, do):

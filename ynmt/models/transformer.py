@@ -69,11 +69,11 @@ class Transformer(torch.nn.Module):
         self.decoder = decoder
         self.generator = generator
 
-    def forward(self, source, target, source_length, target_length):
-        codes = self.encoder(source, source_length)
+    def forward(self, source, target, source_mask, target_mask):
+        codes = self.encoder(source, source_mask)
 
-        hidden, _, _ = self.decoder(codes, source_length, target, target_length)
+        hidden, cross_attention_weight = self.decoder(target, codes, target_mask, source_mask)
 
         prediction = self.generator(hidden)
 
-        return prediction
+        return prediction, cross_attention_weight

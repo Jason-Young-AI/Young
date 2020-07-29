@@ -34,13 +34,15 @@ class MultiHeadAttention(torch.nn.Module):
         self.attention_linear = torch.nn.Linear(self.dimension, self.head_number * self.head_dimension)
 
     def forward(self, query, key, value, attention_weight_mask):
-        query_length, batch_size, dimension = query.size()
+        # query, key, value: [Batch_Size x X_Length x Head_Number * Head_Dimension]
+
+        batch_size = query.size(0)
 
         def split(x):
-            return x.reshape(-1, batch_size, self.head_number, self.head_dimension).transpose(0, 1).transpose(1, 2)
+            return x.reshape(batch_size, -1, self.head_number, self.head_dimension).transpose(1, 2)
 
         def merge(x):
-            return x.transpose(1, 2).transpose(0, 1).reshape(-1, batch_size, self.head_number * self.head_dimension)
+            return x.transpose(1, 2).reshape(batch_size, -1, self.head_number * self.head_dimension)
 
         query = self.query_linear(query)
         key = self.key_linear(key)
@@ -58,6 +60,6 @@ class MultiHeadAttention(torch.nn.Module):
         attention = merge(attention)
         attention = self.attention_linear(attention)
 
-        # attention: [query_length x batch_size x dimension]
-        # attention_weight: [batch_size x head_number x query_length x key_length]
+        # attention: [Query_Length x Batch_Size x Dimension]
+        # attention_weight: [Batch_Size x Head_Number x Query_Length x Key_Length]
         return attention, attention_weight
