@@ -12,11 +12,10 @@
 
 import os
 import json
-import pickle
 import visdom
-import tempfile
 
 
+from ynmt.utilities.file import get_temp_file_path
 from ynmt.utilities.constant import Constant
 
 
@@ -76,7 +75,7 @@ class Visualizer(object):
             return
         if self.offline == True:
             if self.logging_path is None:
-                _, self.logging_path = get_temp_file_path('ynmt-')
+                _, self.logging_path = get_temp_file_path('ynmt-visualize')
             self.environment = visdom.Visdom(env=self.name, log_to_filename=self.logging_path, offline=self.offline)
         else:
             self.environment = visdom.Visdom(
@@ -129,6 +128,8 @@ class Visualizer(object):
             self.environment.delete_env(self.name)
 
     def add_window(self, window_name):
+        if self.disabled:
+            return
         self.windows.add(window_name)
         with open(self.logging_win_path, 'a', encoding='utf-8') as logging_win_file:
             line = window_name + '\n'
