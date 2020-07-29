@@ -13,7 +13,7 @@
 import logging
 
 
-from ynmt.pedestal.file import get_temp_file_path
+from ynmt.utilities.file import get_temp_file_path
 
 
 logging_level = dict(
@@ -43,7 +43,7 @@ def setup_logger(name, logging_path='', logging_level=logging.NOTSET):
     logger.setLevel(logging_level)
 
     if logging_path == '':
-        _, logging_path = get_temp_file_path('ynmt-')
+        _, logging_path = get_temp_file_path('ynmt-log-')
         print(f'Logging path is not specified, the following path is used for logging: {logging_path}')
 
     logger.handlers.clear()
