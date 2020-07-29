@@ -11,77 +11,104 @@
 
 
 import gc
+import torch
+import numpy
 import pynvml
 import inspect
 import datetime
 
-import torch
-import numpy as np
+
+from ynmt.utilities.file import get_temp_file_path
+
+
+byte_size_dict = {
+    torch.bool: 1,
+    torch.uint8: 1,
+    torch.int8: 1,
+    torch.int16: 2,
+    torch.int32: 4,
+    torch.int64: 8,
+    torch.float16: 2,
+    torch.float32: 4,
+    torch.float64: 8,
+}
+
 
 
 class Tracker(object):
-    def __init__(self, frame, detail=True, verbose=False, device=0, path=''):
-        assert inspect.isframe(frame), f'#1 Argument should be a Frame object.'
+    def __init__(self, path='', verbose=False):
+        self.path = path
+        if self.path == '':
+            self.path = get_temp_file_path('ynmt-track-')
 
-        self.frame = frame
-        self.detail = detail
         self.verbose = verbose
-        self.device = device
 
-        self.last_tensor_sizes = set()
-        self.gpu_profile_path = path + f'{datetime.datetime.now():%d-%b-%y-%H:%M:%S}-gpu_mem_track.txt'
-        self.begin = True
+        self.last_tensor_infos = set()
 
-        self.func_name = frame.f_code.co_name
-        self.filename = frame.f_globals["__file__"]
-        if (self.filename.endswith(".pyc") or
-                self.filename.endswith(".pyo")):
-            self.filename = self.filename[:-1]
-        self.module_name = self.frame.f_globals["__name__"]
-        self.curr_line = self.frame.f_lineno
+    def setup(self, frame):
+        assert inspect.isframe(frame), f'#1 Argument should be a Frame object.'
+        self.frame = frame
+
+    @property
+    def file_name(self):
+        file_name = self.frame.f_globals["__file__"]
+        if file_name.endswith(".pyc") or file_name.endswith(".pyo"):
+            file_name = file_name[:-1]
+        return file_name
+
+    @property
+    def module_name(self):
+        return self.frame.f_globals["__name__"]
+
+    @property
+    def method_name(self):
+        return self.frame.f_code.co_name
+
+    @property
+    def line_number(self):
+        return self.frame.f_lineno
 
     def get_tensors(self):
-        for obj in gc.get_objects():
+        for tracked_object in gc.get_objects():
             try:
-                if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                    tensor = obj
+                if (torch.is_tensor(tracked_object) or
+                    (hasattr(tracked_object, 'data') and torch.is_tensor(tracked_object.data))
+                ):
+                    if tracked_object.is_cuda:
+                        yield tracked_object
                 else:
                     continue
-                if tensor.is_cuda:
-                    yield tensor
             except Exception as e:
                 if self.verbose:
                     print('A trivial exception occured: {}'.format(e))
 
-    def track(self):
-        """
-        Track the GPU memory usage
-        """
+    def track(self, message='', device=0):
+        assert self.frame is not None, f'Setup Tracker First!'
         pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(self.device)
+
+        handle = pynvml.nvmlDeviceGetHandleByIndex(device)
         meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        self.curr_line = self.frame.f_lineno
-        where_str = self.module_name + ' ' + self.func_name + ':' + ' line ' + str(self.curr_line)
 
-        with open(self.gpu_profile_fn, 'a+') as f:
+        position = f'{self.module_name} {self.method_name}: line {self.line_number}'
 
-            if self.begin:
-                f.write(f"GPU Memory Track | {datetime.datetime.now():%d-%b-%y-%H:%M:%S} |"
-                        f" Total Used Memory:{meminfo.used/1000**2:<7.1f}Mb\n\n")
-                self.begin = False
+        with open(self.path, 'a+') as f:
+            f.write(f'Message: {message}\n')
+            tensor_sizes = [tensor.size() for tensor in self.get_tensors()]
+            tensor_infos = set()
+            for tensor in self.get_tensors():
+                tensor_type = type(tensor)
+                tensor_shape = tuple(tensor.size())
+                tensor_number = tensor_sizes.count(tensor.size())
+                tensor_memory = numpy.prod(numpy.array(tensor.size())) * byte_size_dict[tensor.dtype]/1024/1024
+                tensor_infos.add((tensor_type, tensor_shape, tensor_number, tensor_memory))
 
-            if self.print_detail is True:
-                ts_list = [tensor.size() for tensor in self.get_tensors()]
-                new_tensor_sizes = {(type(x), tuple(x.size()), ts_list.count(x.size()), np.prod(np.array(x.size()))*4/1000**2)
-                                    for x in self.get_tensors()}
-                for t, s, n, m in new_tensor_sizes - self.last_tensor_sizes:
-                    f.write(f'+ | {str(n)} * Size:{str(s):<20} | Memory: {str(m*n)[:6]} M | {str(t):<20}\n')
-                for t, s, n, m in self.last_tensor_sizes - new_tensor_sizes:
-                    f.write(f'- | {str(n)} * Size:{str(s):<20} | Memory: {str(m*n)[:6]} M | {str(t):<20} \n')
-                self.last_tensor_sizes = new_tensor_sizes
+            for t, s, n, m in tensor_infos - self.last_tensor_infos:
+                f.write(f'+ | {str(n)} * Size:{str(s):<20} | Memory: {str(m*n)[:6]} M | {str(t):<20}\n')
+            for t, s, n, m in self.last_tensor_infos - tensor_infos:
+                f.write(f'- | {str(n)} * Size:{str(s):<20} | Memory: {str(m*n)[:6]} M | {str(t):<20}\n')
+            self.last_tensor_infos = tensor_infos
 
-            f.write(f"\nAt {where_str:<50}"
+            f.write(f"\nAt {position:<50}"
                     f"Total Used Memory:{meminfo.used/1000**2:<7.1f}Mb\n\n")
 
         pynvml.nvmlShutdown()
-
