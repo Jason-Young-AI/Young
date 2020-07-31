@@ -24,7 +24,7 @@ def pack_batch(batch_iterator, pack_size):
 
 
 class Batch(object):
-    def __init__(self, structure, instances):
+    def __init__(self, structure, instances=list()):
         assert isinstance(structure, set), 'Type of structure should be set().'
         for attribute_name in structure:
             assert isinstance(attribute_name, str), 'Type of {attribute_name} in structure should be str().'
