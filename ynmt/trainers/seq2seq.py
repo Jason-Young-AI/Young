@@ -15,9 +15,9 @@ import torch
 
 from ynmt.trainers import Trainer
 from ynmt.data.attribute import pad_attribute
+from ynmt.data.batch import Batch
 from ynmt.utilities.distributed import gather_all
-from ynmt.utilities.statistics import Statistics
-from ynmt.utilities.extractor import get_match_item
+from ynmt.utilities.extractor import get_padding_mask, get_future_mask
 
 
 def build_trainer_seq2seq(args,
@@ -33,7 +33,6 @@ def build_trainer_seq2seq(args,
         tester,
         scheduler, optimizer,
         vocabularies,
-        args.accumulate_number,
         args.normalization_type,
         device_descritpor,
     )
@@ -48,7 +47,6 @@ class Seq2Seq(Trainer):
                  tester,
                  scheduler, optimizer,
                  vocabularies,
-                 accumulate_number,
                  normalization_type,
                  device_descriptor):
         super(Seq2Seq, self).__init__(name,
@@ -57,94 +55,75 @@ class Seq2Seq(Trainer):
                                       tester,
                                       optimizer, scheduler,
                                       vocabularies,
-                                      accumulate_number,
                                       normalization_type,
                                       device_descriptor)
-        self.statistics = Statistics({'tgt_loss', 'tgt_total_item', 'tgt_correct_item'})
 
-    def get_normalization(self, packed_padded_train_batch):
+    def customize_accum_batch(self, accum_batch):
+        padded_batches = list()
         normalization = 0
-        for batch in packed_padded_train_batch:
-            padded_instances, instance_lengths = batch.target
-            if self.normalization_type == 'token':
-                valid_token = padded_instances[1:].ne(self.vocabularies['target'].pad_index)
-                normalization += torch.sum(valid_token)
-            elif self.normalization_type == 'sentence':
-                normalization += len(instance_lengths)
-
-        normalization_list = gather_all(normalization, self.device_descriptor)
-        normalization = sum(normalization_list)
-        return normalization
-
-    def get_decoder_io(self, target, target_lengths):
-        target_input = target[:-1]
-        target_output = target[1:]
-
-        target_max_length = torch.max(target_lengths)
-        if not (target_max_length < len(target)):
-            target_lengths = torch.where(target_lengths > target_max_length - 1, target_max_length - 1, target_lengths)
-        return target_input, target_output, target_lengths
-
-    def update_statistics(self, loss, prediction, target_output):
-        # Statistic
-        tgt_pad_index = self.vocabularies['target'].pad_index
-        match_item = get_match_item(prediction.max(dim=-1)[1], target_output, tgt_pad_index)
-
-        self.statistics.tgt_loss += loss.item()
-        self.statistics.tgt_total_item += target_output.ne(tgt_pad_index).sum().item()
-        self.statistics.tgt_correct_item += match_item.sum().item()
-
-    def pad_batch(self, batches):
-        for batch in batches:
+        for batch in accum_batch:
+            padded_batch = Batch(set(['source', 'target']))
             # source side
-            attributes = batch.source
-            pad_index = self.vocabularies['source'].pad_index
-            (padded_attributes, attribute_lengths) = pad_attribute(attributes, pad_index)
-            padded_attributes = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
-            padded_attributes = padded_attributes.transpose(0, 1)
-            attribute_lengths = torch.tensor(attribute_lengths, dtype=torch.long, device=self.device_descriptor)
-            batch.source = (padded_attributes, attribute_lengths)
+            padded_attributes, _ = pad_attribute(batch.source, self.vocabularies['source'].pad_index)
+            padded_batch.source = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
 
             # target side
-            attributes = batch.target
-            pad_index = self.vocabularies['target'].pad_index
-            (padded_attributes, attribute_lengths) = pad_attribute(attributes, pad_index)
-            padded_attributes = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
-            padded_attributes = padded_attributes.transpose(0, 1)
-            attribute_lengths = torch.tensor(attribute_lengths, dtype=torch.long, device=self.device_descriptor)
-            batch.target = (padded_attributes, attribute_lengths)
+            padded_attributes, _ = pad_attribute(batch.target, self.vocabularies['target'].pad_index)
+            padded_batch.target = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
 
-            yield batch
+            # accumulate batch
+            padded_batches.append(padded_batch)
 
-    def train(self, packed_padded_train_batch):
-        normalization = self.get_normalization(packed_padded_train_batch)
-        self.statistics.clear()
-        for index, batch in enumerate(packed_padded_train_batch):
-            source, source_lengths = batch.source
-            target, target_lengths = batch.target
+            # Calculate normalization
+            if self.normalization_type == 'token':
+                valid_token_number = padded_batch.target[:, 1:].ne(self.vocabularies['target'].pad_index).sum().item()
+                normalization += valid_token_number
+            elif self.normalization_type == 'sentence':
+                normalization += len(padded_batch.target)
 
-            target_input, target_output, target_lengths = self.get_decoder_io(target, target_lengths)
+        return padded_batches, normalization
 
-            prediction = self.model(source, target_input, source_lengths, target_lengths)
-            loss, criterion_states = self.training_criterion(prediction, target_output, reduction='sum')
+    def train_accum_batch(self, customized_accum_train_batch):
+        padded_train_batches, normalization = customized_accum_train_batch
+        bkn = normalization
+        normalization = sum(gather_all(normalization, self.device_descriptor))
+        self.train_statistics.clear()
+        for batch in padded_train_batches:
 
-            self.update_statistics(loss, prediction, target_output)
+            target_input = batch.target[:, :-1]
+            target_output = batch.target[:, 1:]
+
+            target_pad_index = self.vocabularies['target'].pad_index
+            source_pad_index = self.vocabularies['source'].pad_index
+            source_mask = get_padding_mask(batch.source, source_pad_index).unsqueeze(1)
+            target_mask = get_padding_mask(target_input, target_pad_index).unsqueeze(1)
+            target_mask = target_mask | get_future_mask(target_input).unsqueeze(0)
+
+            logits, attention_weight = self.model(batch.source, target_input, source_mask, target_mask)
+
+            loss = self.training_criterion(logits, target_output)
+            self.train_statistics += self.training_criterion.statistics
 
             loss /= normalization
             loss.backward()
-        return self.statistics
 
-    def validate(self, padded_valid_batches):
-        self.statistics.clear()
-        for index, batch in enumerate(padded_valid_batches):
-            source, source_lengths = batch.source
-            target, target_lengths = batch.target
+        return
 
-            target_input, target_output, target_lengths = self.get_decoder_io(target, target_lengths)
+    def validate_accum_batch(self, customized_accum_valid_batch):
+        padded_valid_batches, normalization = customized_accum_valid_batch
+        for batch in padded_valid_batches:
 
-            prediction = self.model(source, target_input, source_lengths, target_lengths)
-            loss, criterion_states = self.validation_criterion(prediction, target_output, reduction='sum')
+            target_input = batch.target[:, :-1]
+            target_output = batch.target[:, 1:]
 
-            self.update_statistics(loss, prediction, target_output)
+            target_pad_index = self.vocabularies['target'].pad_index
+            source_pad_index = self.vocabularies['source'].pad_index
+            source_mask = get_padding_mask(batch.source, source_pad_index).unsqueeze(1)
+            target_mask = get_padding_mask(target_input, target_pad_index).unsqueeze(1)
+            target_mask = target_mask | get_future_mask(target_input).unsqueeze(0)
 
-        return self.statistics
+            logits, attention_weight = self.model(batch.source, target_input, source_mask, target_mask)
+            loss = self.validation_criterion(logits, target_output)
+            self.valid_statistics += self.validation_criterion.statistics
+
+        return
