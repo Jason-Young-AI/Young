@@ -31,7 +31,7 @@ class MultiHeadAttention(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(dropout_probability)
 
-        self.attention_linear = torch.nn.Linear(self.dimension, self.head_number * self.head_dimension)
+        self.attention_linear = torch.nn.Linear(self.dimension, self.dimension)
 
     def forward(self, query, key, value, attention_weight_mask):
         # query, key, value: [Batch_Size x X_Length x Head_Number * Head_Dimension]
