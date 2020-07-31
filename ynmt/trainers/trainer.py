@@ -31,7 +31,6 @@ class Trainer(object):
                  tester,
                  optimizer, scheduler,
                  vocabularies,
-                 accumulate_number,
                  normalization_type,
                  device_descriptor):
         self.name = name
@@ -42,14 +41,16 @@ class Trainer(object):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.vocabularies = vocabularies
-        self.accumulate_number = accumulate_number
         self.normalization_type = normalization_type
         self.device_descriptor = device_descriptor
         self.world_size = torch.distributed.get_world_size()
         self.rank = torch.distributed.get_rank()
 
+        self.train_statistics = Statistics(set())
+        self.valid_statistics = Statistics(set())
         self.step = 0
         self.timer = Timer()
+        self.branch_timer = Timer()
         self.logger = get_logger('train')
         self.visualizer = get_visualizer(self.name)
 
@@ -65,7 +66,7 @@ class Trainer(object):
         for name, parameter in self.model.named_parameters():
             if parameter.requires_grad and parameter.is_leaf:
                 assert parameter.grad is not None, f'Parameter {name}: No gradient!'
-                gradients.append(parameter.grad)
+                gradients.append(parameter.grad.data)
         reduce_all(gradients, self.device_descriptor)
 
         # Update learning rate
@@ -94,8 +95,6 @@ class Trainer(object):
             if loss_match_result is not None:
                 loss_name_prefix = loss_match_result.group(1)
                 loss = stat_value
-                report_string += f'{loss_name_prefix}loss: {loss:5.2f}; '
-                report_statistics[f'{loss_name_prefix}loss'] = loss
 
                 total_item_name = f'{loss_name_prefix}total_item'
                 if total_item_name in gathered_statistics:
@@ -115,8 +114,8 @@ class Trainer(object):
 
                 total_item_name = f'{correct_item_name_prefix}total_item'
                 if total_item_name in gathered_statistics:
-                    accuracy = correct_item / gathered_statistics[total_item_name]
-                    report_string += f'{correct_item_name_prefix}acc: {accuracy:4.2f}; '
+                    accuracy = correct_item / gathered_statistics[total_item_name] * 100
+                    report_string += f'{correct_item_name_prefix}acc: {accuracy:4.2f}%; '
                     report_statistics[f'{correct_item_name_prefix}acc'] = accuracy
 
                 continue
@@ -130,7 +129,7 @@ class Trainer(object):
             else:
                 report_string += f'{stat_name}: {stat_value}; '
 
-            report_statistics['stat_name'] = stat_value
+            report_statistics[f'{stat_name}'] = stat_value
 
 
         report_string += f'lr: {self.learning_rate:g}; '
@@ -146,74 +145,83 @@ class Trainer(object):
             stat_name = name + '_' + stat_name
             self.visualizer.visualize('line', stat_name, stat_name, opts=options, X=[self.step], Y=[stat_value], update="append")
 
-    def launch(self, train_batches, training_period, valid_batches, validation_period,
+    def launch(self,
+               accum_train_batches, training_period,
+               accum_valid_batches, validation_period,
                checkpoint_directory, checkpoint_name, checkpoint_keep_number):
 
+        self.train_statistics.clear()
         self.model.train(True)
         self.optimizer.zero_grad()
 
-        padded_train_batches = self.pad_batch(train_batches)
-        padded_valid_batches = self.pad_batch(valid_batches)
-        packed_padded_train_batches = pack_batch(padded_train_batches, self.accumulate_number)
-
         self.timer.launch()
 
-        total_statistics = Statistics(set())
-        for index, packed_padded_train_batch in enumerate(packed_padded_train_batches):
-            # train
-            start_time = self.timer.elapsed_time
-            self.timer.restart()
-            train_statistics = self.train(packed_padded_train_batch)
-            self.timer.standby()
-            end_time = self.timer.elapsed_time
-            self.update()
-            train_report_statistics = self.report('Train', train_statistics, end_time - start_time)
-            self.visualize('Train', train_report_statistics)
-            total_statistics += train_statistics
+        for index, accum_train_batch in enumerate(accum_train_batches):
+            if index < self.step:
+                continue
 
-            # save checkpoint
-            if self.step % training_period == 0:
-                checkpoint = dict(
-                    step = self.step,
-                    model = self.model.state_dict(),
-                    optimizer = self.optimizer.state_dict(),
-                    scheduler = self.scheduler.state_dict()
-                )
-                self.logger.info(f'Saving checkpoint ... ')
-                start_time = self.timer.elapsed_time
-                self.timer.restart()
-                save_checkpoint(checkpoint_directory, checkpoint_name, checkpoint, checkpoint_keep_number)
-                self.timer.standby()
-                end_time = self.timer.elapsed_time
-                self.logger.info(
-                    f'Saved checkpoint to \'{checkpoint_directory}\' at {self.step} steps. '
-                    f'(Cost: {end_time - start_time:6.0f}s)'
-                )
+            # train
+            self.train_accum_batch(self.customize_accum_batch(accum_train_batch))
+            self.update()
+            train_report_statistics = self.report('Train', self.train_statistics, self.timer.elapsed_time)
+            self.visualize('Train', train_report_statistics)
 
             # validate
             if self.step % validation_period == 0:
-                self.model.train(False)
-                with torch.no_grad():
-                    self.logger.info(f'Validating ... ')
-                    start_time = self.timer.elapsed_time
-                    self.timer.restart()
-                    validate_status = self.validate(padded_valid_batches)
-                    self.timer.standby()
-                    end_time = self.timer.elapsed_time
-                    valid_report_statistics = self.report('Validate', validate_status, end_time - start_time)
-                    self.visualize('Validate', valid_report_statistics)
-                self.model.train(True)
+                self.timer.standby()
+                self.validate(accum_valid_batches)
+                self.timer.restart()
 
-        self.report('Final', total_statistics, self.timer.elapsed_time)
+            # save
+            if self.step % training_period == 0:
+                self.timer.standby()
+                self.save(checkpoint_directory, checkpoint_name, checkpoint_keep_number)
+                self.timer.restart()
+        return
 
-    def pad_batch(self, batches):
-        # batches is a generator
+    def save(self, checkpoint_directory, checkpoint_name, checkpoint_keep_number):
+        self.branch_timer.reset()
+        self.branch_timer.launch()
+
+        if self.rank == 0:
+            checkpoint = dict(
+                step = self.step,
+                model = self.model.state_dict(),
+                optimizer = self.optimizer.state_dict(),
+                scheduler = self.scheduler.state_dict()
+            )
+            self.logger.info(f'Saving checkpoint ... ')
+            save_checkpoint(checkpoint_directory, checkpoint_name, checkpoint, checkpoint_keep_number)
+            self.logger.info(
+                f'Saved checkpoint to \'{checkpoint_directory}\' at {self.step} steps. '
+                f'(Cost: {self.branch_timer.elapsed_time:2.0f}s)'
+            )
+
+        return
+
+    def validate(self, accum_valid_batches):
+        self.branch_timer.reset()
+        self.branch_timer.launch()
+
+        self.valid_statistics.clear()
+        self.model.train(False)
+        with torch.no_grad():
+            for accum_valid_batch in accum_valid_batches:
+                self.validate_accum_batch(self.customize_accum_batch(accum_valid_batch))
+        self.model.train(True)
+        valid_report_statistics = self.report('Validate', self.valid_statistics, self.branch_timer.elapsed_time)
+        self.visualize('Validate', valid_report_statistics)
+
+        return
+
+    def customize_accum_batch(self, accum_batch):
+        # batch is a list
         raise NotImplementedError
 
-    def train(self, packed_padded_train_batch):
-        # packed_padded_train_batch is a list
+    def train_accum_batch(self, customized_accum_train_batch):
+        # padded_train_batch is a user-definded type
         raise NotImplementedError
 
-    def validate(self, padded_valid_batches):
-        # padded_valid_batches is a generator
+    def validate_accum_batch(self, customized_accum_valid_batch):
+        # padded_valid_batch is a user-definded type
         raise NotImplementedError
