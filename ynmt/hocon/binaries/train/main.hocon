@@ -1,11 +1,11 @@
 data = {
-    name = "default_en-de"
+    name = "en-ro"
     directory = "Data"
     sides = ["source", "target"]
     primary_side = "source"
     languages = {
         source = "en"
-        target = "de"
+        target = "ro"
     }
     filter = {
         sides = ["source", "target"]
@@ -21,14 +21,16 @@ visualizer = {
     port = 6789
     username = "Guest_Visdom"
     password = "Happy_Visual_001"
-    logging_path = ${binaries.train.trainer}"_visdom"
-    offline = True
+    logging_path = ${binaries.train.trainer}"_"${binaries.train.data.name}"_visdom"
+    offline = False
     overwrite = True
 }
 process_control = {
     iteration = {
-        traverse_time = 160
+        traverse_time = 20
+        accumulate_number = 2
         mode = "shuffle"
+        sort_order = ${binaries.train.data.sides}
     }
     distribution = {
         device = "GPU"
@@ -51,6 +53,9 @@ process_control = {
     checkpoint = {
         directory = "Checkpoint"
         keep_number = 100
+        reset_scheduler = False
+        reset_optimizer = False
+        reset_step = False
     }
 }
 model = "transformer"
@@ -63,4 +68,4 @@ criterion = {
     validation  = "cross_entropy"
 }
 random_seed = 1234
-logging_path = "test.log"
+logging_path = "train_"${binaries.train.data.name}"_"${binaries.train.trainer}"_"${binaries.train.model}".log"

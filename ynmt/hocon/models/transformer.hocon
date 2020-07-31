@@ -1,7 +1,7 @@
 name = "transformer"
 dimension = 512
-share_enc_dec_embeddings = False
-share_dec_io_embeddings = False
+share_enc_dec_embeddings = True
+share_dec_io_embeddings = True
 encoder = {
     layer_number = 6
     dimension = 512

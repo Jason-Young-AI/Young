@@ -1,34 +1,32 @@
 data = {
-    name = "default_en-de"
+    name = "en-ro"
     directory = "Data"
     sides = ["source", "target"]
     primary_side = "source"
     languages = {
         source = "en"
-        target = "de"
+        target = "ro"
     }
     number_worker = 16
     number_slice = 4
 }
 corpus = {
     train_paths = {
-        source = "Corpora/train.en-de.en"
-        target = "Corpora/train.en-de.de"
+        source = "Corpora/train.en-ro.en"
+        target = "Corpora/train.en-ro.ro"
     }
     valid_paths = {
-        source = "Corpora/valid.en-de.en"
-        target = "Corpora/valid.en-de.de"
+        source = "Corpora/valid.en-ro.en"
+        target = "Corpora/valid.en-ro.ro"
     }
 }
 vocabulary = {
     groups = [
-        ["source"],
-        ["target"],
+        ["source", "target"],
     ]
     sizes = [
-        32768,
         32768,
     ]
 }
 random_seed = 1234
-logging_path = ""
+logging_path = "preprocess_"${binaries.preprocess.data.name}".log"
