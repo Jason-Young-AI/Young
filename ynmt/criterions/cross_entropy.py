@@ -25,11 +25,23 @@ def build_criterion_cross_entropy(args, vocabulary):
 
 
 class CrossEntropy(Criterion):
-    def compute_loss(self, predicted_distribution, ground_truth, mask):
-        log_predicted_distribution = -torch.log(predicted_distribution)
+    def __init__(self, label_number, ignore_index):
+        super(CrossEntropy, self).__init__(label_number, ignore_index)
+        self.nll_loss = torch.nn.NLLLoss(ignore_index=self.ignore_index, reduction='sum')
 
-        # cross entropy between 'one-hot encoded distribution' & 'predicted_distribution'
-        loss = torch.gather(log_predicted_distribution, dim=-1, index=ground_truth)
-        loss.masked_fill_(mask, 0)
+    def compute_loss(self, logits, ground_truth, valid_mask):
+        # logits: [Batch_Size * Target_Length x Label_Number]
+        # ground_truth: [Batch_Size * Target_Length]
+        log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
 
-        return loss, None
+        loss = self.nll_loss(log_probs, ground_truth)
+
+        correct_item = log_probs.max(1)[1].eq(ground_truth).masked_select(valid_mask).sum().item()
+        total_item = valid_mask.sum().item()
+
+        # For average Loss & Accuracy & PPL
+        self.statistics['loss'] = loss.item()
+        self.statistics['correct_item'] = correct_item
+        self.statistics['total_item'] = total_item
+
+        return loss

@@ -11,8 +11,8 @@
 
 
 from ynmt.criterions.criterion import Criterion
-from ynmt.criterions.label_smoothing_cross_entropy import build_criterion_label_smoothing_cross_entropy
 from ynmt.criterions.cross_entropy import build_criterion_cross_entropy
+from ynmt.criterions.label_smoothing_cross_entropy import build_criterion_label_smoothing_cross_entropy
 
 
 def build_criterion(args, vocabulary):
