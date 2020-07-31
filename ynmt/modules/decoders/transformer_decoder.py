@@ -79,13 +79,13 @@ class TransformerDecoderLayer(torch.nn.Module):
         self.normalize_position = normalize_position
 
         self.self_attention = MultiHeadAttention(dimension, head_number, attention_dropout_probability)
-        self.self_attention_normalization = torch.nn.LayerNorm(dimension)
+        self.self_attention_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
         self.cross_attention = MultiHeadAttention(dimension, head_number, attention_dropout_probability)
-        self.cross_attention_normalization = torch.nn.LayerNorm(dimension)
+        self.cross_attention_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
         self.positionwise_feedforward = PositionWiseFeedForward(dimension, feedforward_dimension, feedforward_dropout_probability)
-        self.positionwise_feedforward_normalization = torch.nn.LayerNorm(dimension)
+        self.positionwise_feedforward_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
     def forward(self, x, codes, self_attention_weight_mask, cross_attention_weight_mask):
         # self attention sublayer
