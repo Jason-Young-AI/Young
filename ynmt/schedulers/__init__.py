@@ -14,10 +14,10 @@ from ynmt.schedulers.scheduler import Scheduler
 from ynmt.schedulers.noam import build_scheduler_noam
 
 
-def build_scheduler(args, model, checkpoint):
+def build_scheduler(args, model, checkpoint, reset_scheduler):
     scheduler = globals()[f'build_scheduler_{args.name}'](args, model)
 
-    if checkpoint is not None and not args.reset_scheduler:
+    if checkpoint is not None and not reset_scheduler:
         scheduler.load_state_dict(checkpoint['scheduler'])
 
     return scheduler
