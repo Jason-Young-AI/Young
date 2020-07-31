@@ -13,12 +13,13 @@
 import os
 import torch
 import importlib
+import pickle
 
 
 import ynmt.hocon.arguments as harg
 
 
-from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator
+from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator, InstanceComparator
 from ynmt.data.iterator import Iterator
 from ynmt.utilities.file import load_data_objects
 from ynmt.utilities.random import fix_random_procedure
@@ -134,12 +135,12 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     # Build Scheduler
     logger.info(f' * Building Learning Rate Scheduler ...')
-    scheduler = build_scheduler(args.scheduler, model, checkpoint)
+    scheduler = build_scheduler(args.scheduler, model, checkpoint, args.process_control.checkpoint.reset_scheduler)
     logger.info(f'   Scheduler \'{args.scheduler.name}\' built.')
 
     # Build Optimizer
     logger.info(f' * Building Optimizer ...')
-    optimizer = build_optimizer(args.optimizer, model, checkpoint)
+    optimizer = build_optimizer(args.optimizer, model, checkpoint, args.process_control.checkpoint.reset_optimizer)
     logger.info(f'   Optimizer \'{args.optimizer.name}\' built.')
 
     # Build Trainer
@@ -152,6 +153,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         vocabularies,
         device_descriptor,
         checkpoint,
+        args.process_control.checkpoint.reset_step,
     )
     logger.info(f'   Trainer \'{args.trainer.name}\' built.')
 
@@ -205,17 +207,12 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         validation_dataset_path,
         args.process_control.validation.batch_size,
         InstanceSizeCalculator(
-            args.data.primary_side,
             args.process_control.validation.batch_type
         ),
-        InstanceFilter(
+        instance_filter=InstanceFilter(
             {side: getattr(args.data.filter, side) for side in args.data.filter.sides}
         ) if args.data.filter.validation else None,
     )
-    validation_dataset_size = 0
-    for partial_validation_dataset in load_data_objects(validation_dataset_path):
-        validation_dataset_size += len(partial_validation_dataset)
-    logger.info(f' = [Producer] = Validation Dataset contains {validation_dataset_size} Instances.')
     batch_sender(validation_batch_generator)
 
     training_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.train.dataset')
@@ -223,19 +220,16 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         training_dataset_path,
         args.process_control.training.batch_size,
         InstanceSizeCalculator(
-            args.data.primary_side,
             args.process_control.training.batch_type
         ),
-        InstanceFilter(
+        instance_filter=InstanceFilter(
             {side: getattr(args.data.filter, side) for side in args.data.filter.sides}
         ) if args.data.filter.training else None,
-        args.process_control.iteration.traverse_time,
-        args.process_control.iteration.mode
+        instance_comparator=InstanceComparator(args.process_control.iteration.sort_order),
+        traverse_time=args.process_control.iteration.traverse_time,
+        accumulate_number=args.process_control.iteration.accumulate_number,
+        mode=args.process_control.iteration.mode
     )
-    training_dataset_size = 0
-    for partial_training_dataset in load_data_objects(training_dataset_path):
-        training_dataset_size += len(partial_training_dataset)
-    logger.info(f' = [Producer] = Training Dataset contains {training_dataset_size} Instances.')
     batch_sender(training_batch_generator)
 
 
@@ -308,10 +302,9 @@ def train(args):
 
     for consumer in consumers:
         consumer.join()
-    producer.join()
+    producer.terminate()
 
     distributed_manager.close()
-
     logger.info(' $ Finished !')
 
 
