@@ -21,7 +21,7 @@ from ynmt.utilities.statistics import Statistics
 
 
 class Iterator(object):
-    def __init__(self, dataset_path, batch_size, instance_size_calculator, instance_filter=None, instance_comparator=InstanceComparator(), traverse_time=1, mode='preserve'):
+    def __init__(self, dataset_path, batch_size, instance_size_calculator, instance_filter=None, instance_comparator=InstanceComparator(), traverse_time=1, accumulate_number=1, mode='preserve'):
         assert mode in {'preserve', 'ascend', 'descend', 'shuffle'}, "Wrong choice of order."
 
         self.dataset_path = dataset_path
@@ -30,9 +30,8 @@ class Iterator(object):
         self.instance_filter = instance_filter
         self.instance_comparator = instance_comparator
         self.traverse_time = traverse_time
+        self.accumulate_number = accumulate_number
         self.mode = mode
-        self.iterations = 0
-        self.rounds = 0
         self.random_state = random.getstate()
 
     @property
@@ -52,6 +51,7 @@ class Iterator(object):
 
     @property
     def batches(self):
+        accum_batches = list()
         current_instances = list()
         max_size = 0
         for instance in self.instances:
@@ -64,28 +64,25 @@ class Iterator(object):
                 continue
             else:
                 if total_size > self.batch_size:
-                    yield Batch(instance.structure, current_instances[:-1])
+                    accum_batches.append(Batch(instance.structure, current_instances[:-1]))
                     current_instances = current_instances[-1:]
                     max_size = self.instance_size_calculator(current_instances[-1]).max()
                 else:
-                    yield Batch(instance.structure, current_instances)
+                    accum_batches.append(Batch(instance.structure, current_instances))
                     current_instances = list()
                     max_size = 0
+            if len(accum_batches) == self.accumulate_number:
+                yield accum_batches
+                accum_batches = list()
 
     def __iter__(self):
         original_random_state = random.getstate()
         random.setstate(self.random_state)
-        for time in range(self.traverse_time):
-            if time < self.rounds:
-                continue
-            for index, batch in enumerate(self.batches):
-                if index < self.iterations:
-                    continue
+        for _ in range(self.traverse_time):
+            for batch in self.batches:
                 if len(batch) == 0:
                     raise ValueError('Batch size too small, so batching no instance, please size up!')
                 else:
                     yield batch
-                self.iterations += 1
-            self.rounds += 1
 
         random.setstate(original_random_state)
