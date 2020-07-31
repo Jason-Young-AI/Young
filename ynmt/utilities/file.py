@@ -83,7 +83,7 @@ def get_coedges(file_path, edges, cofile_path):
 
 def file_slice_edges(file_path, number_slice):
     file_size = os.path.getsize(file_path)
-    quotient, remainder = divmod(file_size,  number_slice)
+    quotient, remainder = divmod(file_size, number_slice)
     edges = list()
     current_start = 0
     current_end = 0

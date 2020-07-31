@@ -18,7 +18,7 @@ import torch
 def find_all_checkpoints(checkpoint_directory, name):
     checkpoint_filename_pattern = re.compile(f'{name}_step_(\d+)\.cp')
     checkpoints = dict()
-    for content_name in os.listdir():
+    for content_name in os.listdir(checkpoint_directory):
         content_path = os.path.join(checkpoint_directory, content_name)
         if os.path.isfile(content_path):
             result = checkpoint_filename_pattern.fullmatch(content_name)
@@ -43,7 +43,7 @@ def load_checkpoint(checkpoint_directory, name):
         latest_checkpoint_path = checkpoints[max_step]
         if os.path.isfile(latest_checkpoint_path):
             latest_checkpoint = torch.load(latest_checkpoint_path, map_location=torch.device('cpu'))
-            assert step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
+            assert max_step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
         else:
             latest_checkpoint = None
 
@@ -57,7 +57,7 @@ def save_checkpoint(checkpoint_directory, name, checkpoint, keep_number):
     torch.save(checkpoint, checkpoint_path)
 
     checkpoints = find_all_checkpoints(checkpoint_directory, name)
-    steps = list(checkpoints.keys()).sort(reverse=True)
+    steps = sorted(list(checkpoints.keys()), reverse=True)
     for step in steps[keep_number:]:
         remove_checkpoint(checkpoints[step])
 

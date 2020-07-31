@@ -32,7 +32,7 @@ def gather_all(data, device_descriptor, data_size=8 * 1024):
     serialized_data_size = len(serialized_data)
     assert serialized_data_size <= data_size, f'Data size exceeds data_size: {data_size}'
 
-    quotient, remainder = divmod(serialized_data_size,  256)
+    quotient, remainder = divmod(serialized_data_size, 256)
     distributed_tensor[0] = quotient
     distributed_tensor[1] = remainder
     distributed_tensor[2:2+serialized_data_size] = torch.tensor(list(serialized_data), dtype=torch.uint8, device=device_descriptor)
