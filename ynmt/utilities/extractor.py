@@ -13,12 +13,6 @@
 import torch
 
 
-def get_match_item(x, pattern, invalid_item):
-    valid_mask = pattern.ne(invalid_item)
-    match_item = x.eq(pattern).masked_select(valid_mask)
-    return match_item
-
-
 def get_model_parameters_number(model):
     parameters_number = dict()
     for name, parameters in model.named_parameters():
