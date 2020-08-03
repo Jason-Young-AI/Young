@@ -43,7 +43,7 @@ class LabelSmoothingCrossEntropy(Criterion):
         # ground_truth: [Batch_Size * Target_Length]
         log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
 
-        real_probs = self.smoothed_distribution.repeat(logits.size(0), 1).to(logits.device)
+        real_probs = self.smoothed_distribution.repeat(logits.size(0), 1)
         real_probs.scatter_(1, ground_truth.unsqueeze(1), 1 - self.label_smoothing_percent)
         real_probs.masked_fill_(~valid_mask.unsqueeze(1), 0)
         loss = self.kl_div_loss(log_probs, real_probs)
