@@ -22,7 +22,7 @@ from ynmt.data.vocabulary import Vocabulary
 from ynmt.data.instance import Instance
 from ynmt.data.dataset import Dataset
 from ynmt.utilities.file import file_slice_edges, get_coedges, save_data_objects
-from ynmt.utilities.line import numericalize
+from ynmt.utilities.line import tokenize, numericalize
 from ynmt.utilities.random import fix_random_procedure
 from ynmt.utilities.logging import setup_logger, get_logger, logging_level
 
@@ -97,7 +97,7 @@ def build_instances(primary_side, sides, paths, vocabularies, corpora_edge):
     while files[primary_side].tell() < primary_corpus_edge_end:
         instance = Instance(structure)
         for side in sides:
-            instance[side] = numericalize(files[side].readline(), vocabularies[side])
+            instance[side] = numericalize(tokenize(files[side].readline()), vocabularies[side])
         instances.append(instance)
 
     for side in sides:
