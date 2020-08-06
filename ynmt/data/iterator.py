@@ -14,7 +14,7 @@ import random
 
 
 from ynmt.data.batch import Batch
-from ynmt.data.instance import InstanceComparator
+from ynmt.data.instance import Instance, InstanceComparator
 from ynmt.utilities.file import load_data_objects
 from ynmt.utilities.random import shuffled
 from ynmt.utilities.statistics import Statistics
@@ -86,3 +86,70 @@ class Iterator(object):
                     yield batch
 
         random.setstate(original_random_state)
+
+
+class RawTextIterator(object):
+    def __init__(self, raw_text_paths, instance_handlers, batch_size, instance_size_calculator):
+        assert isinstance(raw_text_paths, dict), f'raw_text_paths must be a dict like: key->value as name->path'
+        assert isinstance(instance_handlers, dict), f'instance_handlers must be a dict like: key->value as name->instance_handler'
+        self.raw_text_paths = raw_text_paths
+        self.instance_handlers = instance_handlers
+        self.batch_size = batch_size
+        self.instance_size_calculator = instance_size_calculator
+
+    @property
+    def instances(self):
+        raw_text_files = dict()
+        for name, raw_text_path in self.raw_text_paths.items():
+            raw_text_files[name] = open(raw_text_path, 'r', encoding='utf-8')
+
+        # if one of the raw_text_files touch the End Of File, stop read others.
+        touch_eof = False
+        while not touch_eof:
+            instance = Instance(set())
+            for name, raw_text_file in raw_text_files.items():
+                raw_text_line = raw_text_file.readline()
+                if raw_text_line == '':
+                    touch_eof = True
+                    break
+
+                raw_text_line = raw_text_line.strip()
+
+                if name in self.instance_handlers:
+                    raw_text_line = self.instance_handlers[name](raw_text_line)
+
+                instance[name] = raw_text_line
+
+            if not touch_eof:
+                yield instance
+
+        for name, raw_text_file in raw_text_files.items():
+            raw_text_file.close()
+
+    @property
+    def batches(self):
+        current_instances = list()
+        max_size = 0
+
+        for instance in self.instances:
+            current_instances.append(instance)
+            max_size = max(max_size, self.instance_size_calculator(instance).max())
+            total_size = len(current_instances) * max_size
+            if total_size < self.batch_size:
+                continue
+            else:
+                if total_size > self.batch_size:
+                    yield Batch(instance.structure, current_instances[:-1])
+                    current_instances = current_instances[-1:]
+                    max_size = self.instance_size_calculator(current_instances[-1]).max()
+                else:
+                    yield Batch(instance.structure, current_instances)
+                    current_instances = list()
+                    max_size = 0
+
+    def __iter__(self):
+        for batch in self.batches:
+            if len(batch) == 0:
+                raise ValueError('Batch size too small, so batching no instance, please size up!')
+            else:
+                yield batch
