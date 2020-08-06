@@ -17,6 +17,62 @@ import threading
 from ynmt.utilities.file import dumps, loads
 
 
+def get_device_descriptor(device, index):
+    if device == 'CPU':
+        device_name = 'cpu'
+
+    if device == 'GPU':
+        device_name = f'cuda:{index}'
+
+    return torch.device(device_name)
+
+
+def distributed_data_sender(data_generator, data_queues, workshop_semaphore, world_size, ranks):
+    rank2index = dict()
+    for index, rank in enumerate(ranks):
+        rank2index[rank] = index
+
+    for index, data in enumerate(data_generator):
+            rank = index % world_size
+            if rank not in set(ranks):
+                continue
+            else:
+                workshop_semaphore.acquire()
+                data_queues[rank2index[rank]].put(data)
+
+    for data_queue in data_queues:
+        data_queue.put(None)
+
+
+def distributed_data_receiver(receiver_type, data_queue, workshop_semaphore):
+    assert receiver_type in {'list', 'generator'}
+    if receiver_type == 'list':
+        return distributed_data_receive_as_list(data_queue, workshop_semaphore)
+    if receiver_type == 'generator':
+        return distributed_data_receive_as_generator(data_queue, workshop_semaphore)
+
+
+def distributed_data_receive_as_list(data_queue, workshop_semaphore):
+    data_list = list()
+    while True:
+        data = data_queue.get()
+        if data is None:
+            return data_list
+        else:
+            workshop_semaphore.release()
+            data_list.append(data)
+
+
+def distributed_data_receive_as_generator(data_queue, workshop_semaphore):
+    while True:
+        data = data_queue.get()
+        if data is None:
+            return
+        else:
+            workshop_semaphore.release()
+            yield data
+
+
 def gather_all(data, device_descriptor, data_size=8 * 1024):
     data_size_limit = 256 * 256
     assert data_size < data_size_limit, 'Error: data_size exceeds data_size_limit'

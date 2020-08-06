@@ -27,7 +27,7 @@ from ynmt.utilities.logging import setup_logger, get_logger, logging_level
 from ynmt.utilities.visualizing import setup_visualizer, get_visualizer
 from ynmt.utilities.extractor import get_model_parameters_number
 from ynmt.utilities.checkpoint import load_checkpoint
-from ynmt.utilities.distributed import DistributedManager, distributed_main
+from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
 from ynmt.models import build_model
 from ynmt.criterions import build_criterion
@@ -35,16 +35,6 @@ from ynmt.testers import build_tester
 from ynmt.schedulers import build_scheduler
 from ynmt.optimizers import build_optimizer
 from ynmt.trainers import build_trainer
-
-
-def get_device_descriptor(device, process_index):
-    if device == 'CPU':
-        device_name = 'cpu'
-
-    if device == 'GPU':
-        device_name = f'cuda:{process_index}'
-
-    return torch.device(device_name)
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
@@ -67,27 +57,8 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.disabled = True
         visualizer.disabled = True
 
-    def batch_list_receiver():
-        batches = list()
-        while True:
-            batch = batch_queue.get()
-            if batch is None:
-                return batches
-            else:
-                workshop_semaphore.release()
-                batches.append(batch)
-
-    def batch_generator_receiver():
-        while True:
-            batch = batch_queue.get()
-            if batch is None:
-                return
-            else:
-                workshop_semaphore.release()
-                yield batch
-
-    valid_batches = batch_list_receiver()
-    train_batches = batch_generator_receiver()
+    valid_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
+    train_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
 
     vocabularies_path = os.path.join(args.data.directory, f'{args.data.name}.vocab')
     vocabularies = list(load_data_objects(vocabularies_path))[0]
@@ -186,21 +157,6 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
     fix_random_procedure(args.random_seed)
     logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
-    rank2index = dict()
-    for index, rank in enumerate(ranks):
-        rank2index[rank] = index
-
-    def batch_sender(batch_generator):
-        for index, batch in enumerate(batch_generator):
-            rank = index % world_size
-            if rank not in set(ranks):
-                continue
-            else:
-                workshop_semaphore.acquire()
-                batch_queues[rank2index[rank]].put(batch)
-
-        for batch_queue in batch_queues:
-            batch_queue.put(None)
 
     validation_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.valid.dataset')
     validation_batch_generator = Iterator(
@@ -213,7 +169,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
             {side: getattr(args.data.filter, side) for side in args.data.filter.sides}
         ) if args.data.filter.validation else None,
     )
-    batch_sender(validation_batch_generator)
+    distributed_data_sender(validation_batch_generator, batch_queues, workshop_semaphore, world_size, ranks)
 
     training_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.train.dataset')
     training_batch_generator = Iterator(
@@ -230,7 +186,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         accumulate_number=args.process_control.iteration.accumulate_number,
         mode=args.process_control.iteration.mode
     )
-    batch_sender(training_batch_generator)
+    distributed_data_sender(training_batch_generator, batch_queues, workshop_semaphore, world_size, ranks)
 
 
 def train(args):
