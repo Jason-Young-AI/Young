@@ -10,9 +10,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
-def numericalize(string_line, vocabulary):
+def tokenize(string):
+    token_list = string.strip().split()
+    return token_list
+
+
+def numericalize(token_list, vocabulary):
     bos_index = vocabulary.bos_index
     eos_index = vocabulary.eos_index
-    token_list = string_line.strip().split()
     index_list = [ bos_index ] + [ vocabulary.index(token) for token in token_list ] + [ eos_index ]
     return index_list
