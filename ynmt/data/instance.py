@@ -27,17 +27,19 @@ class InstanceFilter(object):
 
 
 class InstanceSizeCalculator(object):
-    def __init__(self, calculate_type):
-        assert calculate_type in {'token', 'sentence'}, "Wrong choice of calculator type."
+    def __init__(self, calculation_attrs, calculation_type):
+        assert isinstance(calculation_attrs, set), f"#1 arg {calculation_attrs} should be a Set()."
+        assert calculation_type in {'token', 'sentence'}, f"Wrong choice of calculator type."
 
-        self.calculate_type = calculate_type
+        self.calculation_attrs = calculation_attrs
+        self.calculation_type = calculation_type
 
     def __call__(self, instance):
         attribute_sizes = Statistics(set())
-        for attribute_name in instance.structure:
-            if self.calculate_type == 'sentence':
+        for attribute_name in self.calculation_attrs:
+            if self.calculation_type == 'sentence':
                 attribute_size = 1
-            if self.calculate_type == 'token':
+            if self.calculation_type == 'token':
                 attribute_size = len(instance[attribute_name])
 
             attribute_sizes[attribute_name] = attribute_size
@@ -47,7 +49,7 @@ class InstanceSizeCalculator(object):
 
 class InstanceComparator(object):
     def __init__(self, comparision_attrs=[]):
-        assert isinstance(comparision_attrs, list), "#1 arg {comparision_attributes} should be a List()."
+        assert isinstance(comparision_attrs, list), f"#1 arg {comparision_attrs} should be a List()."
         self.comparision_attrs = set()
         self.comparision_order = list()
 
@@ -75,9 +77,9 @@ class InstanceComparator(object):
 
 class Instance(object):
     def __init__(self, structure):
-        assert isinstance(structure, set), 'Type of structure should be set().'
+        assert isinstance(structure, set), f'Type of structure should be set().'
         for attribute_name in structure:
-            assert isinstance(attribute_name, str), 'Type of {attribute_name} in structure should be str().'
+            assert isinstance(attribute_name, str), f'Type of {attribute_name} in structure should be str().'
 
         self.__structure = structure
         for attribute_name in self.__structure:
@@ -87,6 +89,8 @@ class Instance(object):
         return len(self.__structure)
 
     def __setitem__(self, attribute_name, attribute_value):
+        if attribute_name not in self.__structure:
+            self.__structure.add(attribute_name)
         self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
