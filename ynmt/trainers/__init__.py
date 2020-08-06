@@ -15,7 +15,8 @@ from ynmt.trainers.seq2seq import build_trainer_seq2seq
 
 
 def build_trainer(args,
-                  model, training_criterion, validation_criterion,
+                  model, model_settings,
+                  training_criterion, validation_criterion,
                   tester,
                   scheduler, optimizer,
                   vocabularies,
@@ -23,7 +24,8 @@ def build_trainer(args,
                   checkpoint, reset_step):
     trainer = globals()[f'build_trainer_{args.name}'](
         args,
-        model, training_criterion, validation_criterion,
+        model, model_settings,
+        training_criterion, validation_criterion,
         tester,
         scheduler, optimizer,
         vocabularies,

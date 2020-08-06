@@ -21,14 +21,15 @@ from ynmt.utilities.extractor import get_padding_mask, get_future_mask
 
 
 def build_trainer_seq2seq(args,
-                          model, training_criterion, validation_criterion,
+                          model, model_settings,
+                          training_criterion, validation_criterion,
                           tester,
                           scheduler, optimizer,
                           vocabularies,
                           device_descritpor):
     seq2seq = Seq2Seq(
         args.name,
-        model,
+        model, model_settings,
         training_criterion, validation_criterion,
         tester,
         scheduler, optimizer,
@@ -42,7 +43,7 @@ def build_trainer_seq2seq(args,
 class Seq2Seq(Trainer):
     def __init__(self,
                  name,
-                 model,
+                 model, model_settings,
                  training_criterion, validation_criterion,
                  tester,
                  scheduler, optimizer,
@@ -50,7 +51,7 @@ class Seq2Seq(Trainer):
                  normalization_type,
                  device_descriptor):
         super(Seq2Seq, self).__init__(name,
-                                      model,
+                                      model, model_settings,
                                       training_criterion, validation_criterion,
                                       tester,
                                       optimizer, scheduler,

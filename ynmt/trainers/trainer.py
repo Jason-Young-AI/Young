@@ -26,7 +26,7 @@ from ynmt.utilities.visualizing import get_visualizer
 class Trainer(object):
     def __init__(self,
                  name,
-                 model,
+                 model, model_settings,
                  training_criterion, validation_criterion,
                  tester,
                  optimizer, scheduler,
@@ -35,6 +35,7 @@ class Trainer(object):
                  device_descriptor):
         self.name = name
         self.model = model
+        self.model_settings = model_settings
         self.training_criterion = training_criterion
         self.validation_criterion = validation_criterion
         self.tester = tester
@@ -188,7 +189,9 @@ class Trainer(object):
                 step = self.step,
                 model = self.model.state_dict(),
                 optimizer = self.optimizer.state_dict(),
-                scheduler = self.scheduler.state_dict()
+                scheduler = self.scheduler.state_dict(),
+                vocabularies = self.vocabularies,
+                model_settings = self.model_settings
             )
             self.logger.info(f'Saving checkpoint ... ')
             save_checkpoint(checkpoint_directory, checkpoint_name, checkpoint, checkpoint_keep_number)
