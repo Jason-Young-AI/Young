@@ -43,6 +43,8 @@ class Batch(object):
         return len(self.__structure)
 
     def __setitem__(self, attribute_name, attribute_value):
+        if attribute_name not in self.__structure:
+            self.__structure.add(attribute_name)
         self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
