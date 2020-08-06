@@ -60,11 +60,6 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     valid_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
     train_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
 
-    vocabularies_path = os.path.join(args.data.directory, f'{args.data.name}.vocab')
-    vocabularies = list(load_data_objects(vocabularies_path))[0]
-    vocabulary_sizes = {side: len(vocabulary) for side, vocabulary in vocabularies.items()}
-    logger.info(f' * Loaded Vocabularies: {vocabulary_sizes}')
-
     logger.info(f' * Checking already exist checkpoint ...')
     checkpoint = load_checkpoint(args.process_control.checkpoint.directory, args.data.name)
     if checkpoint is None:
@@ -73,6 +68,12 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.info(f'   Loaded latest checkpoint from \'{args.process_control.checkpoint.directory}\' at {checkpoint["step"]} steps')
 
     ## Building Something
+
+    # Build Vocabularies
+    vocabularies_path = os.path.join(args.data.directory, f'{args.data.name}.vocab')
+    vocabularies = list(load_data_objects(vocabularies_path))[0]
+    vocabulary_sizes = {side: len(vocabulary) for side, vocabulary in vocabularies.items()}
+    logger.info(f' * Loaded Vocabularies: {vocabulary_sizes}')
 
     # Build Model
     logger.info(f' * Building Model ...')
@@ -118,7 +119,8 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f' * Building Trainer ...')
     trainer = build_trainer(
         args.trainer,
-        model, training_criterion, validation_criterion,
+        model, args.model,
+        training_criterion, validation_criterion,
         tester,
         scheduler, optimizer,
         vocabularies,
@@ -163,6 +165,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         validation_dataset_path,
         args.process_control.validation.batch_size,
         InstanceSizeCalculator(
+            set(args.data.sides),
             args.process_control.validation.batch_type
         ),
         instance_filter=InstanceFilter(
@@ -176,6 +179,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         training_dataset_path,
         args.process_control.training.batch_size,
         InstanceSizeCalculator(
+            set(args.data.sides),
             args.process_control.training.batch_type
         ),
         instance_filter=InstanceFilter(
@@ -210,7 +214,6 @@ def train(args):
 
     torch.multiprocessing.set_start_method('spawn')
     distributed_manager = DistributedManager()
-    distributed_manager.open()
     workshop_semaphore = torch.multiprocessing.Semaphore(world_size * workshop_capacity)
 
     consumers = list()
@@ -258,9 +261,8 @@ def train(args):
 
     for consumer in consumers:
         consumer.join()
-    producer.terminate()
+    producer.join()
 
-    distributed_manager.close()
     logger.info(' $ Finished !')
 
 

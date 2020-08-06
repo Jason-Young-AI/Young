@@ -184,16 +184,15 @@ class DistributedManager(object):
         self.exception_catcher_thread = threading.Thread(
             target=self.exception_catcher,
             args=(),
+            daemon=True
         )
+        self.exception_catcher_thread.start()
 
     def manage(self, process):
         self.processes.append(process)
 
     def open(self):
         self.exception_catcher_thread.start()
-
-    def close(self):
-        self.exception_catcher_thread.join()
 
     def exception_catcher(self):
         pid, exception = self.exception_queue.get()
