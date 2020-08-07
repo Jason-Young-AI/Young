@@ -14,7 +14,6 @@ import re
 import torch
 
 
-from ynmt.data.batch import pack_batch
 from ynmt.utilities.timer import Timer
 from ynmt.utilities.logging import get_logger
 from ynmt.utilities.statistics import Statistics, perplexity
