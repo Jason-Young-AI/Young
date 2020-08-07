@@ -75,6 +75,9 @@ class Iterator(object):
                 yield accum_batches
                 accum_batches = list()
 
+        if len(current_instances) != 0:
+            yield Batch(current_instances[-1].structure, current_instances)
+
     def __iter__(self):
         original_random_state = random.getstate()
         random.setstate(self.random_state)
@@ -146,6 +149,8 @@ class RawTextIterator(object):
                     yield Batch(instance.structure, current_instances)
                     current_instances = list()
                     max_size = 0
+        if len(current_instances) != 0:
+            yield Batch(current_instances[-1].structure, current_instances)
 
     def __iter__(self):
         for batch in self.batches:
