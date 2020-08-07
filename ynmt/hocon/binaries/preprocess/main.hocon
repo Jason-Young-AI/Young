@@ -2,7 +2,6 @@ data = {
     name = "en-ro"
     directory = "Data"
     sides = ["source", "target"]
-    primary_side = "source"
     languages = {
         source = "en"
         target = "ro"

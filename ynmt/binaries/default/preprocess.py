@@ -127,8 +127,9 @@ def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
     return partial_dataset
 
 
-def build_dataset(dataset_type, primary_side, sides, paths, vocabularies,
+def build_dataset(dataset_type, sides, paths, vocabularies,
                   number_worker=1, number_slice=1):
+    primary_side = sides[0]
     logger = get_logger('preprocess')
     primary_path = getattr(paths, primary_side)
     primary_edges = file_slice_edges(primary_path, number_worker * number_slice)
@@ -186,7 +187,6 @@ def preprocess(args):
     logger.info('Building training dataset ...')
     training_dataset = build_dataset(
         'train',
-        args.data.primary_side,
         args.data.sides,
         args.corpus.train_paths,
         vocabularies,
@@ -202,7 +202,6 @@ def preprocess(args):
     logger.info('Building validation dataset ...')
     validation_dataset = build_dataset(
         'valid',
-        args.data.primary_side,
         args.data.sides,
         args.corpus.valid_paths,
         vocabularies,
