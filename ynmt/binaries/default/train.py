@@ -208,7 +208,7 @@ def train(args):
         logger.info(' * Distribution on CPU ...')
     if device == 'GPU':
         logger.info(' * Distribution on GPU ...')
-        assert torch.cuda.device_count() > number_process, f'Insufficient GPU!'
+        assert torch.cuda.device_count() >= number_process, f'Insufficient GPU!'
     logger.info(f'   Master - tcp://{master_ip}:{master_port}')
     logger.info(f'   Ranks({ranks}) in World({world_size})')
 
