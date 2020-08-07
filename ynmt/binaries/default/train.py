@@ -92,17 +92,17 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     # Build Criterion (Training)
     logger.info(f' * Building Training Criterion ...')
-    training_criterion = build_criterion(args.criterion.training, vocabularies['target'], device_descriptor)
+    training_criterion = build_criterion(args.criterion.training, vocabularies[args.data.output_side], device_descriptor)
     logger.info(f'   Training Criterion \'{args.criterion.training.name}\' built.')
 
     # Build Criterion (Validation)
     logger.info(f' * Building Validation Criterion ...')
-    validation_criterion = build_criterion(args.criterion.validation, vocabularies['target'], device_descriptor)
+    validation_criterion = build_criterion(args.criterion.validation, vocabularies[args.data.output_side], device_descriptor)
     logger.info(f'   Validation Criterion \'{args.criterion.validation.name}\' built.')
 
     # Build Tester
     logger.info(f' * Building Tester ...')
-    tester = build_tester(args.tester, vocabularies['target'])
+    tester = build_tester(args.tester, vocabularies[args.data.output_side])
     logger.info(f'   Tester \'{args.tester.name}\' built.')
 
     # Build Scheduler
