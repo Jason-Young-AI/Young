@@ -33,33 +33,41 @@ def find_all_checkpoints(checkpoint_directory, name):
     return checkpoints
 
 
-def load_checkpoint(checkpoint_directory, name):
-    checkpoints = find_all_checkpoints(checkpoint_directory, name)
+def load_checkpoint(checkpoint_directory_or_path, name):
+    if os.path.isfile(checkpoint_directory_or_path):
+        checkpoint = torch.load(checkpoint_directory_or_path, map_location=torch.device('cpu'))
 
-    if len(checkpoints) == 0:
-        latest_checkpoint = None
-    else:
-        max_step = max(checkpoints.keys())
-        latest_checkpoint_path = checkpoints[max_step]
-        if os.path.isfile(latest_checkpoint_path):
-            latest_checkpoint = torch.load(latest_checkpoint_path, map_location=torch.device('cpu'))
-            assert max_step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
-        else:
+        return checkpoint
+    elif os.path.isdir(checkpoint_directory_or_path):
+        checkpoints = find_all_checkpoints(checkpoint_directory_or_path, name)
+
+        if len(checkpoints) == 0:
             latest_checkpoint = None
+        else:
+            max_step = max(checkpoints.keys())
+            latest_checkpoint_path = checkpoints[max_step]
+            if os.path.isfile(latest_checkpoint_path):
+                latest_checkpoint = torch.load(latest_checkpoint_path, map_location=torch.device('cpu'))
+                assert max_step == latest_checkpoint['step'], 'An Error occurred when loading checkpoint.'
+            else:
+                latest_checkpoint = None
 
-    return latest_checkpoint
+        return latest_checkpoint
 
 
-def save_checkpoint(checkpoint_directory, name, checkpoint, keep_number):
-    step = checkpoint['step']
-    checkpoint_filename = f'{name}_step_{step}.cp'
-    checkpoint_path = os.path.join(checkpoint_directory, checkpoint_filename)
-    torch.save(checkpoint, checkpoint_path)
+def save_checkpoint(checkpoint, checkpoint_directory_or_path, name, keep_number):
+    if os.path.isfile(checkpoint_directory_or_path):
+        torch.save(checkpoint, checkpoint_directory_or_path)
+    elif os.path.isdir(checkpoint_directory_or_path):
+        step = checkpoint['step']
+        checkpoint_filename = f'{name}_step_{step}.cp'
+        checkpoint_path = os.path.join(checkpoint_directory_or_path, checkpoint_filename)
+        torch.save(checkpoint, checkpoint_path)
 
-    checkpoints = find_all_checkpoints(checkpoint_directory, name)
-    steps = sorted(list(checkpoints.keys()), reverse=True)
-    for step in steps[keep_number:]:
-        remove_checkpoint(checkpoints[step])
+        checkpoints = find_all_checkpoints(checkpoint_directory_or_path, name)
+        steps = sorted(list(checkpoints.keys()), reverse=True)
+        for step in steps[keep_number:]:
+            remove_checkpoint(checkpoints[step])
 
 
 def remove_checkpoint(checkpoint_path):
