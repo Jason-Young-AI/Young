@@ -111,7 +111,6 @@ class Seq2Seq(Trainer):
 
     def train_accum_batch(self, customized_accum_train_batch):
         padded_train_batches, normalization = customized_accum_train_batch
-        bkn = normalization
         normalization = sum(gather_all(normalization, self.device_descriptor))
         self.train_statistics.clear()
         for batch in padded_train_batches:
