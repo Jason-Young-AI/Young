@@ -27,7 +27,7 @@ def get_device_descriptor(device, index):
     return torch.device(device_name)
 
 
-def distributed_data_sender(data_generator, data_queues, workshop_semaphore, world_size, ranks):
+def distributed_data_sender(data_generator, data_queues, workshop_semaphore, world_size, ranks, order_index=False):
     rank2index = dict()
     for index, rank in enumerate(ranks):
         rank2index[rank] = index
@@ -38,6 +38,8 @@ def distributed_data_sender(data_generator, data_queues, workshop_semaphore, wor
                 continue
             else:
                 workshop_semaphore.acquire()
+                if order_index:
+                    data = (index, data)
                 data_queues[rank2index[rank]].put(data)
 
     for data_queue in data_queues:
