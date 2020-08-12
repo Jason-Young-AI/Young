@@ -13,19 +13,6 @@
 import torch
 
 
-from ynmt.data.attribute import pad_attribute
-
-
-def pad_batch(batch, vocabularies, attribute_names, device_descriptor):
-    assert isinstance(attribute_names, set), f'#2 argument : {attribute_names} must be a Set()'
-
-    for attribute_name in attribute_names:
-        padded_attributes, _ = pad_attribute(batch[attribute_name], vocabularies[attribute_name].pad_index)
-        batch[attribute_name] = torch.tensor(padded_attributes, dtype=torch.long, device=device_descriptor)
-
-    return batch
-
-
 class Batch(object):
     def __init__(self, structure, instances=list()):
         assert isinstance(structure, set), 'Type of structure should be set().'
