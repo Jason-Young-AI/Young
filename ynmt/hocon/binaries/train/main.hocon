@@ -30,7 +30,7 @@ visualizer = {
 }
 process_control = {
     iteration = {
-        traverse_time = 1
+        traverse_time = 20
         accumulate_number = 2
         mode = "shuffle"
         sort_order = ["source", "target"]

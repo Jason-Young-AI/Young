@@ -7,3 +7,6 @@ models = {
 trainers = {
     include file("trainers/main.hocon")
 }
+generators = {
+    include file("generators/main.hocon")
+}

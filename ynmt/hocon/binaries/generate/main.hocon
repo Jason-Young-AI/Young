@@ -1,25 +1,22 @@
 data = {
     name = "en-ro"
-    sides = ["source", "target"]
-    output_side = "target"
-    languages = {
+    sides = {
         source = "en"
         target = "ro"
     }
+    input_paths = {
+        source = "Corpora/test.en-ro.en"
+        target = "Corpora/test.en-ro.ro"
+    }
+    output_paths = {
+        hypothesis = "Translation/test.en-ro.hyp"
+    }
     batch_size = 32
     batch_type = "sentence"
-    checkpoint_path = ${binaries.generate.data.name}".cp"
-    raw_text_base_path = "test."${binaries.generate.data.name}
-    output_path = ""
+    checkpoint_path = "Checkpoint/seq2seq_en-ro_best.cp"
 }
-distribution = {
-    device = "GPU"
-    master_ip = "127.0.0.1"
-    master_port = "12345"
-    world_size = 4
-    ranks = [0, 1, 2, 3]
-    workshop_capacity = 60
+logger = {
+    name = "generate"
+    path = "generate_"${binaries.generate.data.name}"_"${binaries.generate.generator}".log"
 }
-tester = "beam_search"
-random_seed = 1234
-logging_path = "generate_"${binaries.generate.data.name}".log"
+generator = "seq2seq"
