@@ -1,9 +1,0 @@
-name = "beam_search"
-beam_size = 5
-n_best = 5
-min_length = 1
-max_length = 200
-penalty = {
-    alpha = 0.6
-    beta = 0.0
-}

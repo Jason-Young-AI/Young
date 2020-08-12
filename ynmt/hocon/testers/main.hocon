@@ -1,3 +1,0 @@
-beam_search = {
-    include file("beam_search.hocon")
-}
