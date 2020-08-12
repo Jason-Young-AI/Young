@@ -10,14 +10,11 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from ynmt.models.model import Model
+
+
 from ynmt.models.transformer import build_model_transformer
 
 
-def build_model(args, vocabularies, checkpoint, device_descriptor):
-    model = globals()[f'build_model_{args.name}'](args, vocabularies)
-
-    if checkpoint is not None:
-        model.load_state_dict(checkpoint['model'], strict=False)
-
-    model.to(device_descriptor)
-    return model
+def build_model(args, vocabularies):
+    return globals()[f'build_model_{args.name}'](args, vocabularies)

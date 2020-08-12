@@ -11,11 +11,11 @@
 
 
 from ynmt.criterions.criterion import Criterion
+
+
 from ynmt.criterions.cross_entropy import build_criterion_cross_entropy
 from ynmt.criterions.label_smoothing_cross_entropy import build_criterion_label_smoothing_cross_entropy
 
 
-def build_criterion(args, vocabulary, device_descriptor):
-    criterion = globals()[f'build_criterion_{args.name}'](args, vocabulary)
-    criterion.to(device_descriptor)
-    return criterion
+def build_criterion(args, vocabulary):
+    return globals()[f'build_criterion_{args.name}'](args, vocabulary)

@@ -11,13 +11,10 @@
 
 
 from ynmt.optimizers.optimizer import Optimizer
+
+
 from ynmt.optimizers.adam import build_optimizer_adam
 
 
-def build_optimizer(args, model, checkpoint, reset_optimizer):
-    optimizer = globals()[f'build_optimizer_{args.name}'](args, model)
-
-    if checkpoint is not None and not reset_optimizer:
-        optimizer.load_state_dict(checkpoint['optimizer'])
-
-    return optimizer
+def build_optimizer(args, model):
+    return globals()[f'build_optimizer_{args.name}'](args, model)
