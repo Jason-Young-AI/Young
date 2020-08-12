@@ -14,5 +14,4 @@ from ynmt.testers.beam_search import build_tester_beam_search
 
 
 def build_tester(args, vocabulary):
-    tester = globals()[f'build_tester_{args.name}'](args, vocabulary)
-    return tester
+    return globals()[f'build_tester_{args.name}'](args, vocabulary)
