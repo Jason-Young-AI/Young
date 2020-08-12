@@ -10,9 +10,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import torch
-
-
 class Optimizer(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
