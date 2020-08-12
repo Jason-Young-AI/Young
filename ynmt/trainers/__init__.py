@@ -11,28 +11,66 @@
 
 
 from ynmt.trainers.trainer import Trainer
+
+from ynmt.schedulers import build_scheduler
+from ynmt.optimizers import build_optimizer
+
 from ynmt.trainers.seq2seq import build_trainer_seq2seq
+
+from ynmt.utilities.checkpoint import load_checkpoint
 
 
 def build_trainer(args,
-                  model, model_settings,
-                  training_criterion, validation_criterion,
-                  tester,
-                  scheduler, optimizer,
+                  model,
                   vocabularies,
-                  device_descritpor,
-                  checkpoint, reset_step):
+                  device_descriptor,
+                  logger, visualizer):
+
+    logger.info(f' | Moving model to device of Trainer ...')
+    model.to(device_descriptor)
+    logger.info(f' - Completed.')
+
+    logger.info(f' | Checking already exist checkpoint ...')
+    checkpoint = load_checkpoint(args.checkpoint.directory, args.checkpoint.name)
+    if checkpoint is None:
+        logger.info(f' - No checkpoint found in \'{args.checkpoint.directory}\'.')
+    else:
+        logger.info(f' - Loaded latest checkpoint from \'{args.checkpoint.directory}\' at {checkpoint["step"]} steps')
+
+
+    # Build Scheduler
+    logger.info(f' | Building Learning Rate Scheduler ...')
+    scheduler = build_scheduler(args.scheduler, model)
+    logger.info(f' - Scheduler \'{args.scheduler.name}\' built.')
+
+    # Build Optimizer
+    logger.info(f' | Building Optimizer ...')
+    optimizer = build_optimizer(args.optimizer, model)
+    logger.info(f' - Optimizer \'{args.optimizer.name}\' built.')
+
+    if checkpoint is not None:
+        if not args.checkpoint.reset_scheduler:
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            logger.info(f' | Reset Scheduler.')
+
+        if not args.checkpoint.reset_optimizer:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            logger.info(f' | Reset Optimizer.')
+
+        logger.info(f' | Loading Parameters ...')
+        model.load_state_dict(checkpoint['model'], strict=False)
+        logger.info(f' - Parameters Loaded.')
+
     trainer = globals()[f'build_trainer_{args.name}'](
         args,
-        model, model_settings,
-        training_criterion, validation_criterion,
-        tester,
+        model,
         scheduler, optimizer,
         vocabularies,
-        device_descritpor,
+        device_descriptor,
+        logger, visualizer
     )
 
-    if checkpoint is not None and not reset_step:
+    if checkpoint is not None and not args.checkpoint.reset_step:
         trainer.step = checkpoint['step']
 
     return trainer

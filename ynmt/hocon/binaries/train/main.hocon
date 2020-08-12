@@ -1,36 +1,39 @@
 data = {
     name = "en-ro"
     directory = "Data"
-    sides = ["source", "target"]
-    output_side = "target"
-    languages = {
+    sides = {
         source = "en"
         target = "ro"
     }
     filter = {
-        sides = ["source", "target"]
         source = [0, 100]
         target = [0, 100]
         validation = False
         training = True
     }
 }
+logger = {
+    name = "train"
+    path = "train_"${binaries.train.data.name}"_"${binaries.train.trainer}".log"
+    off = False
+}
 visualizer = {
     name = ${binaries.train.trainer}
+    path = ${binaries.train.data.name}"_"${binaries.train.trainer}".vis"
+    off = True
     server = "www.young-leigh.love"
     port = 6789
     username = "Guest_Visdom"
     password = "Happy_Visual_001"
-    logging_path = ${binaries.train.trainer}"_"${binaries.train.data.name}"_visdom"
-    offline = False
+    offline = True
     overwrite = True
 }
 process_control = {
     iteration = {
-        traverse_time = 20
+        traverse_time = 1
         accumulate_number = 2
         mode = "shuffle"
-        sort_order = ${binaries.train.data.sides}
+        sort_order = ["source", "target"]
     }
     distribution = {
         device = "GPU"
@@ -50,22 +53,7 @@ process_control = {
         batch_size = 32
         batch_type = "sentence"
     }
-    checkpoint = {
-        directory = "Checkpoint"
-        keep_number = 100
-        reset_scheduler = False
-        reset_optimizer = False
-        reset_step = False
-    }
 }
-model = "transformer"
-tester = "beam_search"
-scheduler = "noam"
-optimizer = "adam"
+model = "transformer_base"
 trainer = "seq2seq"
-criterion = {
-    training  = "label_smoothing_cross_entropy"
-    validation  = "cross_entropy"
-}
 random_seed = 1234
-logging_path = "train_"${binaries.train.data.name}"_"${binaries.train.trainer}"_"${binaries.train.model}".log"

@@ -14,28 +14,44 @@ import torch
 
 
 from ynmt.trainers import Trainer
-from ynmt.data.attribute import pad_attribute
+
+from ynmt.testers import build_tester
+from ynmt.criterions import build_criterion
+
 from ynmt.data.batch import Batch
+from ynmt.data.attribute import pad_attribute
+
 from ynmt.utilities.distributed import gather_all
-from ynmt.utilities.extractor import get_padding_mask, get_future_mask
 
 
 def build_trainer_seq2seq(args,
-                          model, model_settings,
-                          training_criterion, validation_criterion,
-                          tester,
+                          model,
                           scheduler, optimizer,
                           vocabularies,
-                          device_descritpor):
+                          device_descriptor,
+                          logger, visualizer):
+
+    tester = build_tester(args.tester, vocabularies['target'])
+
+    training_criterion = build_criterion(args.training_criterion, vocabularies['target'])
+    validation_criterion = build_criterion(args.validation_criterion, vocabularies['target'])
+
+    training_criterion.to(device_descriptor)
+    validation_criterion.to(device_descriptor)
+
     seq2seq = Seq2Seq(
         args.name,
-        model, model_settings,
-        training_criterion, validation_criterion,
-        tester,
+        model,
         scheduler, optimizer,
+        tester,
+        training_criterion, validation_criterion,
         vocabularies,
         args.normalization_type,
-        device_descritpor,
+        args.checkpoint.directory,
+        args.checkpoint.name,
+        args.checkpoint.keep_number,
+        device_descriptor,
+        logger, visualizer,
     )
     return seq2seq
 
@@ -43,21 +59,30 @@ def build_trainer_seq2seq(args,
 class Seq2Seq(Trainer):
     def __init__(self,
                  name,
-                 model, model_settings,
-                 training_criterion, validation_criterion,
-                 tester,
+                 model,
                  scheduler, optimizer,
+                 tester,
+                 training_criterion, validation_criterion,
                  vocabularies,
                  normalization_type,
-                 device_descriptor):
+                 checkpoint_directory,
+                 checkpoint_name,
+                 checkpoint_keep_number,
+                 device_descriptor,
+                 logger, visualizer):
         super(Seq2Seq, self).__init__(name,
-                                      model, model_settings,
-                                      training_criterion, validation_criterion,
-                                      tester,
+                                      model,
                                       optimizer, scheduler,
                                       vocabularies,
                                       normalization_type,
-                                      device_descriptor)
+                                      checkpoint_directory,
+                                      checkpoint_name,
+                                      checkpoint_keep_number,
+                                      device_descriptor,
+                                      logger, visualizer)
+        self.tester = tester
+        self.training_criterion = training_criterion
+        self.validation_criterion = validation_criterion
 
     def customize_accum_batch(self, accum_batch):
         padded_batches = list()
@@ -94,14 +119,7 @@ class Seq2Seq(Trainer):
             target_input = batch.target[:, :-1]
             target_output = batch.target[:, 1:]
 
-            target_pad_index = self.vocabularies['target'].pad_index
-            source_pad_index = self.vocabularies['source'].pad_index
-            source_mask = get_padding_mask(batch.source, source_pad_index).unsqueeze(1)
-            target_mask = get_padding_mask(target_input, target_pad_index).unsqueeze(1)
-            target_mask = target_mask | get_future_mask(target_input).unsqueeze(0)
-
-            logits, attention_weight = self.model(batch.source, target_input, source_mask, target_mask)
-
+            logits, attention_weight = self.model(batch.source, target_input)
             loss = self.training_criterion(logits, target_output)
             self.train_statistics += self.training_criterion.statistics
 
@@ -117,13 +135,7 @@ class Seq2Seq(Trainer):
             target_input = batch.target[:, :-1]
             target_output = batch.target[:, 1:]
 
-            target_pad_index = self.vocabularies['target'].pad_index
-            source_pad_index = self.vocabularies['source'].pad_index
-            source_mask = get_padding_mask(batch.source, source_pad_index).unsqueeze(1)
-            target_mask = get_padding_mask(target_input, target_pad_index).unsqueeze(1)
-            target_mask = target_mask | get_future_mask(target_input).unsqueeze(0)
-
-            logits, attention_weight = self.model(batch.source, target_input, source_mask, target_mask)
+            logits, attention_weight = self.model(batch.source, target_input)
             loss = self.validation_criterion(logits, target_output)
             self.valid_statistics += self.validation_criterion.statistics
 

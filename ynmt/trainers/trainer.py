@@ -15,34 +15,36 @@ import torch
 
 
 from ynmt.utilities.timer import Timer
-from ynmt.utilities.logging import get_logger
 from ynmt.utilities.statistics import Statistics, perplexity
 from ynmt.utilities.checkpoint import save_checkpoint
 from ynmt.utilities.distributed import reduce_all, gather_all
-from ynmt.utilities.visualizing import get_visualizer
 
 
 class Trainer(object):
     def __init__(self,
                  name,
-                 model, model_settings,
-                 training_criterion, validation_criterion,
-                 tester,
+                 model,
                  optimizer, scheduler,
                  vocabularies,
                  normalization_type,
-                 device_descriptor):
+                 checkpoint_directory,
+                 checkpoint_name,
+                 checkpoint_keep_number,
+                 device_descriptor,
+                 logger, visualizer):
         self.name = name
         self.model = model
-        self.model_settings = model_settings
-        self.training_criterion = training_criterion
-        self.validation_criterion = validation_criterion
-        self.tester = tester
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.vocabularies = vocabularies
         self.normalization_type = normalization_type
+        self.checkpoint_directory = checkpoint_directory
+        self.checkpoint_name = checkpoint_name
+        self.checkpoint_keep_number = checkpoint_keep_number
         self.device_descriptor = device_descriptor
+        self.logger = logger
+        self.visualizer = visualizer
+
         self.world_size = torch.distributed.get_world_size()
         self.rank = torch.distributed.get_rank()
 
@@ -51,8 +53,6 @@ class Trainer(object):
         self.step = 0
         self.timer = Timer()
         self.branch_timer = Timer()
-        self.logger = get_logger('train')
-        self.visualizer = get_visualizer(self.name)
 
     @property
     def learning_rate(self):
@@ -145,11 +145,7 @@ class Trainer(object):
             stat_name = name + '_' + stat_name
             self.visualizer.visualize('line', stat_name, stat_name, opts=options, X=[self.step], Y=[stat_value], update="append")
 
-    def launch(self,
-               accum_train_batches, training_period,
-               accum_valid_batches, validation_period,
-               checkpoint_directory, checkpoint_name, checkpoint_keep_number):
-
+    def launch(self, accum_train_batches, training_period, accum_valid_batches, validation_period):
         self.train_statistics.clear()
         self.model.train(True)
         self.optimizer.zero_grad()
@@ -168,18 +164,17 @@ class Trainer(object):
 
             # validate
             if self.step % validation_period == 0:
-                self.timer.standby()
                 self.validate(accum_valid_batches)
-                self.timer.restart()
 
             # save
             if self.step % training_period == 0:
-                self.timer.standby()
-                self.save(checkpoint_directory, checkpoint_name, checkpoint_keep_number)
-                self.timer.restart()
+                self.save()
+
+        self.save()
         return
 
-    def save(self, checkpoint_directory, checkpoint_name, checkpoint_keep_number):
+    def save(self):
+        self.timer.standby()
         self.branch_timer.reset()
         self.branch_timer.launch()
 
@@ -190,18 +185,21 @@ class Trainer(object):
                 optimizer = self.optimizer.state_dict(),
                 scheduler = self.scheduler.state_dict(),
                 vocabularies = self.vocabularies,
-                model_settings = self.model_settings
+                model_settings = self.model.settings
             )
             self.logger.info(f'Saving checkpoint ... ')
-            save_checkpoint(checkpoint_directory, checkpoint_name, checkpoint, checkpoint_keep_number)
+            save_checkpoint(checkpoint, self.checkpoint_directory, self.checkpoint_name, self.checkpoint_keep_number)
             self.logger.info(
-                f'Saved checkpoint to \'{checkpoint_directory}\' at {self.step} steps. '
+                f'Saved checkpoint to \'{self.checkpoint_directory}\' at {self.step} steps. '
                 f'(Cost: {self.branch_timer.elapsed_time:2.0f}s)'
             )
 
+        self.timer.restart()
         return
 
     def validate(self, accum_valid_batches):
+        self.timer.standby()
+
         self.branch_timer.reset()
         self.branch_timer.launch()
 
@@ -214,6 +212,7 @@ class Trainer(object):
         valid_report_statistics = self.report('Validate', self.valid_statistics, self.branch_timer.elapsed_time)
         self.visualize('Validate', valid_report_statistics)
 
+        self.timer.restart()
         return
 
     def customize_accum_batch(self, accum_batch):

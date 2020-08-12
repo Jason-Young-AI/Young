@@ -18,9 +18,10 @@ import multiprocessing
 import ynmt.hocon.arguments as harg
 
 
-from ynmt.data.vocabulary import Vocabulary
-from ynmt.data.instance import Instance
 from ynmt.data.dataset import Dataset
+from ynmt.data.instance import Instance
+from ynmt.data.vocabulary import Vocabulary
+
 from ynmt.utilities.file import file_slice_edges, get_coedges, save_data_objects
 from ynmt.utilities.line import tokenize, numericalize
 from ynmt.utilities.random import fix_random_procedure
@@ -57,58 +58,57 @@ def get_token_counter(file_path, number_worker):
     return total_token_counter
 
 
-def build_vocabularies(sides, groups, sizes, paths, languages, number_worker):
-    logger = get_logger('preprocess')
+def build_vocabularies(sides, groups, sizes, paths, number_worker, logger_name):
+    logger = get_logger(logger_name)
     token_counters = dict()
-    for index, side in enumerate(sides):
-        logger.info(f' * No.{index} - {side}')
-        path = getattr(paths, side)
-        logger.info(f'   corpus: {path}')
-        language = getattr(languages, side)
-        logger.info(f'   language: {language}')
+    for index, (side_name, side_tag) in enumerate(sides.items()):
+        path = paths[side_name]
         token_counter = get_token_counter(path, number_worker)
+        token_counters[side_name] = token_counter
+        logger.info(f' * No.{index} - {side_name}')
+        logger.info(f'   corpus: {path}')
+        logger.info(f'   tag: {side_tag}')
         logger.info(f'   {len(token_counter)} token found')
-        token_counters[side] = token_counter
 
     vocabularies = dict()
     for group, size in zip(groups, sizes):
         logger.info(f' * Sides {group} will be merged with size limit {size}')
         token_counter = collections.Counter()
-        for side in group:
-            token_counter.update(token_counters[side])
+        for side_name in group:
+            token_counter.update(token_counters[side_name])
         vocabulary = Vocabulary(list(token_counter.items()), size)
-        for side in group:
-            vocabularies[side] = vocabulary
+        for side_name in group:
+            vocabularies[side_name] = vocabulary
         logger.info(f'   Merged vocabulary size is {len(vocabulary)}')
 
     return vocabularies
 
 
-def build_instances(primary_side, sides, paths, vocabularies, corpora_edge):
-    structure = set(sides)
+def build_instances(primary_side_name, side_names, paths, vocabularies, corpora_edge):
+    structure = set(side_names)
     files = dict()
-    for side in sides:
-        corpus_edge_start, corpus_edge_end = corpora_edge[side]
-        files[side]= open(getattr(paths, side), 'r', encoding='utf-8')
-        files[side].seek(corpus_edge_start)
+    for side_name in side_names:
+        corpus_edge_start, corpus_edge_end = corpora_edge[side_name]
+        files[side_name]= open(paths[side_name], 'r', encoding='utf-8')
+        files[side_name].seek(corpus_edge_start)
 
     instances = list()
-    primary_corpus_edge_start, primary_corpus_edge_end = corpora_edge[primary_side]
-    while files[primary_side].tell() < primary_corpus_edge_end:
+    primary_corpus_edge_start, primary_corpus_edge_end = corpora_edge[primary_side_name]
+    while files[primary_side_name].tell() < primary_corpus_edge_end:
         instance = Instance(structure)
-        for side in sides:
-            instance[side] = numericalize(tokenize(files[side].readline()), vocabularies[side])
+        for side_name in side_names:
+            instance[side_name] = numericalize(tokenize(files[side_name].readline()), vocabularies[side_name])
         instances.append(instance)
 
-    for side in sides:
-        files[side].close()
+    for side_name in side_names:
+        files[side_name].close()
 
     return instances
 
 
-def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
+def get_partial_dataset(primary_side_name, side_names, paths, vocabularies, corpora_edges,
                         edge_index_start, edge_index_end, number_worker):
-    structure = set(sides)
+    structure = set(side_names)
     partial_dataset = Dataset(structure)
 
     def add_instances(instances):
@@ -118,8 +118,8 @@ def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
     with multiprocessing.Pool(number_worker) as pool:
         results = list()
         for edge_index in range(edge_index_start, edge_index_end):
-            corpora_edge = dict({side: corpora_edges[side][edge_index] for side in sides})
-            result = pool.apply_async(build_instances, (primary_side, sides, paths, vocabularies, corpora_edge))
+            corpora_edge = dict({side_name: corpora_edges[side_name][edge_index] for side_name in side_names})
+            result = pool.apply_async(build_instances, (primary_side_name, side_names, paths, vocabularies, corpora_edge))
             results.append(result)
         for result in results:
             add_instances(result.get())
@@ -127,21 +127,23 @@ def get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
     return partial_dataset
 
 
-def build_dataset(dataset_type, sides, paths, vocabularies,
+def build_dataset(dataset_type, sides, paths, vocabularies, logger_name,
                   number_worker=1, number_slice=1):
-    primary_side = sides[0]
-    logger = get_logger('preprocess')
-    primary_path = getattr(paths, primary_side)
+    logger = get_logger(logger_name)
+
+    side_names = list(sides.keys())
+    primary_side_name = side_names[0]
+    primary_path = paths[primary_side_name]
     primary_edges = file_slice_edges(primary_path, number_worker * number_slice)
 
     corpora_edges = dict()
-    corpora_edges[primary_side] = primary_edges
-    for side in sides:
-        if side == primary_side:
+    corpora_edges[primary_side_name] = primary_edges
+    for side_name in sides.keys():
+        if side_name == primary_side_name:
             continue
-        path = getattr(paths, side)
+        path = paths[side_name]
         edges = get_coedges(primary_path, primary_edges, path)
-        corpora_edges[side] = edges
+        corpora_edges[side_name] = edges
 
     logger.info(f' * {dataset_type} will be slicing to {number_slice} partial_datasets!')
     datasets = list()
@@ -150,7 +152,7 @@ def build_dataset(dataset_type, sides, paths, vocabularies,
         edge_index_end = edge_index_start + number_worker
 
         logger.info(f' ** Building No.{index} partial_dataset ...')
-        dataset = get_partial_dataset(primary_side, sides, paths, vocabularies, corpora_edges,
+        dataset = get_partial_dataset(primary_side_name, side_names, paths, vocabularies, corpora_edges,
                                       edge_index_start, edge_index_end, number_worker)
 
         logger.info(f'    {len(dataset)} instances Built.')
@@ -161,7 +163,7 @@ def build_dataset(dataset_type, sides, paths, vocabularies,
 
 
 def preprocess(args):
-    logger = setup_logger(name='preprocess', logging_path=args.logging_path, logging_level=logging_level['INFO'])
+    logger = setup_logger(name=args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
 
     fix_random_procedure(args.random_seed)
 
@@ -169,14 +171,15 @@ def preprocess(args):
         logger.error('Data directory does not exists!')
         return
 
+    sides = {side_name: side_tag for side_name, side_tag in args.data.sides}
     logger.info('Building vocabulary ...')
     vocabularies = build_vocabularies(
-        args.data.sides,
+        sides,
         args.vocabulary.groups,
         args.vocabulary.sizes,
         args.corpus.train_paths,
-        args.data.languages,
         args.data.number_worker,
+        args.logger.name,
     )
 
     logger.info(' > Saving vocabularies ...')
@@ -187,9 +190,10 @@ def preprocess(args):
     logger.info('Building training dataset ...')
     training_dataset = build_dataset(
         'train',
-        args.data.sides,
+        sides,
         args.corpus.train_paths,
         vocabularies,
+        args.logger.name,
         args.data.number_worker,
         args.data.number_slice,
     )
@@ -202,9 +206,10 @@ def preprocess(args):
     logger.info('Building validation dataset ...')
     validation_dataset = build_dataset(
         'valid',
-        args.data.sides,
+        sides,
         args.corpus.valid_paths,
         vocabularies,
+        args.logger.name,
     )
 
     logger.info(' > Saving validation dataset ...')

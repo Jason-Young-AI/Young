@@ -1,0 +1,25 @@
+data = {
+    name = "en-ro"
+    sides = ["source", "target"]
+    output_side = "target"
+    languages = {
+        source = "en"
+        target = "ro"
+    }
+    batch_size = 32
+    batch_type = "sentence"
+    checkpoint_path = ${binaries.generate.data.name}".cp"
+    raw_text_base_path = "test."${binaries.generate.data.name}
+    output_path = ""
+}
+distribution = {
+    device = "GPU"
+    master_ip = "127.0.0.1"
+    master_port = "12345"
+    world_size = 4
+    ranks = [0, 1, 2, 3]
+    workshop_capacity = 60
+}
+tester = "beam_search"
+random_seed = 1234
+logging_path = "generate_"${binaries.generate.data.name}".log"

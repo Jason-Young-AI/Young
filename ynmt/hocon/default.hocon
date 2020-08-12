@@ -4,18 +4,6 @@ binaries = {
 models = {
     include file("models/main.hocon")
 }
-criterions = {
-    include file("criterions/main.hocon")
-}
-testers = {
-    include file("testers/main.hocon")
-}
-schedulers = {
-    include file("schedulers/main.hocon")
-}
-optimizers = {
-    include file("optimizers/main.hocon")
-}
 trainers = {
     include file("trainers/main.hocon")
 }

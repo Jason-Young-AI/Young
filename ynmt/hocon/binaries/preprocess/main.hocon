@@ -1,8 +1,7 @@
 data = {
     name = "en-ro"
     directory = "Data"
-    sides = ["source", "target"]
-    languages = {
+    sides = {
         source = "en"
         target = "ro"
     }
@@ -27,5 +26,8 @@ vocabulary = {
         32768,
     ]
 }
+logger = {
+    name = "preprocess"
+    path = "preprocess_"${binaries.preprocess.data.name}".log"
+}
 random_seed = 1234
-logging_path = "preprocess_"${binaries.preprocess.data.name}".log"

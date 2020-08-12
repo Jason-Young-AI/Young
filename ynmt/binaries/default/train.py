@@ -19,40 +19,35 @@ import pickle
 import ynmt.hocon.arguments as harg
 
 
-from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator, InstanceComparator
 from ynmt.data.iterator import Iterator
+from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator, InstanceComparator
+
 from ynmt.utilities.file import load_data_objects
 from ynmt.utilities.random import fix_random_procedure
-from ynmt.utilities.logging import setup_logger, get_logger, logging_level
-from ynmt.utilities.visualizing import setup_visualizer, get_visualizer
+from ynmt.utilities.logging import setup_logger, logging_level
+from ynmt.utilities.visualizing import setup_visualizer
 from ynmt.utilities.extractor import get_model_parameters_number
-from ynmt.utilities.checkpoint import load_checkpoint
 from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
 from ynmt.models import build_model
-from ynmt.criterions import build_criterion
-from ynmt.testers import build_tester
-from ynmt.schedulers import build_scheduler
-from ynmt.optimizers import build_optimizer
 from ynmt.trainers import build_trainer
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
     fix_random_procedure(args.random_seed)
-
-    logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
     visualizer = setup_visualizer(
         args.visualizer.name, args.visualizer.server, args.visualizer.port,
         username=args.visualizer.username,
         password=args.visualizer.password,
-        logging_path=args.visualizer.logging_path,
+        logging_path=args.visualizer.path,
         offline=args.visualizer.offline,
         overwrite=args.visualizer.overwrite,
     )
     is_station = rank == 0
     if is_station:
-        logger.disabled = False
-        visualizer.disabled = False
+        logger.disabled = False | args.logger.off
+        visualizer.disabled = False | args.visualizer.off
     else:
         logger.disabled = True
         visualizer.disabled = True
@@ -60,24 +55,17 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     valid_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
     train_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
 
-    logger.info(f' * Checking already exist checkpoint ...')
-    checkpoint = load_checkpoint(args.process_control.checkpoint.directory, args.data.name)
-    if checkpoint is None:
-        logger.info(f'   No checkpoint found in \'{args.process_control.checkpoint.directory}\'.')
-    else:
-        logger.info(f'   Loaded latest checkpoint from \'{args.process_control.checkpoint.directory}\' at {checkpoint["step"]} steps')
-
     ## Building Something
 
     # Build Vocabularies
     vocabularies_path = os.path.join(args.data.directory, f'{args.data.name}.vocab')
     vocabularies = list(load_data_objects(vocabularies_path))[0]
-    vocabulary_sizes = {side: len(vocabulary) for side, vocabulary in vocabularies.items()}
+    vocabulary_sizes = {side_name: len(vocabulary) for side_name, vocabulary in vocabularies.items()}
     logger.info(f' * Loaded Vocabularies: {vocabulary_sizes}')
 
     # Build Model
     logger.info(f' * Building Model ...')
-    model = build_model(args.model, vocabularies, checkpoint, device_descriptor)
+    model = build_model(args.model, vocabularies)
     parameters_number = get_model_parameters_number(model)
     parameters_number_str = str()
     for name, number in parameters_number.items():
@@ -90,43 +78,14 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         f'\n{parameters_number_str}'
     )
 
-    # Build Criterion (Training)
-    logger.info(f' * Building Training Criterion ...')
-    training_criterion = build_criterion(args.criterion.training, vocabularies[args.data.output_side], device_descriptor)
-    logger.info(f'   Training Criterion \'{args.criterion.training.name}\' built.')
-
-    # Build Criterion (Validation)
-    logger.info(f' * Building Validation Criterion ...')
-    validation_criterion = build_criterion(args.criterion.validation, vocabularies[args.data.output_side], device_descriptor)
-    logger.info(f'   Validation Criterion \'{args.criterion.validation.name}\' built.')
-
-    # Build Tester
-    logger.info(f' * Building Tester ...')
-    tester = build_tester(args.tester, vocabularies[args.data.output_side])
-    logger.info(f'   Tester \'{args.tester.name}\' built.')
-
-    # Build Scheduler
-    logger.info(f' * Building Learning Rate Scheduler ...')
-    scheduler = build_scheduler(args.scheduler, model, checkpoint, args.process_control.checkpoint.reset_scheduler)
-    logger.info(f'   Scheduler \'{args.scheduler.name}\' built.')
-
-    # Build Optimizer
-    logger.info(f' * Building Optimizer ...')
-    optimizer = build_optimizer(args.optimizer, model, checkpoint, args.process_control.checkpoint.reset_optimizer)
-    logger.info(f'   Optimizer \'{args.optimizer.name}\' built.')
-
     # Build Trainer
     logger.info(f' * Building Trainer ...')
     trainer = build_trainer(
         args.trainer,
-        model, args.model,
-        training_criterion, validation_criterion,
-        tester,
-        scheduler, optimizer,
+        model,
         vocabularies,
         device_descriptor,
-        checkpoint,
-        args.process_control.checkpoint.reset_step,
+        logger, visualizer,
     )
     logger.info(f'   Trainer \'{args.trainer.name}\' built.')
 
@@ -145,11 +104,8 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f'   Validate every {args.process_control.validation.period} steps ...')
 
     trainer.launch(
-        train_batches,
-        args.process_control.training.period,
-        valid_batches,
-        args.process_control.validation.period,
-        args.process_control.checkpoint.directory, args.data.name, args.process_control.checkpoint.keep_number
+        train_batches, args.process_control.training.period,
+        valid_batches, args.process_control.validation.period,
     )
 
     visualizer.close()
@@ -158,18 +114,20 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
     fix_random_procedure(args.random_seed)
-    logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
 
+    sides = {side_name: side_tag for side_name, side_tag in args.data.sides}
+    side_names = list(sides.keys())
     validation_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.valid.dataset')
     validation_batch_generator = Iterator(
         validation_dataset_path,
         args.process_control.validation.batch_size,
         InstanceSizeCalculator(
-            set(args.data.sides),
+            set(side_names),
             args.process_control.validation.batch_type
         ),
         instance_filter=InstanceFilter(
-            {side: getattr(args.data.filter, side) for side in args.data.filter.sides}
+            {side_name: args.data.filter[side_name] for side_name, side_tag in sides.items()}
         ) if args.data.filter.validation else None,
     )
     distributed_data_sender(validation_batch_generator, batch_queues, workshop_semaphore, world_size, ranks)
@@ -179,11 +137,11 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
         training_dataset_path,
         args.process_control.training.batch_size,
         InstanceSizeCalculator(
-            set(args.data.sides),
+            set(side_names),
             args.process_control.training.batch_type
         ),
         instance_filter=InstanceFilter(
-            {side: getattr(args.data.filter, side) for side in args.data.filter.sides}
+            {side_name: args.data.filter[side_name] for side_name, side_tag in sides.items()}
         ) if args.data.filter.training else None,
         instance_comparator=InstanceComparator(args.process_control.iteration.sort_order),
         traverse_time=args.process_control.iteration.traverse_time,
@@ -194,7 +152,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 
 
 def train(args):
-    logger = setup_logger('train', logging_path=args.logging_path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
 
     device = args.process_control.distribution.device
     master_ip = args.process_control.distribution.master_ip
@@ -270,11 +228,6 @@ def main():
     args = harg.get_arguments()
     train_args = harg.get_partial_arguments(args, 'binaries.train')
     train_args.model = harg.get_partial_arguments(args, f'models.{train_args.model}')
-    train_args.criterion.training = harg.get_partial_arguments(args, f'criterions.{train_args.criterion.training}')
-    train_args.criterion.validation = harg.get_partial_arguments(args, f'criterions.{train_args.criterion.validation}')
-    train_args.tester = harg.get_partial_arguments(args, f'testers.{train_args.tester}')
-    train_args.scheduler = harg.get_partial_arguments(args, f'schedulers.{train_args.scheduler}')
-    train_args.optimizer = harg.get_partial_arguments(args, f'optimizers.{train_args.optimizer}')
     train_args.trainer = harg.get_partial_arguments(args, f'trainers.{train_args.trainer}')
     train(train_args)
 
