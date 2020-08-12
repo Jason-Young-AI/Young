@@ -1,3 +1,0 @@
-adam = {
-    include file("adam.hocon") 
-}

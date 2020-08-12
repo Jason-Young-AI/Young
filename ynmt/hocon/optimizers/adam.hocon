@@ -1,5 +1,0 @@
-name = "adam"
-learning_rate = 0.001
-beta1 = 0.9
-beta2 = 0.98
-epsilon = 1e-08
