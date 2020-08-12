@@ -35,6 +35,18 @@ class HOCONArguments(object):
         else:
             raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
 
+    def __iter__(self):
+        for attribute_name in self.__names:
+            yield (attribute_name, self[attribute_name])
+
+    def __setitem__(self, attribute_name, attribute_value):
+        if attribute_name not in self.__names:
+            self.__names.add(attribute_name)
+        self.__dict__[attribute_name] = attribute_value
+
+    def __getitem__(self, attribute_name):
+        return self.__dict__[attribute_name]
+
     @property
     def dictionary(self):
         dictionary = {}
