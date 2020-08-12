@@ -76,7 +76,7 @@ class Iterator(object):
                 accum_batches = list()
 
         if len(current_instances) != 0:
-            yield Batch(current_instances[-1].structure, current_instances)
+            yield [Batch(current_instances[-1].structure, current_instances)]
 
     def __iter__(self):
         original_random_state = random.getstate()
