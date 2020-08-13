@@ -13,9 +13,15 @@
 import torch
 
 
+from ynmt.models import Model
+
+
 from ynmt.modules.encoders import TransformerEncoder
 from ynmt.modules.decoders import TransformerDecoder
 from ynmt.modules.perceptrons import MultilayerPerceptron
+
+
+from ynmt.utilities.extractor import get_padding_mask, get_future_mask
 
 
 def build_model_transformer(args, vocabularies):
@@ -50,7 +56,7 @@ def build_model_transformer(args, vocabularies):
     if args.share_dec_io_embeddings:
         generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
 
-    transformer = Transformer(args.dimension, transformer_encoder, transformer_decoder, generator)
+    transformer = Transformer(args, args.dimension, transformer_encoder, transformer_decoder, generator)
 
     for parameter in transformer.parameters():
         if parameter.dim() > 1:
@@ -59,9 +65,9 @@ def build_model_transformer(args, vocabularies):
     return transformer
 
 
-class Transformer(torch.nn.Module):
-    def __init__(self, dimension, encoder, decoder, generator):
-        super(Transformer, self).__init__()
+class Transformer(Model):
+    def __init__(self, args, dimension, encoder, decoder, generator):
+        super(Transformer, self).__init__(args)
         assert dimension == encoder.dimension
         assert dimension == decoder.dimension
         self.dimension = dimension
@@ -69,7 +75,10 @@ class Transformer(torch.nn.Module):
         self.decoder = decoder
         self.generator = generator
 
-    def forward(self, source, target, source_mask, target_mask):
+    def forward(self, source, target):
+        source_mask = self.get_source_mask(source)
+        target_mask = self.get_target_mask(target)
+
         codes = self.encoder(source, source_mask)
 
         hidden, cross_attention_weight = self.decoder(target, codes, target_mask, source_mask)
@@ -77,3 +86,14 @@ class Transformer(torch.nn.Module):
         prediction = self.generator(hidden)
 
         return prediction, cross_attention_weight
+
+    def get_source_mask(self, source):
+        source_pad_index = self.encoder.embed_token.padding_idx
+        source_mask = get_padding_mask(source, source_pad_index).unsqueeze(1)
+        return source_mask
+
+    def get_target_mask(self, target):
+        target_pad_index = self.decoder.embed_token.padding_idx
+        target_mask = get_padding_mask(target, target_pad_index).unsqueeze(1)
+        target_mask = target_mask | get_future_mask(target).unsqueeze(0)
+        return target_mask
