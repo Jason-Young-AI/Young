@@ -13,10 +13,12 @@ data = {
     }
     batch_size = 32
     batch_type = "sentence"
-    checkpoint_path = "Checkpoint/seq2seq_en-ro_best.cp"
+    checkpoint_path = "seq2seq_en-ro_best.cp"
+    #checkpoint_path = "Checkpoint/seq2seq_en-ro_best.cp"
 }
 logger = {
     name = "generate"
     path = "generate_"${binaries.generate.data.name}"_"${binaries.generate.generator}".log"
 }
 generator = "seq2seq"
+device = "GPU"
