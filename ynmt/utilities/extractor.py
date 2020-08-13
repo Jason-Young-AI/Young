@@ -13,6 +13,27 @@
 import torch
 
 
+def get_tiled_tensor(tensor, dimension, times):
+    order = [ index for index in range(tensor.dim())]
+    order[0], order[dimension] = order[dimension], order[0]
+
+    tensor = tensor.permute(order).contiguous()
+
+    tiled_size = list(tensor.size())
+    tiled_size[0] *= times
+
+    tensor = tensor \
+            .reshape(tensor.size(0), -1) \
+            .transpose(0, 1) \
+            .repeat(times, 1) \
+            .transpose(0, 1) \
+            .reshape(tiled_size)
+
+    tensor = tensor.permute(order).contiguous()
+
+    return tensor
+
+
 def get_model_parameters_number(model):
     parameters_number = dict()
     for name, parameters in model.named_parameters():
