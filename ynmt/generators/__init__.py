@@ -18,6 +18,7 @@ from ynmt.generators.seq2seq import build_generator_seq2seq
 def build_generator(args,
                     model,
                     vocabularies,
+                    output_paths,
                     device_descriptor,
                     logger):
 
@@ -29,6 +30,7 @@ def build_generator(args,
         args,
         model,
         vocabularies,
+        output_paths,
         device_descriptor,
         logger
     )

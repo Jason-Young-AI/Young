@@ -23,18 +23,20 @@ class Generator(object):
                  name,
                  model,
                  vocabularies,
+                 output_paths,
                  device_descriptor,
                  logger):
         self.name = name
         self.model = model
         self.vocabularies = vocabularies
+        self.output_paths = output_paths
         self.device_descriptor = device_descriptor
         self.logger = logger
 
         self.statistics = Statistics(set())
         self.timer = Timer()
 
-   def launch(self, batches, output_paths):
+    def launch(self, batches):
         self.statistics.clear()
         self.timer.launch()
 
@@ -42,6 +44,7 @@ class Generator(object):
         with torch.no_grad():
             for index, batch in enumerate(batches):
                 self.generate_batch(self.customize_batch(batch))
+                self.logger.info(f'Generated the No.{index} batch.')
 
         return
 
