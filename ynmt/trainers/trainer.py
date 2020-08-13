@@ -153,8 +153,8 @@ class Trainer(object):
         self.timer.launch()
 
         for index, accum_train_batch in enumerate(accum_train_batches):
-            if index < self.step:
-                continue
+            #if index < self.step:
+            #    continue
 
             # train
             self.train_accum_batch(self.customize_accum_batch(accum_train_batch))
