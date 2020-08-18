@@ -83,7 +83,7 @@ class Trainer(object):
         report_string = f'{name}@{self.step} - '
 
         statistics_list = gather_all(statistics, self.device_descriptor)
-        gathered_statistics = sum(statistics_list, Statistics(set()))
+        gathered_statistics = sum(statistics_list, Statistics())
 
         loss_pattern = re.compile('(.*)loss')
         total_item_pattern = re.compile('(.*)total_item')
