@@ -10,6 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import re
 import torch
 
 
@@ -21,12 +22,14 @@ from ynmt.data.batch import Batch
 from ynmt.data.attribute import pad_attribute
 
 from ynmt.utilities.extractor import get_tiled_tensor
+from ynmt.utilities.statistics import BLEUScorer
 
 
 def build_generator_seq2seq(args,
                             model,
                             vocabularies,
                             output_paths,
+                            reference_paths,
                             device_descriptor,
                             logger):
 
@@ -38,6 +41,9 @@ def build_generator_seq2seq(args,
         tester,
         vocabularies,
         output_paths,
+        reference_paths,
+        args.bpe_symbol,
+        args.remove_bpe,
         device_descriptor,
         logger,
     )
@@ -51,30 +57,42 @@ class Seq2Seq(Generator):
                  tester,
                  vocabularies,
                  output_paths,
+                 reference_paths,
+                 bpe_symbol,
+                 remove_bpe,
                  device_descriptor,
                  logger):
         super(Seq2Seq, self).__init__(name,
                                       model,
                                       vocabularies,
                                       output_paths,
+                                      reference_paths,
                                       device_descriptor,
                                       logger)
         self.tester = tester
-        self.hypothesis_path = self.output_paths['hypothesis']
-        with open(self.hypothesis_path, 'w', encoding='utf-8') as hypothesis_file:
-            hypothesis_file.truncate()
+        self.bpe_symbol = bpe_symbol
+        self.remove_bpe = remove_bpe
+
+        self.target_hyp_file =  open(self.output_paths['target_hyp'], 'w', encoding='utf-8')
+        self.target_hyp_file.truncate()
+
+        reference_name_pattern = re.compile(f'target_ref(\d+)')
+        self.target_ref_files = list()
+        for reference_name, reference_path in self.reference_paths.items():
+            result = reference_name_pattern.fullmatch(reference_name)
+            if result is not None:
+                target_ref_file = open(reference_path, 'r', encoding='utf-8')
+                self.target_ref_files.append(target_ref_file)
 
         self.total_sentence_number = 0
 
+        self.bleu_scorer = BLEUScorer()
+
     def customize_batch(self, batch):
-        padded_batch = Batch(set(['source', 'target']))
+        padded_batch = Batch(set(['source']))
         # source side
         padded_attributes, _ = pad_attribute(batch.source, self.vocabularies['source'].pad_index)
         padded_batch.source = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
-
-        # target side
-        padded_attributes, _ = pad_attribute(batch.target, self.vocabularies['target'].pad_index)
-        padded_batch.target = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
 
         return padded_batch
 
@@ -82,7 +100,6 @@ class Seq2Seq(Generator):
         self.statistics.clear()
 
         source = customized_batch.source
-        target = customized_batch.target
 
         parallel_line_number, max_source_length = source.size()
 
@@ -96,18 +113,8 @@ class Seq2Seq(Generator):
 
         while not self.tester.finished:
             codes = codes.index_select(0, self.tester.path_offset.reshape(-1))
-            #codes_size = list(codes.size())
-            #codes_size[0] = self.tester.parallel_line_number * self.tester.reserved_path_number
-            #codes = codes.reshape(codes.size(0) // self.tester.reserved_path_number, -1)
-            #codes = torch.index_select(codes, 0, self.tester.active_line_indices)
-            #codes = codes.reshape(codes_size)
 
             source_mask = source_mask.index_select(0, self.tester.path_offset.reshape(-1))
-            #source_mask_size = list(source_mask.size())
-            #source_mask_size[0] = self.tester.parallel_line_number * self.tester.reserved_path_number
-            #source_mask = source_mask.reshape(source_mask.size(0) // self.tester.reserved_path_number, -1)
-            #source_mask = torch.index_select(source_mask, 0, self.tester.active_line_indices)
-            #source_mask = source_mask.reshape(source_mask_size)
 
             previous_prediction = self.tester.found_nodes.reshape(
                 self.tester.parallel_line_number * self.tester.reserved_path_number,
@@ -129,27 +136,36 @@ class Seq2Seq(Generator):
                 self.tester.reserved_path_number,
                 -1
             )
-            #print(prediction_distribution.size())
             self.tester.search(prediction_distribution)
         self.output()
         return
 
     def output(self):
         results = self.tester.candidate_paths
-        with open(self.hypothesis_path, 'a', encoding='utf-8') as hypothesis_file:
-            for result in results:
-                hypothesis_file.writelines(f'No.{self.total_sentence_number}:\n')
-                self.total_sentence_number += 1
-                for index, candidate_result in enumerate(result):
-                    log_prob = candidate_result['log_prob']
-                    score = candidate_result['score']
-                    prediction = candidate_result['path']
-                    output_line = f'    Cand.{index}: log_prob={log_prob}, score={score} |||'
-                    sentence = str()
-                    for token_index in prediction:
-                        if token_index == self.vocabularies['target'].eos_index:
-                            break
-                        sentence = sentence + ' ' + self.vocabularies['target'].token(token_index)
-                    output_line = output_line + ' ' + sentence + '\n'
-                    hypothesis_file.writelines(output_line)
-                hypothesis_file.writelines(f'\n')
+        for result in results:
+            ref_sentences = list()
+            for target_ref_file in self.target_ref_files:
+                ref_sentences.append(target_ref_file.readline().split())
+            self.target_hyp_file.writelines(f'No.{self.total_sentence_number}:\n')
+            self.total_sentence_number += 1
+            for index, candidate_result in enumerate(result):
+                log_prob = candidate_result['log_prob']
+                score = candidate_result['score']
+                prediction = candidate_result['path']
+                self.target_hyp_file.writelines(f'Cand.{index}: log_prob={log_prob:.3f}, score={score:.3f}\n')
+                token_strings = list()
+                for token_index in prediction:
+                    if token_index == self.vocabularies['target'].eos_index:
+                        break
+                    token_strings.append(self.vocabularies['target'].token(token_index))
+                sentence = ' '.join(token_strings)
+                if self.remove_bpe:
+                    sentence = (sentence + ' ').replace(self.bpe_symbol, '').strip()
+                if index == 0:
+                    self.bleu_scorer.add(sentence.split(), ref_sentences)
+                self.target_hyp_file.writelines(sentence + '\n')
+            self.target_hyp_file.writelines(f'===================================\n')
+
+    def final_operation(self):
+        self.target_hyp_file.writelines(self.bleu_scorer.result_string)
+        print(self.bleu_scorer.result_string)

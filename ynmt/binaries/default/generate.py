@@ -49,6 +49,7 @@ def generate(args):
     sides = dict(args.data.sides)
     input_paths = dict(args.data.input_paths)
     output_paths = dict(args.data.output_paths)
+    reference_paths = dict(args.data.reference_paths)
 
     instance_handlers = dict()
     for side_name in sides.keys():
@@ -75,6 +76,7 @@ def generate(args):
         model,
         vocabularies,
         output_paths,
+        reference_paths,
         device_descriptor,
         logger
     )

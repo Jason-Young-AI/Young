@@ -19,6 +19,7 @@ def build_generator(args,
                     model,
                     vocabularies,
                     output_paths,
+                    reference_paths,
                     device_descriptor,
                     logger):
 
@@ -31,6 +32,7 @@ def build_generator(args,
         model,
         vocabularies,
         output_paths,
+        reference_paths,
         device_descriptor,
         logger
     )

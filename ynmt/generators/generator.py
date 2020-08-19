@@ -24,12 +24,14 @@ class Generator(object):
                  model,
                  vocabularies,
                  output_paths,
+                 reference_paths,
                  device_descriptor,
                  logger):
         self.name = name
         self.model = model
         self.vocabularies = vocabularies
         self.output_paths = output_paths
+        self.reference_paths = reference_paths
         self.device_descriptor = device_descriptor
         self.logger = logger
 
@@ -46,6 +48,7 @@ class Generator(object):
                 self.generate_batch(self.customize_batch(batch))
                 self.logger.info(f'Generated the No.{index} batch.')
 
+        self.final_operation()
         return
 
     def customize_batch(self, batch):
@@ -54,4 +57,7 @@ class Generator(object):
 
     def generate_batch(self, customized_batch):
         # customized_batch is a object of Class Batch()
+        raise NotImplementedError
+
+    def final_operation(self):
         raise NotImplementedError
