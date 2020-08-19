@@ -142,8 +142,6 @@ class BLEUScorer(object):
             f"BP={self.brevity_penalty:.3f}, Len_Ratio={self.length_ratio:.3f}, "
             f"Hyp_Len={self.hypothesis_length}, Ref_Len={self.reference_length}"
         )
-        for index in range(self.gram_number):
-            print(self.ngram_statistics[index])
         return res_str
 
 
