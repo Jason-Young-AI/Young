@@ -15,6 +15,18 @@ def tokenize(string):
     return token_list
 
 
+def stringize(index_list, vocabulary):
+    token_list = list()
+    for index in index_list:
+        if index == vocabulary.eos_index:
+            break
+        if index in {vocabulary.pad_index, vocabulary.bos_index}:
+            continue
+        else:
+            token_list.append(vocabulary.token(index))
+    return token_list
+
+
 def numericalize(token_list, vocabulary):
     bos_index = vocabulary.bos_index
     eos_index = vocabulary.eos_index
