@@ -15,13 +15,28 @@ import os
 import torch
 import pickle
 import tempfile
+import itertools
 
 
-def get_temp_file_path(prefix):
-    sys_temp_dir_path = tempfile.gettempdir()
-    temp_dir_path = tempfile.mkdtemp(dir=sys_temp_dir_path, prefix=prefix)
-    logging_file, logging_path = tempfile.mkstemp(dir=temp_dir_path)
-    return logging_file, logging_path
+def mk_temp(prefix, temp_type, location=tempfile.gettempdir()):
+    assert temp_type in set({'dir', 'file'}), f'Invalid temp type: {temp_type} (Options: (\'dir\', \'file\'))'
+    assert os.path.isdir(location), f'Location: {location} is not a directory!'
+    if temp_type == 'dir':
+        temp_path = tempfile.mkdtemp(dir=location, prefix=prefix)
+
+    if temp_type == 'file':
+        _, temp_path = tempfile.mkstemp(dir=location, prefix=prefix)
+
+    return temp_path
+
+def rm_temp(temp_path):
+    if os.path.isfile(temp_path):
+        os.remove(temp_path)
+
+    if os.path.isdir(temp_path):
+        for child_temp_path in os.listdir(temp_path):
+            rm_temp(child_temp_path)
+        os.rmdir(temp_path)
 
 
 def dumps(data):
@@ -39,69 +54,23 @@ def loads(serialized_data):
     return data
 
 
-def safely_readline(binary_file_object):
-    current_position = binary_file_object.tell()
-    while True:
-        try:
-            line = binary_file_object.readline()
-            return line.decode(encoding='utf-8')
-        except UnicodeDecodeError:
-            current_position -= 1
-            binary_file_object.seek(current_position)
+def dump_data(file_path, data_object):
+    with open(file_path, 'wb') as file_object:
+        pickle.dump(data_object, file_object)
 
 
-def blocks(binary_file_object, edge_start, edge_end, byte_size=1024*1024*1024):
-    binary_file_object.seek(edge_start)
-    current_tell = binary_file_object.tell()
-    while binary_file_object.tell() < edge_end:
-        block_size = min(byte_size, edge_end-binary_file_object.tell())
-        yield binary_file_object.read(block_size)
-
-
-def count_line(binary_file_object, edge_start, edge_end):
-    number_line = 0
-    for block in blocks(binary_file_object, edge_start, edge_end):
-        number_line += block.count(b'\n')
-    return number_line
-
-
-def get_coedges(file_path, edges, cofile_path):
-    coedges = list()
-    cocurrent_start = 0
-    cocurrent_end = 0
-    with open(file_path, 'rb') as file_object, open(cofile_path, 'rb') as cofile_object:
-        for edge_start, edge_end in edges:
-            number_line = count_line(file_object, edge_start, edge_end)
-            cocurrent_start = cocurrent_end
-            while number_line:
-                safely_readline(cofile_object)
-                number_line -= 1
-            cocurrent_end = cofile_object.tell()
-            coedges.append((cocurrent_start, cocurrent_end))
-    return coedges
-
-
-def file_slice_edges(file_path, number_slice):
-    file_size = os.path.getsize(file_path)
-    quotient, remainder = divmod(file_size, number_slice)
-    edges = list()
-    current_start = 0
-    current_end = 0
+def load_data(file_path):
     with open(file_path, 'rb') as file_object:
-        for index in range(number_slice):
-            current_start = current_end
-            current_end = current_start + quotient + int( index < remainder )
-            file_object.seek(current_end)
-            safely_readline(file_object)
-            if file_object.tell() < file_size:
-                current_end = file_object.tell()
-            else:
-                current_end = file_size
-            edges.append((current_start, current_end))
-    return edges
+        return pickle.load(file_object)
 
 
-def load_data_objects(file_path):
+def dump_datas(file_path, data_objects):
+    with open(file_path, 'wb') as file_object:
+        for data_object in data_objects:
+            pickle.dump(data_object, file_object)
+
+
+def load_datas(file_path):
     with open(file_path, 'rb') as file_object:
         while True:
             try:
@@ -110,7 +79,34 @@ def load_data_objects(file_path):
                 break
 
 
-def save_data_objects(file_path, data_objects):
-    with open(file_path, 'wb') as file_object:
-        for data_object in data_objects:
-            pickle.dump(data_object, file_object)
+def load_plain(file_path, partition_unit='line', partition_size=1000000):
+    assert partition_unit in {'byte', 'line'}, f'Invalid unit of partition: \'{partition_unit}\' (Ops: [\'byte\', \'line\'])'
+    assert partition_size > 0, f'Invalid size of partition: \'{partition_size}\''
+
+    if partition_unit == 'byte':
+        with open(file_path, 'rb') as file_object:
+            while True:
+                file_partition = file_object.readlines(partition_size)
+                if len(file_partition) == 0:
+                    break
+                else:
+                    yield file_partition
+
+    elif partition_unit == 'line':
+        with open(file_path, 'r', encoding='utf-8') as file_object:
+            while True:
+                file_partition = list(itertools.islice(file_object, partition_size))
+                if len(file_partition) == 0:
+                    break
+                else:
+                    yield file_partition
+
+            # # [Attention]: The method below is a few second slower than 'islice' method.
+            # file_partition = list()
+            # for line in file_object:
+            #     file_partition.append(line)
+            #     if len(file_partition) == partition_size:
+            #         yield file_partition
+            #         file_partition = list()
+            # if len(file_partition) != 0:
+            #     yield file_partition
