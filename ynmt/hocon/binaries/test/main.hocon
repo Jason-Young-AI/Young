@@ -1,0 +1,12 @@
+task = "seq2seq"
+tester = "seq2seq"
+device = "GPU"
+
+output_directory = "Outputs"
+checkpoint_directory = "Checkpoints"
+
+logger = {
+    name = "test"
+    path = "test.log"
+    off = False
+}
