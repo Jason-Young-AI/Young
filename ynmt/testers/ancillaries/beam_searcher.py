@@ -13,20 +13,7 @@
 import torch
 
 
-def build_tester_beam_search(args, vocabulary):
-    beam_search = BeamSearch(
-        reserved_path_number = args.beam_size,
-        candidate_path_number = args.n_best,
-        search_space_size = len(vocabulary),
-        initial_node = vocabulary.bos_index,
-        terminal_node = vocabulary.eos_index,
-        min_depth = args.min_length, max_depth = args.max_length,
-        alpha = args.penalty.alpha, beta = args.penalty.beta
-    )
-    return beam_search
-
-
-class BeamSearch(object):
+class BeamSearcher(object):
     def __init__(self,
                  reserved_path_number, candidate_path_number, search_space_size, initial_node, terminal_node,
                  min_depth=0, max_depth=512, alpha=0.0, beta=0.0):
