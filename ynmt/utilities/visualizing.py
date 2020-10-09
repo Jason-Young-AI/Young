@@ -15,7 +15,7 @@ import json
 import visdom
 
 
-from ynmt.utilities.file import get_temp_file_path
+from ynmt.utilities.file import mk_temp
 from ynmt.utilities.constant import Constant
 
 
@@ -75,7 +75,7 @@ class Visualizer(object):
             return
         if self.offline == True:
             if self.logging_path is None:
-                _, self.logging_path = get_temp_file_path('ynmt-visualize')
+                self.logging_path = mk_temp('ynmt-visualize-', 'file')
             self.environment = visdom.Visdom(env=self.name, log_to_filename=self.logging_path, offline=self.offline)
         else:
             self.environment = visdom.Visdom(
