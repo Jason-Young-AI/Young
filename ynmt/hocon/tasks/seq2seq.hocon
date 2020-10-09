@@ -33,7 +33,6 @@ datasets = {
 training_batches = {
     batch_size = 4096
     batch_type = "token"
-    traverse_time = 20
     accumulate_number = 2
     mode = "shuffle"
     filter = {
