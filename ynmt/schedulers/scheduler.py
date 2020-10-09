@@ -11,6 +11,13 @@
 
 
 class Scheduler(object):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def setup(cls, args, model):
+        raise NotImplementedError
+
     def learning_rate(self, step):
         raise NotImplementedError
 
