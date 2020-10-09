@@ -54,8 +54,8 @@ REQUIRED = [
         'numpy',
         'torch',
         'visdom',
-        'tqdm',
         'pyhocon',
+        'pynvml',
         ]
 
 # Optional
