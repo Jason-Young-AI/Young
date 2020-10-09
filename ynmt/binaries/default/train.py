@@ -15,27 +15,26 @@ import torch
 import importlib
 import pickle
 
-
 import ynmt.hocon.arguments as harg
 
-
-from ynmt.data.iterator import Iterator
-from ynmt.data.instance import InstanceFilter, InstanceSizeCalculator, InstanceComparator
-
-from ynmt.utilities.file import load_data_objects
 from ynmt.utilities.random import fix_random_procedure
 from ynmt.utilities.logging import setup_logger, logging_level
+from ynmt.utilities.checkpoint import load_checkpoint
 from ynmt.utilities.visualizing import setup_visualizer
 from ynmt.utilities.extractor import get_model_parameters_number
 from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
+from ynmt.tasks import build_task
 from ynmt.models import build_model
+from ynmt.schedulers import build_scheduler
+from ynmt.optimizers import build_optimizer
 from ynmt.trainers import build_trainer
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
-    fix_random_procedure(args.random_seed)
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    fix_random_procedure(args.random_seed)
+
     visualizer = setup_visualizer(
         args.visualizer.name, args.visualizer.server, args.visualizer.port,
         username=args.visualizer.username,
@@ -52,20 +51,24 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.disabled = True
         visualizer.disabled = True
 
-    valid_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
-    train_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
+    validation_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
+    training_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
 
     ## Building Something
+    
+    # Build Task
+    logger.info(f' * Building Task: \'{args.task.name}\' ...')
+    task = build_task(args.task, logger)
+    logger.info(f'   The construction of Task is complete.')
 
-    # Build Vocabularies
-    vocabularies_path = os.path.join(args.data.directory, f'{args.data.name}.vocab')
-    vocabularies = list(load_data_objects(vocabularies_path))[0]
-    vocabulary_sizes = {side_name: len(vocabulary) for side_name, vocabulary in vocabularies.items()}
-    logger.info(f' * Loaded Vocabularies: {vocabulary_sizes}')
+    # Load Ancillary Datasets
+    logger.info(f' * Loading Ancillary Datasets ...')
+    task.load_ancillary_datasets(args.task)
+    logger.info(f'   Ancillary Datasets has been loaded.')
 
     # Build Model
     logger.info(f' * Building Model ...')
-    model = build_model(args.model, vocabularies)
+    model = build_model(args.model, task)
     parameters_number = get_model_parameters_number(model)
     parameters_number_str = str()
     for name, number in parameters_number.items():
@@ -78,88 +81,90 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         f'\n{parameters_number_str}'
     )
 
-    # Build Trainer
-    logger.info(f' * Building Trainer ...')
-    trainer = build_trainer(
-        args.trainer,
-        model,
-        vocabularies,
-        device_descriptor,
-        logger, visualizer,
-    )
-    logger.info(f'   Trainer \'{args.trainer.name}\' built.')
+    logger.info(f' * Moving model to device of Trainer ...')
+    model.to(device_descriptor)
+    logger.info(f'   Completed.')
 
-    # Open Visualizer
-    logger.info(f' * Open Visualizer ...')
-    visualizer.open()
-    if visualizer.offline:
-        logger.info(f'   Visualizer in Offline mode')
+    # Loading Checkpoint
+    checkpoint = load_checkpoint(args.checkpoint)
+    if checkpoint is None:
+        logger.info(f' * Training from scratch.')
     else:
-        logger.info(f'   Visualizer connection established between {visualizer.server}:{visualizer.port}')
-    logger.info(f'   Visualizer logging to \'{visualizer.logging_path}\' .')
+        logger.info(f' * Training from checkpoint \'{args.checkpoint}\' at {checkpoint["step"]} steps.')
+
+    # Build Scheduler
+    logger.info(f' * Building Learning Rate Scheduler \'{args.scheduler.name}\' ...')
+    scheduler = build_scheduler(args.scheduler, model)
+    logger.info(f'   Completed.')
+
+    # Build Optimizer
+    logger.info(f' * Building Optimizer \'{args.optimizer.name}\' ...')
+    optimizer = build_optimizer(args.optimizer, model)
+    logger.info(f'   Completed.')
+
+    if checkpoint is not None:
+        if not args.reset_scheduler:
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            logger.info(f' | Reset Scheduler.')
+
+        if not args.reset_optimizer:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            logger.info(f' | Reset Optimizer.')
+
+        logger.info(f' | Loading Parameters ...')
+        model.load_state_dict(checkpoint['model'], strict=False)
+        logger.info(f' - Completed.')
+
+    # Build Trainer
+    logger.info(f' * Building Trainer \'{args.trainer.name}\' ...')
+    trainer = build_trainer(args.trainer, task, model, scheduler, optimizer, device_descriptor, logger, visualizer)
+    logger.info(f'   The construction of trainer is complete.')
+
+    if checkpoint is not None and not args.reset_trainer:
+        trainer.step = checkpoint['step']
+
+    if visualizer.disabled:
+        logger.info(f' * Visualizer Disabled.')
+    else:
+        # Open Visualizer
+        logger.info(f' * Visualizer On.')
+        visualizer.open()
+        if visualizer.offline:
+            logger.info(f'   Visualizer in Offline mode')
+        else:
+            logger.info(f'   Visualizer connection established between {visualizer.server}:{visualizer.port}')
+        logger.info(f'   Visualizer logging to \'{visualizer.logging_path}\' .')
 
     # Launch Trainer
     logger.info(f' * Launch Trainer ...')
-    logger.info(f'   Saving checkpoint every {args.process_control.training.period} steps ...')
-    logger.info(f'   Validate every {args.process_control.validation.period} steps ...')
+    logger.info(f'   Saving checkpoint every {args.trainer.training_period} steps;')
+    logger.info(f'   Validate every {args.trainer.validation_period} steps.')
 
-    trainer.launch(
-        train_batches, args.process_control.training.period,
-        valid_batches, args.process_control.validation.period,
-    )
+    trainer.launch(training_batches, validation_batches)
 
     visualizer.close()
-    logger.info(f' * Close Visualizer ...')
 
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
-    fix_random_procedure(args.random_seed)
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    fix_random_procedure(args.random_seed)
 
-    sides = {side_name: side_tag for side_name, side_tag in args.data.sides}
-    side_names = list(sides.keys())
-    validation_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.valid.dataset')
-    validation_batch_generator = Iterator(
-        validation_dataset_path,
-        args.process_control.validation.batch_size,
-        InstanceSizeCalculator(
-            set(side_names),
-            args.process_control.validation.batch_type
-        ),
-        instance_filter=InstanceFilter(
-            {side_name: args.data.filter[side_name] for side_name, side_tag in sides.items()}
-        ) if args.data.filter.validation else None,
-    )
-    distributed_data_sender(validation_batch_generator, batch_queues, workshop_semaphore, world_size, ranks)
+    task = build_task(args.task, logger)
 
-    training_dataset_path = os.path.join(args.data.directory, f'{args.data.name}.train.dataset')
-    training_batch_generator = Iterator(
-        training_dataset_path,
-        args.process_control.training.batch_size,
-        InstanceSizeCalculator(
-            set(side_names),
-            args.process_control.training.batch_type
-        ),
-        instance_filter=InstanceFilter(
-            {side_name: args.data.filter[side_name] for side_name, side_tag in sides.items()}
-        ) if args.data.filter.training else None,
-        instance_comparator=InstanceComparator(args.process_control.iteration.sort_order),
-        traverse_time=args.process_control.iteration.traverse_time,
-        accumulate_number=args.process_control.iteration.accumulate_number,
-        mode=args.process_control.iteration.mode
-    )
-    distributed_data_sender(training_batch_generator, batch_queues, workshop_semaphore, world_size, ranks)
+    distributed_data_sender(task.validation_batches(args.task), batch_queues, workshop_semaphore, world_size, ranks)
+
+    distributed_data_sender(task.training_batches(args.task), batch_queues, workshop_semaphore, world_size, ranks)
 
 
 def train(args):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
 
-    device = args.process_control.distribution.device
-    master_ip = args.process_control.distribution.master_ip
-    master_port = args.process_control.distribution.master_port
-    world_size = args.process_control.distribution.world_size
-    ranks = args.process_control.distribution.ranks
-    workshop_capacity = args.process_control.distribution.workshop_capacity
+    device = args.distribution.device
+    master_ip = args.distribution.master_ip
+    master_port = args.distribution.master_port
+    world_size = args.distribution.world_size
+    ranks = args.distribution.ranks
+    workshop_capacity = args.distribution.workshop_capacity
     number_process = len(ranks)
 
     if device == 'CPU':
@@ -219,7 +224,7 @@ def train(args):
 
     for consumer in consumers:
         consumer.join()
-    producer.join()
+    producer.terminate()
 
     logger.info(' $ Finished !')
 
@@ -227,6 +232,7 @@ def train(args):
 def main():
     args = harg.get_arguments()
     train_args = harg.get_partial_arguments(args, 'binaries.train')
+    train_args.task = harg.get_partial_arguments(args, f'tasks.{train_args.task}')
     train_args.model = harg.get_partial_arguments(args, f'models.{train_args.model}')
     train_args.trainer = harg.get_partial_arguments(args, f'trainers.{train_args.trainer}')
     train(train_args)

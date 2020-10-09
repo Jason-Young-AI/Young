@@ -4,6 +4,6 @@ preprocess = {
 train = {
     include file("train/main.hocon") 
 }
-generate = {
-    include file("generate/main.hocon") 
+test = {
+    include file("test/main.hocon") 
 }

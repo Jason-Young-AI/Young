@@ -12,130 +12,158 @@
 
 import torch
 
+from ynmt.trainers import register_trainer, Trainer
 
-from ynmt.trainers import Trainer
-
-from ynmt.testers import build_tester
 from ynmt.criterions import build_criterion
 
 from ynmt.data.batch import Batch
 from ynmt.data.attribute import pad_attribute
 
+from ynmt.utilities.statistics import perplexity
 from ynmt.utilities.distributed import gather_all
 
 
-def build_trainer_seq2seq(args,
-                          model,
-                          scheduler, optimizer,
-                          vocabularies,
-                          device_descriptor,
-                          logger, visualizer):
-
-    tester = build_tester(args.tester, vocabularies['target'])
-
-    training_criterion = build_criterion(args.training_criterion, vocabularies['target'])
-    validation_criterion = build_criterion(args.validation_criterion, vocabularies['target'])
-
-    training_criterion.to(device_descriptor)
-    validation_criterion.to(device_descriptor)
-
-    seq2seq = Seq2Seq(
-        args.name,
-        model,
-        scheduler, optimizer,
-        tester,
-        training_criterion, validation_criterion,
-        vocabularies,
-        args.normalization_type,
-        args.checkpoint.directory,
-        args.checkpoint.name,
-        args.checkpoint.keep_number,
-        device_descriptor,
-        logger, visualizer,
-    )
-    return seq2seq
-
-
+@register_trainer('seq2seq')
 class Seq2Seq(Trainer):
     def __init__(self,
-                 name,
-                 model,
-                 scheduler, optimizer,
-                 tester,
-                 training_criterion, validation_criterion,
-                 vocabularies,
-                 normalization_type,
-                 checkpoint_directory,
-                 checkpoint_name,
-                 checkpoint_keep_number,
-                 device_descriptor,
-                 logger, visualizer):
-        super(Seq2Seq, self).__init__(name,
-                                      model,
-                                      optimizer, scheduler,
-                                      vocabularies,
-                                      normalization_type,
-                                      checkpoint_directory,
-                                      checkpoint_name,
-                                      checkpoint_keep_number,
-                                      device_descriptor,
-                                      logger, visualizer)
-        self.tester = tester
+        task, model, scheduler, optimizer,
+        checkpoint_directory, checkpoint_name, checkpoint_keep_number,
+        training_period, validation_period,
+        training_criterion, validation_criterion,
+        normalization_type,
+        device_descriptor, logger, visualizer
+    ):
+        super(Seq2Seq, self).__init__(
+            task, model, scheduler, optimizer,
+            checkpoint_directory, checkpoint_name, checkpoint_keep_number,
+            training_period, validation_period,
+            device_descriptor, logger, visualizer
+        )
         self.training_criterion = training_criterion
         self.validation_criterion = validation_criterion
 
-    def customize_accum_batch(self, accum_batch):
-        padded_batches = list()
+        self.normalization_type = normalization_type
+
+    @classmethod
+    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+
+        training_criterion = build_criterion(args.training_criterion, task)
+        validation_criterion = build_criterion(args.validation_criterion, task)
+
+        training_criterion.to(device_descriptor)
+        validation_criterion.to(device_descriptor)
+
+        seq2seq = cls(
+            task, model, scheduler, optimizer,
+            args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
+            args.training_period, args.validation_period,
+            training_criterion, validation_criterion,
+            args.normalization_type,
+            device_descriptor, logger, visualizer,
+        )
+        return seq2seq
+
+    def customize_accumulated_batch(self, accumulated_batch):
+        accumulated_padded_batch = list()
         normalization = 0
-        for batch in accum_batch:
-            padded_batch = Batch(set(['source', 'target']))
+
+        for batch in accumulated_batch:
+            padded_batch = Batch(set({'source', 'target'}))
             # source side
-            padded_attributes, _ = pad_attribute(batch.source, self.vocabularies['source'].pad_index)
-            padded_batch.source = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
+            padded_source_attribute, _ = pad_attribute(batch['source'], self.task.vocabularies['source'].pad_index)
+            padded_batch['source'] = torch.tensor(padded_source_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # target side
-            padded_attributes, _ = pad_attribute(batch.target, self.vocabularies['target'].pad_index)
-            padded_batch.target = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
+            padded_target_attribute, _ = pad_attribute(batch['target'], self.task.vocabularies['target'].pad_index)
+            padded_batch['target'] = torch.tensor(padded_target_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # accumulate batch
-            padded_batches.append(padded_batch)
+            accumulated_padded_batch.append(padded_batch)
 
             # Calculate normalization
             if self.normalization_type == 'token':
-                valid_token_number = padded_batch.target[:, 1:].ne(self.vocabularies['target'].pad_index).sum().item()
+                valid_token_number = padded_batch.target[:, 1:].ne(self.task.vocabularies['target'].pad_index).sum().item()
                 normalization += valid_token_number
             elif self.normalization_type == 'sentence':
                 normalization += len(padded_batch.target)
 
-        return padded_batches, normalization
+        return accumulated_padded_batch, normalization
 
-    def train_accum_batch(self, customized_accum_train_batch):
-        padded_train_batches, normalization = customized_accum_train_batch
+    def train_accumulated_batch(self, customized_accumulated_train_batch):
+        accumulated_padded_train_batch, normalization = customized_accumulated_train_batch
         normalization = sum(gather_all(normalization, self.device_descriptor))
         self.train_statistics.clear()
-        for batch in padded_train_batches:
+        for padded_train_batch in accumulated_padded_train_batch:
 
-            target_input = batch.target[:, :-1]
-            target_output = batch.target[:, 1:]
+            target_input = padded_train_batch.target[:, :-1]
+            target_output = padded_train_batch.target[:, 1:]
 
-            logits, attention_weight = self.model(batch.source, target_input)
+            logits, attention_weight = self.model(padded_train_batch.source, target_input)
             loss = self.training_criterion(logits, target_output)
             self.train_statistics += self.training_criterion.statistics
 
             loss /= normalization
             loss.backward()
 
-        return
+    def validate_accumulated_batch(self, customized_accumulated_valid_batch):
+        accumulated_padded_valid_batch, normalization = customized_accumulated_valid_batch
+        for padded_valid_batch in accumulated_padded_valid_batch:
 
-    def validate_accum_batch(self, customized_accum_valid_batch):
-        padded_valid_batches, normalization = customized_accum_valid_batch
-        for batch in padded_valid_batches:
+            target_input = padded_valid_batch.target[:, :-1]
+            target_output = padded_valid_batch.target[:, 1:]
 
-            target_input = batch.target[:, :-1]
-            target_output = batch.target[:, 1:]
-
-            logits, attention_weight = self.model(batch.source, target_input)
+            logits, attention_weight = self.model(padded_valid_batch.source, target_input)
             loss = self.validation_criterion(logits, target_output)
             self.valid_statistics += self.validation_criterion.statistics
 
-        return
+    def report(self, handle_name, reduced_statistics, time_cost):
+        loss = reduced_statistics['loss']
+        correct_item = reduced_statistics['correct_item']
+        total_item = reduced_statistics['total_item']
+
+        loss_per_item = loss / total_item
+        ppl = perplexity(loss_per_item)
+        accuracy = correct_item / total_item * 100
+
+        report_string = f'{handle_name}@{self.step} - '
+        report_string += f'loss/item: {loss_per_item:4.2f}; '
+        report_string += f'ppl: {ppl:4.2f}; '
+        report_string += f'acc: {accuracy:4.2f}%; '
+        report_string += f'lr: {self.learning_rate:g}; '
+        report_string += f'{time_cost:.0f}s'
+        self.logger.info(report_string)
+
+        l_win_name = f'{handle_name}_loss_per_item'
+        p_win_name = f'{handle_name}_perplexity'
+        a_win_name = f'{handle_name}_accuracy'
+
+        l_win_title = f'[{handle_name}]: loss/item'
+        p_win_title = f'[{handle_name}]: perplexity'
+        a_win_title = f'[{handle_name}]: accuracy'
+
+        self.visualizer.visualize(
+            'line', l_win_name, l_win_title,
+            opts=dict(
+                legend = ['loss/item'],
+            ),
+            X=[self.step], Y=[loss_per_item],
+            update="append",
+        )
+
+        self.visualizer.visualize(
+            'line', p_win_name, p_win_title,
+            opts=dict(
+                legend = ['perplexity'],
+            ),
+            X=[self.step], Y=[ppl],
+            update="append",
+        )
+
+        self.visualizer.visualize(
+            'line', a_win_name, a_win_title,
+            opts=dict(
+                legend = ['accuracy'],
+            ),
+            X=[self.step], Y=[accuracy],
+            update="append",
+        )

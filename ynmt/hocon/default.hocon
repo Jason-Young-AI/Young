@@ -4,9 +4,12 @@ binaries = {
 models = {
     include file("models/main.hocon")
 }
+tasks = {
+    include file("tasks/main.hocon")
+}
+testers = {
+    include file("testers/main.hocon")
+}
 trainers = {
     include file("trainers/main.hocon")
-}
-generators = {
-    include file("generators/main.hocon")
 }

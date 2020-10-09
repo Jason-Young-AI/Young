@@ -1,25 +1,29 @@
-data = {
-    name = "en-ro"
-    directory = "Data"
-    sides = {
-        source = "en"
-        target = "ro"
-    }
-    filter = {
-        source = [0, 100]
-        target = [0, 100]
-        validation = False
-        training = True
-    }
+task = "seq2seq"
+trainer = "seq2seq"
+model = "transformer_base"
+reset_scheduler = False
+reset_optimizer = False
+reset_trainer = False
+checkpoint = ""
+optimizer = {
+    name = "adam"
+    learning_rate = 0.001
+    beta1 = 0.9
+    beta2 = 0.98
+    epsilon = 1e-08
+}
+scheduler = {
+    name = "noam"
+    warmup_step = 8000
 }
 logger = {
     name = "train"
-    path = "train_"${binaries.train.data.name}"_"${binaries.train.trainer}".log"
+    path = "train.log"
     off = False
 }
 visualizer = {
-    name = ${binaries.train.trainer}
-    path = ${binaries.train.data.name}"_"${binaries.train.trainer}".vis"
+    name = "seq2seq"
+    path = "seq2seq.vis"
     off = True
     server = "www.young-leigh.love"
     port = 6789
@@ -28,32 +32,12 @@ visualizer = {
     offline = True
     overwrite = True
 }
-process_control = {
-    iteration = {
-        traverse_time = 20
-        accumulate_number = 2
-        mode = "shuffle"
-        sort_order = ["source", "target"]
-    }
-    distribution = {
-        device = "GPU"
-        master_ip = "127.0.0.1"
-        master_port = "12345"
-        world_size = 4
-        ranks = [0, 1, 2, 3]
-        workshop_capacity = 60
-    }
-    training = {
-        period = 1000
-        batch_size = 4096
-        batch_type = "token"
-    }
-    validation = {
-        period = 1000
-        batch_size = 32
-        batch_type = "sentence"
-    }
+distribution = {
+    device = "GPU"
+    master_ip = "127.0.0.1"
+    master_port = "12345"
+    world_size = 4
+    ranks = [0, 1, 2, 3]
+    workshop_capacity = 60
 }
-model = "transformer_base"
-trainer = "seq2seq"
 random_seed = 1234

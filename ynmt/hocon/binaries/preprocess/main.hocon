@@ -1,33 +1,9 @@
-data = {
-    name = "en-ro"
-    directory = "Data"
-    sides = {
-        source = "en"
-        target = "ro"
-    }
-    number_worker = 16
-    number_slice = 4
-}
-corpus = {
-    train_paths = {
-        source = "Corpora/train.en-ro.en"
-        target = "Corpora/train.en-ro.ro"
-    }
-    valid_paths = {
-        source = "Corpora/valid.en-ro.en"
-        target = "Corpora/valid.en-ro.ro"
-    }
-}
-vocabulary = {
-    groups = [
-        ["source", "target"],
-    ]
-    sizes = [
-        32768,
-    ]
-}
+task = "seq2seq"
+
+random_seed = 1234
+
 logger = {
     name = "preprocess"
-    path = "preprocess_"${binaries.preprocess.data.name}".log"
+    path = "preprocess.log"
+    off = False
 }
-random_seed = 1234

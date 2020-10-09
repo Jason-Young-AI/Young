@@ -1,24 +1,7 @@
 name = "seq2seq"
 normalization_type = "token"
-checkpoint = {
-    name = "seq2seq_en-ro"
-    directory = "Checkpoint"
-    keep_number = 100
-    reset_scheduler = False
-    reset_optimizer = False
-    reset_step = False
-}
-optimizer = {
-    name = "adam"
-    learning_rate = 0.001
-    beta1 = 0.9
-    beta2 = 0.98
-    epsilon = 1e-08
-}
-scheduler = {
-    name = "noam"
-    warmup_step = 8000
-}
+training_period = 1000
+validation_period = 1000
 training_criterion = {
     name = "label_smoothing_cross_entropy"
     label_smoothing_percent = 0.1
@@ -26,14 +9,8 @@ training_criterion = {
 validation_criterion = {
     name = "cross_entropy"
 }
-tester = {
-    name = "beam_search"
-    beam_size = 5
-    n_best = 5
-    min_length = 1
-    max_length = 200
-    penalty = {
-        alpha = 0.6
-        beta = 0.0
-    }
+checkpoints = {
+    name = "seq2seq_en-ro"
+    directory = "Checkpoints"
+    keep_number = 100
 }

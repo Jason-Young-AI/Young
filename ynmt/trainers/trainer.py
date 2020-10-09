@@ -22,25 +22,20 @@ from ynmt.utilities.distributed import reduce_all, gather_all
 
 class Trainer(object):
     def __init__(self,
-                 name,
-                 model,
-                 optimizer, scheduler,
-                 vocabularies,
-                 normalization_type,
-                 checkpoint_directory,
-                 checkpoint_name,
-                 checkpoint_keep_number,
-                 device_descriptor,
-                 logger, visualizer):
-        self.name = name
+        task, model, scheduler, optimizer,
+        checkpoint_directory, checkpoint_name, checkpoint_keep_number,
+        training_period, validation_period,
+        device_descriptor, logger, visualizer,
+    ):
+        self.task = task
         self.model = model
-        self.optimizer = optimizer
         self.scheduler = scheduler
-        self.vocabularies = vocabularies
-        self.normalization_type = normalization_type
+        self.optimizer = optimizer
         self.checkpoint_directory = checkpoint_directory
         self.checkpoint_name = checkpoint_name
         self.checkpoint_keep_number = checkpoint_keep_number
+        self.training_period = training_period
+        self.validation_period = validation_period
         self.device_descriptor = device_descriptor
         self.logger = logger
         self.visualizer = visualizer
@@ -55,8 +50,17 @@ class Trainer(object):
         self.branch_timer = Timer()
 
     @property
+    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+        raise NotImplementedError
+
+    @property
     def learning_rate(self):
         return self.scheduler.learning_rate(self.step)
+
+    def reduce_statistics(self, statistics):
+        statistics_list = gather_all(statistics, self.device_descriptor)
+        reduced_statistics = sum(statistics_list, Statistics())
+        return reduced_statistics
 
     def update(self):
         self.step += 1
@@ -79,102 +83,9 @@ class Trainer(object):
         # Clear all gradients
         self.optimizer.zero_grad()
 
-    def report(self, name, statistics, time_cost):
-        report_string = f'{name}@{self.step} - '
-
-        statistics_list = gather_all(statistics, self.device_descriptor)
-        gathered_statistics = sum(statistics_list, Statistics())
-
-        loss_pattern = re.compile('(.*)loss')
-        total_item_pattern = re.compile('(.*)total_item')
-        correct_item_pattern = re.compile('(.*)correct_item')
-
-        report_statistics = Statistics(set())
-        for index, (stat_name, stat_value) in enumerate(gathered_statistics):
-            loss_match_result = loss_pattern.fullmatch(stat_name)
-            if loss_match_result is not None:
-                loss_name_prefix = loss_match_result.group(1)
-                loss = stat_value
-
-                total_item_name = f'{loss_name_prefix}total_item'
-                if total_item_name in gathered_statistics:
-                    loss_per_item = loss / gathered_statistics[total_item_name]
-                    report_string += f'{loss_name_prefix}loss/item: {loss_per_item:4.2f}; '
-                    report_statistics[f'{loss_name_prefix}loss/item'] = loss_per_item
-                    ppl = perplexity(loss_per_item)
-                    report_string += f'{loss_name_prefix}ppl: {ppl:4.2f}; '
-                    report_statistics[f'{loss_name_prefix}ppl'] = ppl
-
-                continue
-
-            correct_item_match_result = correct_item_pattern.fullmatch(stat_name)
-            if correct_item_match_result is not None:
-                correct_item_name_prefix = correct_item_match_result.group(1)
-                correct_item = stat_value
-
-                total_item_name = f'{correct_item_name_prefix}total_item'
-                if total_item_name in gathered_statistics:
-                    accuracy = correct_item / gathered_statistics[total_item_name] * 100
-                    report_string += f'{correct_item_name_prefix}acc: {accuracy:4.2f}%; '
-                    report_statistics[f'{correct_item_name_prefix}acc'] = accuracy
-
-                continue
-
-            total_item_match_result = total_item_pattern.fullmatch(stat_name)
-            if total_item_match_result is not None:
-                continue
-
-            if isinstance(stat_value, float):
-                report_string += f'{stat_name}: {stat_value:4.2f}; '
-            else:
-                report_string += f'{stat_name}: {stat_value}; '
-
-            report_statistics[f'{stat_name}'] = stat_value
-
-
-        report_string += f'lr: {self.learning_rate:g}; '
-        report_string += f'{time_cost:.0f}s'
-        self.logger.info(report_string)
-        return report_statistics
-
-    def visualize(self, name, report_statistics):
-        for stat_name, stat_value in report_statistics:
-            options = dict(
-                legend = [stat_name]
-            )
-            stat_name = name + '_' + stat_name
-            self.visualizer.visualize('line', stat_name, stat_name, opts=options, X=[self.step], Y=[stat_value], update="append")
-
-    def launch(self, accum_train_batches, training_period, accum_valid_batches, validation_period):
-        self.train_statistics.clear()
-        self.model.train(True)
-        self.optimizer.zero_grad()
-
-        self.timer.launch()
-
-        for index, accum_train_batch in enumerate(accum_train_batches):
-            #if index < self.step:
-            #    continue
-
-            # train
-            self.train_accum_batch(self.customize_accum_batch(accum_train_batch))
-            self.update()
-            train_report_statistics = self.report('Train', self.train_statistics, self.timer.elapsed_time)
-            self.visualize('Train', train_report_statistics)
-
-            # validate
-            if self.step % validation_period == 0:
-                self.validate(accum_valid_batches)
-
-            # save
-            if self.step % training_period == 0:
-                self.save()
-
-        self.save()
-        return
-
     def save(self):
         self.timer.standby()
+
         self.branch_timer.reset()
         self.branch_timer.launch()
 
@@ -184,45 +95,76 @@ class Trainer(object):
                 model = self.model.state_dict(),
                 optimizer = self.optimizer.state_dict(),
                 scheduler = self.scheduler.state_dict(),
-                vocabularies = self.vocabularies,
-                model_settings = self.model.settings
+                model_args = self.model.args
             )
             self.logger.info(f'Saving checkpoint ... ')
             save_checkpoint(checkpoint, self.checkpoint_directory, self.checkpoint_name, self.checkpoint_keep_number)
             self.logger.info(
                 f'Saved checkpoint to \'{self.checkpoint_directory}\' at {self.step} steps. '
-                f'(Cost: {self.branch_timer.elapsed_time:2.0f}s)'
+                f'(Take: {self.branch_timer.elapsed_time:2.0f}s)'
             )
 
         self.timer.restart()
         return
 
-    def validate(self, accum_valid_batches):
+    def launch(self, accumulated_train_batches, accumulated_valid_batches):
+        self.train_statistics.clear()
+        self.timer.reset()
+        self.timer.launch()
+
+        self.optimizer.zero_grad()
+
+        for accumulated_train_batch in accumulated_train_batches:
+            # train
+            self.model.train(True) # Set to training mode may take some time, but it can aviod wrong operation of subclasses.
+            self.train(accumulated_train_batch)
+
+            # validate
+            if self.step % self.validation_period == 0:
+                self.model.train(False)
+                self.validate(accumulated_valid_batches)
+
+            # save
+            if self.step % self.training_period == 0:
+                self.save()
+
+        self.save()
+        return
+
+    def train(self, accumulated_train_batch):
+        self.train_accumulated_batch(self.customize_accumulated_batch(accumulated_train_batch))
+
+        self.update()
+        reduced_train_statistics = self.reduce_statistics(self.train_statistics)
+        self.report('Train', reduced_train_statistics, self.timer.elapsed_time)
+
+    def validate(self, accumulated_valid_batches):
         self.timer.standby()
 
+        self.valid_statistics.clear()
         self.branch_timer.reset()
         self.branch_timer.launch()
 
-        self.valid_statistics.clear()
-        self.model.train(False)
         with torch.no_grad():
-            for accum_valid_batch in accum_valid_batches:
-                self.validate_accum_batch(self.customize_accum_batch(accum_valid_batch))
-        self.model.train(True)
-        valid_report_statistics = self.report('Validate', self.valid_statistics, self.branch_timer.elapsed_time)
-        self.visualize('Validate', valid_report_statistics)
+            for accumulated_valid_batch in accumulated_valid_batches:
+                self.validate_accumulated_batch(self.customize_accumulated_batch(accumulated_valid_batch))
+
+        reduced_valid_statistics = self.reduce_statistics(self.valid_statistics)
+        self.report('Validate', reduced_valid_statistics, self.branch_timer.elapsed_time)
 
         self.timer.restart()
-        return
 
-    def customize_accum_batch(self, accum_batch):
-        # batch is a list
+    def report(self, handle_name, reduced_statistics, time_cost):
         raise NotImplementedError
 
-    def train_accum_batch(self, customized_accum_train_batch):
-        # padded_train_batch is a user-definded type
+    def customize_accumulated_batch(self, accumulated_batch):
+        # accumulated_batch is a list
         raise NotImplementedError
 
-    def validate_accum_batch(self, customized_accum_valid_batch):
-        # padded_valid_batch is a user-definded type
+    def train_accumulated_batch(self, customized_accumulated_train_batch):
+        # customized_accumulated_train_batch is a user-definded type
+        raise NotImplementedError
+
+    def validate_accumulated_batch(self, customized_accumulated_valid_batch):
+        # customized_accumulated_valid_batch is a user-definded type
         raise NotImplementedError
