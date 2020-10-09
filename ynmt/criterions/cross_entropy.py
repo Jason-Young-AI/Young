@@ -13,21 +13,23 @@
 import torch
 
 
-from ynmt.criterions import Criterion
+from ynmt.criterions import register_criterion, Criterion
 
 
-def build_criterion_cross_entropy(args, vocabulary):
-    cross_entropy = CrossEntropy(
-        len(vocabulary),
-        vocabulary.pad_index
-    )
-    return cross_entropy
-
-
+@register_criterion('cross_entropy')
 class CrossEntropy(Criterion):
     def __init__(self, label_number, ignore_index):
         super(CrossEntropy, self).__init__(label_number, ignore_index)
         self.nll_loss = torch.nn.NLLLoss(ignore_index=self.ignore_index, reduction='sum')
+
+    @classmethod
+    def setup(cls, args, task):
+        vocabulary = task.vocabularies['target']
+
+        return cls(
+            len(vocabulary),
+            vocabulary.pad_index
+        )
 
     def compute_loss(self, logits, ground_truth, valid_mask):
         # logits: [Batch_Size * Target_Length x Label_Number]

@@ -10,12 +10,20 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
+
 from ynmt.criterions.criterion import Criterion
 
+from ynmt.utilities.registration import Registration, import_modules
 
-from ynmt.criterions.cross_entropy import build_criterion_cross_entropy
-from ynmt.criterions.label_smoothing_cross_entropy import build_criterion_label_smoothing_cross_entropy
+criterion_registration = Registration(Criterion)
 
 
-def build_criterion(args, vocabulary):
-    return globals()[f'build_criterion_{args.name}'](args, vocabulary)
+def build_criterion(args, task):
+    return criterion_registration[args.name].setup(args, task)
+
+
+def register_criterion(registration_name):
+    return criterion_registration.register(registration_name)
+
+import_modules('ynmt.criterions', os.path.dirname(__file__))

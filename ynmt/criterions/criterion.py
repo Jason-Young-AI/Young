@@ -23,6 +23,10 @@ class Criterion(torch.nn.Module):
         self.ignore_index = ignore_index
         self.statistics = Statistics(set())
 
+    @classmethod
+    def setup(cls, args, task):
+        raise NotImplementedError
+
     def forward(self, logits, ground_truth):
         assert logits.dim() - 1 == ground_truth.dim(), f'Wrong number of dimension: #1 arg:{logits.size()}, #2 arg: {ground_truth.size()}'
         assert logits.size()[:-1] == ground_truth.size(), f'Wrong size: #1 arg:{logits.size()}, #2 arg: {ground_truth.size()}'
