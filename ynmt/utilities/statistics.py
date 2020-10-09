@@ -52,6 +52,16 @@ class BLEUScorer(object):
         self.gram_number = gram_number
         self.initialize()
 
+    def __add__(self, other):
+        if isinstance(other, BLEUScorer):
+            assert self.gram_number == other.gram_number, f'Gram Number must be the same.'
+            result_bleu_scorer = BLEUScorer(self.gram_number)
+            result_bleu_scorer.total_hypothesis_length = self.total_hypothesis_length + other.total_hypothesis_length
+            result_bleu_scorer.total_closest_reference_length = self.total_closest_reference_length + other.total_closest_reference_length
+            for index in range(result_bleu_scorer.gram_number):
+                result_bleu_scorer.ngram_statistics[index] = self.ngram_statistics[index] + other.ngram_statistics[index]
+        return result_bleu_scorer
+
     def initialize(self):
         self.total_hypothesis_length = 0
         self.total_closest_reference_length = 0
