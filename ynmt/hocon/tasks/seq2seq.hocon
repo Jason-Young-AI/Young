@@ -1,0 +1,52 @@
+name = seq2seq
+
+language = {
+    source = 'en'
+    target = 'ro'
+}
+
+vocabularies = {
+    share = True
+    size_limit = {
+        source = 32768
+        target = 32768
+    }
+}
+
+raw_data = {
+    training = {
+        source = "Corpora/train.en-ro.en"
+        target = "Corpora/train.en-ro.ro"
+    }
+    validation = {
+        source = "Corpora/valid.en-ro.en"
+        target = "Corpora/valid.en-ro.ro"
+    }
+}
+
+datasets = {
+    training = "Datasets/train.en-ro.dataset"
+    validation = "Datasets/valid.en-ro.dataset"
+    vocabularies = "Datasets/en-ro.vocab"
+}
+
+training_batches = {
+    batch_size = 4096
+    batch_type = "token"
+    traverse_time = 20
+    accumulate_number = 2
+    mode = "shuffle"
+    filter = {
+        source = [0, 100]
+        target = [0, 100]
+    }
+}
+
+validation_batches = {
+    batch_size = 32
+    batch_type = "sentence"
+}
+
+number_worker = 8
+shard_size = 1000000
+work_amount = 1000000
