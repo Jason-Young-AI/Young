@@ -23,7 +23,7 @@ class Iterator(object):
     def __init__(self,
         dataset_path, batch_size,
         instance_size_calculator, instance_filter=None, instance_comparator=InstanceComparator(),
-        traverse_time=1, accumulate_number=1, mode='preserve'
+        accumulate_number=1, mode='preserve', infinite=False,
     ):
         assert mode in {'preserve', 'ascend', 'descend', 'shuffle'}, "Wrong choice of order."
 
@@ -32,9 +32,9 @@ class Iterator(object):
         self.instance_size_calculator = instance_size_calculator
         self.instance_filter = instance_filter
         self.instance_comparator = instance_comparator
-        self.traverse_time = traverse_time
         self.accumulate_number = accumulate_number
         self.mode = mode
+        self.infinite = infinite
         self.random_state = random.getstate()
 
     @property
@@ -84,12 +84,14 @@ class Iterator(object):
     def __iter__(self):
         original_random_state = random.getstate()
         random.setstate(self.random_state)
-        for _ in range(self.traverse_time):
+        while True:
             for batch in self.batches:
                 if len(batch) == 0:
                     raise ValueError('Batch size too small, so batching no instance, please size up!')
                 else:
                     yield batch
+            if not self.infinite:
+                break
 
         random.setstate(original_random_state)
 
