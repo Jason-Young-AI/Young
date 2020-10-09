@@ -10,11 +10,20 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
+
 from ynmt.models.model import Model
 
+from ynmt.utilities.registration import Registration, import_modules
 
-from ynmt.models.transformer import build_model_transformer
+model_registration = Registration(Model)
 
 
-def build_model(args, vocabularies):
-    return globals()[f'build_model_{args.name}'](args, vocabularies)
+def build_model(args, task):
+    return model_registration[args.name].setup(args, task)
+
+def register_model(registration_name):
+    return model_registration.register(registration_name)
+
+
+import_modules('ynmt.models', os.path.dirname(__file__))

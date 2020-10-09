@@ -12,59 +12,16 @@
 
 import torch
 
-
-from ynmt.models import Model
-
+from ynmt.models import register_model, Model
 
 from ynmt.modules.encoders import TransformerEncoder
 from ynmt.modules.decoders import TransformerDecoder
 from ynmt.modules.perceptrons import MultilayerPerceptron
 
-
 from ynmt.utilities.extractor import get_padding_mask, get_future_mask
 
 
-def build_model_transformer(args, vocabularies):
-    transformer_encoder = TransformerEncoder(
-        vocabularies['source'],
-        args.encoder.layer_number,
-        args.encoder.dimension,
-        args.encoder.feedforward_dimension,
-        args.encoder.head_number,
-        args.encoder.dropout_probability,
-        args.encoder.attention_dropout_probability,
-        args.encoder.feedforward_dropout_probability,
-        args.encoder.normalize_position
-    )
-    transformer_decoder = TransformerDecoder(
-        vocabularies['target'],
-        args.decoder.layer_number,
-        args.decoder.dimension,
-        args.decoder.feedforward_dimension,
-        args.decoder.head_number,
-        args.decoder.dropout_probability,
-        args.decoder.attention_dropout_probability,
-        args.decoder.feedforward_dropout_probability,
-        args.decoder.normalize_position
-    )
-
-    generator = MultilayerPerceptron(args.decoder.dimension, len(vocabularies['target']))
-
-    if args.share_enc_dec_embeddings:
-        transformer_decoder.embed_token.weight = transformer_encoder.embed_token.weight
-
-    if args.share_dec_io_embeddings:
-        generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
-
-    transformer = Transformer(args, args.dimension, transformer_encoder, transformer_decoder, generator)
-
-    for parameter in transformer.parameters():
-        if parameter.dim() > 1:
-            torch.nn.init.xavier_uniform_(parameter)
-
-    return transformer
-
-
+@register_model('transformer')
 class Transformer(Model):
     def __init__(self, args, dimension, encoder, decoder, generator):
         super(Transformer, self).__init__(args)
@@ -97,3 +54,44 @@ class Transformer(Model):
         target_mask = get_padding_mask(target, target_pad_index).unsqueeze(1)
         target_mask = target_mask | get_future_mask(target).unsqueeze(0)
         return target_mask
+
+    @classmethod
+    def setup(cls, args, task):
+        transformer_encoder = TransformerEncoder(
+            task.vocabularies['source'],
+            args.encoder.layer_number,
+            args.encoder.dimension,
+            args.encoder.feedforward_dimension,
+            args.encoder.head_number,
+            args.encoder.dropout_probability,
+            args.encoder.attention_dropout_probability,
+            args.encoder.feedforward_dropout_probability,
+            args.encoder.normalize_position
+        )
+        transformer_decoder = TransformerDecoder(
+            task.vocabularies['target'],
+            args.decoder.layer_number,
+            args.decoder.dimension,
+            args.decoder.feedforward_dimension,
+            args.decoder.head_number,
+            args.decoder.dropout_probability,
+            args.decoder.attention_dropout_probability,
+            args.decoder.feedforward_dropout_probability,
+            args.decoder.normalize_position
+        )
+
+        generator = MultilayerPerceptron(args.decoder.dimension, len(task.vocabularies['target']))
+
+        if args.share_enc_dec_embeddings:
+            transformer_decoder.embed_token.weight = transformer_encoder.embed_token.weight
+
+        if args.share_dec_io_embeddings:
+            generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
+
+        transformer = cls(args, args.dimension, transformer_encoder, transformer_decoder, generator)
+
+        for parameter in transformer.parameters():
+            if parameter.dim() > 1:
+                torch.nn.init.xavier_uniform_(parameter)
+
+        return transformer
