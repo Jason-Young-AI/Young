@@ -58,20 +58,20 @@ def distributed_data_receive_as_list(data_queue, workshop_semaphore):
     data_list = list()
     while True:
         data = data_queue.get()
+        workshop_semaphore.release()
         if data is None:
             return data_list
         else:
-            workshop_semaphore.release()
             data_list.append(data)
 
 
 def distributed_data_receive_as_generator(data_queue, workshop_semaphore):
     while True:
         data = data_queue.get()
+        workshop_semaphore.release()
         if data is None:
             return
         else:
-            workshop_semaphore.release()
             yield data
 
 
@@ -116,7 +116,7 @@ def reduce_all(tensors, device_descriptor, data_size=8 * 1024 * 1024):
     for tensor in tensors:
         assert tensor.dtype == tensor_type, f'All dtype of tensor in tensor has to be the same({tensor_type}).'
 
-    data = torch.zeros(data_size_limit, dtype=tensor_type, device=device_descriptor)
+    data = torch.zeros(data_size, dtype=tensor_type, device=device_descriptor)
 
     cache = list()
     cache_size = 0
@@ -138,10 +138,10 @@ def reduce_all(tensors, device_descriptor, data_size=8 * 1024 * 1024):
 
     for tensor in tensors:
         tensor_size = tensor.numel()
-        if tensor_size > data_size_limit:
+        if tensor_size > data_size:
             torch.distributed.all_reduce(tensor)
             continue
-        if cache_size + tensor_size > data_size_limit:
+        if cache_size + tensor_size > data_size:
             reduce_all_data()
             cache = list()
             cache_size = 0
@@ -150,6 +150,8 @@ def reduce_all(tensors, device_descriptor, data_size=8 * 1024 * 1024):
 
     if len(cache) != 0:
         reduce_all_data()
+        cache = list()
+        cache_size = 0
 
 
 def distributed_init(device, master_ip, master_port, world_size, rank):
@@ -176,7 +178,6 @@ def distributed_main(main, main_args, init_args, exception_queue):
         exception = "".join(traceback.format_exception(*sys.exc_info()))
         message = (os.getpid(), exception)
         exception_queue.put(message)
-        sys.exit(1)
 
 
 class DistributedManager(object):
@@ -198,10 +199,6 @@ class DistributedManager(object):
 
     def exception_catcher(self):
         pid, exception = self.exception_queue.get()
-        for process in self.processes:
-            if process.is_alive():
-                process.terminate()
-            process.join()
 
         exception_message = (
             f'\n'
