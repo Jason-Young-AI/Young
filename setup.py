@@ -132,7 +132,7 @@ def setup_my_package():
             'console_scripts': [
                 'ynmt-preprocess = ynmt_cli.default.preprocess:main',
                 'ynmt-train = ynmt_cli.default.train:main',
-                'ynmt-generate = ynmt_cli.default.generate:main',
+                'ynmt-test = ynmt_cli.default.test:main',
             ],
         },
     )
