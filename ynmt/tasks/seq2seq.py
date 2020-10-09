@@ -44,9 +44,9 @@ class Seq2Seq(Task, SeqMixin):
             InstanceSizeCalculator(self.structure, args.training_batches.batch_type),
             instance_filter = InstanceFilter({'source': args.training_batches.filter.source, 'target': args.training_batches.filter.target}),
             instance_comparator = InstanceComparator(['source', 'target']),
-            traverse_time=args.training_batches.traverse_time,
             accumulate_number=args.training_batches.accumulate_number,
             mode=args.training_batches.mode,
+            infinite=True,
         )
 
     def validation_batches(self, args):
