@@ -10,9 +10,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import torch
-
-
 class Batch(object):
     def __init__(self, structure, instances=list()):
         assert isinstance(structure, set), 'Type of structure should be set().'

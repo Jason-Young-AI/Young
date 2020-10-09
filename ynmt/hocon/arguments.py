@@ -15,7 +15,6 @@ import pyhocon
 import argparse
 import collections
 
-
 from ynmt.utilities.constant import Constant
 
 

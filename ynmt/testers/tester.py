@@ -10,7 +10,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import re
 import torch
 
 from ynmt.utilities.timer import Timer

@@ -14,9 +14,6 @@ import os
 import importlib
 
 
-from ynmt.utilities.constant import Constant
-
-
 def import_modules(father, directory):
     file_names = os.listdir(directory)
     for file_name in file_names:

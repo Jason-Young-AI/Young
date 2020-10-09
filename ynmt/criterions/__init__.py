@@ -16,6 +16,7 @@ from ynmt.criterions.criterion import Criterion
 
 from ynmt.utilities.registration import Registration, import_modules
 
+
 criterion_registration = Registration(Criterion)
 
 

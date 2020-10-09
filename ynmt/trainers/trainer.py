@@ -10,12 +10,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import re
 import torch
 
-
 from ynmt.utilities.timer import Timer
-from ynmt.utilities.statistics import Statistics, perplexity
+from ynmt.utilities.statistics import Statistics
 from ynmt.utilities.checkpoint import save_checkpoint
 from ynmt.utilities.distributed import reduce_all, gather_all
 
@@ -133,7 +131,9 @@ class Trainer(object):
             if self.step % self.training_period == 0:
                 self.save()
 
-        self.save()
+        if self.step % self.training_period != 0:
+            self.save()
+
         return
 
     def train(self, accumulated_train_batch):

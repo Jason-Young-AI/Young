@@ -12,7 +12,6 @@
 
 import torch
 
-
 from ynmt.criterions import register_criterion, Criterion
 
 

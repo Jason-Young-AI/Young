@@ -13,7 +13,6 @@
 import torch
 import threading
 
-
 from ynmt.utilities.file import dumps, loads
 
 

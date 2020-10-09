@@ -13,10 +13,9 @@
 import random
 
 from ynmt.data.batch import Batch
-from ynmt.data.instance import Instance, InstanceComparator
+from ynmt.data.instance import InstanceComparator
 from ynmt.utilities.file import load_datas
 from ynmt.utilities.random import shuffled
-from ynmt.utilities.statistics import Statistics
 
 
 class Iterator(object):

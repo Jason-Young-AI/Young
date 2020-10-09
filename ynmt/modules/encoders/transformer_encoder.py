@@ -13,7 +13,6 @@
 import math
 import torch
 
-
 from ynmt.modules.embeddings import TrigonometricPositionalEmbedding
 from ynmt.modules.attentions import MultiHeadAttention
 from ynmt.modules.perceptrons import PositionWiseFeedForward

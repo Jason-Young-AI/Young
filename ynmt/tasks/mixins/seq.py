@@ -12,7 +12,6 @@
 
 import collections
 
-
 from ynmt.utilities.file import load_plain
 from ynmt.utilities.multiprocessing import multi_process
 

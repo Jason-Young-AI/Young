@@ -12,7 +12,6 @@
 
 import time
 
-
 from ynmt.utilities.constant import Constant
 
 

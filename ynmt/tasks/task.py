@@ -12,7 +12,7 @@
 
 from ynmt.data.dataset import Dataset
 
-from ynmt.utilities.file import mk_temp, rm_temp, load_data, load_datas, dump_data, dump_datas
+from ynmt.utilities.file import mk_temp, rm_temp, load_data, dump_data, dump_datas
 from ynmt.utilities.multiprocessing import multi_process
 
 

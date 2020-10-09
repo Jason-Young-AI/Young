@@ -10,8 +10,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import os
-import re
 import torch
 
 from ynmt.testers import register_tester, Tester

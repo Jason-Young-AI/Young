@@ -16,6 +16,7 @@ from ynmt.models.model import Model
 
 from ynmt.utilities.registration import Registration, import_modules
 
+
 model_registration = Registration(Model)
 
 

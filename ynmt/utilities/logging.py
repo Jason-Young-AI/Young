@@ -12,7 +12,6 @@
 
 import logging
 
-
 from ynmt.utilities.file import mk_temp
 
 

@@ -14,7 +14,6 @@ import os
 import json
 import visdom
 
-
 from ynmt.utilities.file import mk_temp
 from ynmt.utilities.constant import Constant
 
