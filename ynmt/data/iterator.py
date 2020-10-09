@@ -12,16 +12,19 @@
 
 import random
 
-
 from ynmt.data.batch import Batch
 from ynmt.data.instance import Instance, InstanceComparator
-from ynmt.utilities.file import load_data_objects
+from ynmt.utilities.file import load_datas
 from ynmt.utilities.random import shuffled
 from ynmt.utilities.statistics import Statistics
 
 
 class Iterator(object):
-    def __init__(self, dataset_path, batch_size, instance_size_calculator, instance_filter=None, instance_comparator=InstanceComparator(), traverse_time=1, accumulate_number=1, mode='preserve'):
+    def __init__(self,
+        dataset_path, batch_size,
+        instance_size_calculator, instance_filter=None, instance_comparator=InstanceComparator(),
+        traverse_time=1, accumulate_number=1, mode='preserve'
+    ):
         assert mode in {'preserve', 'ascend', 'descend', 'shuffle'}, "Wrong choice of order."
 
         self.dataset_path = dataset_path
@@ -36,7 +39,7 @@ class Iterator(object):
 
     @property
     def instances(self):
-        for dataset in load_data_objects(self.dataset_path):
+        for dataset in load_datas(self.dataset_path):
             if self.mode == 'preserve':
                 instances = dataset
             elif self.mode == 'ascend':
@@ -92,41 +95,23 @@ class Iterator(object):
 
 
 class RawTextIterator(object):
-    def __init__(self, raw_text_paths, instance_handlers, batch_size, instance_size_calculator):
-        assert isinstance(raw_text_paths, dict), f'raw_text_paths must be a dict like: key->value as name->path'
-        assert isinstance(instance_handlers, dict), f'instance_handlers must be a dict like: key->value as name->instance_handler'
+    def __init__(self, raw_text_paths, instance_handler, batch_size, instance_size_calculator):
+        assert isinstance(raw_text_paths, list), f'raw_text_paths must be a list of path.'
         self.raw_text_paths = raw_text_paths
-        self.instance_handlers = instance_handlers
+        self.instance_handler = instance_handler
         self.batch_size = batch_size
         self.instance_size_calculator = instance_size_calculator
 
     @property
     def instances(self):
-        raw_text_files = dict()
-        for name, raw_text_path in self.raw_text_paths.items():
-            raw_text_files[name] = open(raw_text_path, 'r', encoding='utf-8')
+        raw_text_files = list()
+        for raw_text_path in self.raw_text_paths:
+            raw_text_files.append(open(raw_text_path, 'r', encoding='utf-8'))
 
-        # if one of the raw_text_files touch the End Of File, stop read others.
-        touch_eof = False
-        while not touch_eof:
-            instance = Instance(set())
-            for name, raw_text_file in raw_text_files.items():
-                raw_text_line = raw_text_file.readline()
-                if raw_text_line == '':
-                    touch_eof = True
-                    break
+        for lines in zip(*raw_text_files):
+            yield self.instance_handler(lines)
 
-                raw_text_line = raw_text_line.strip()
-
-                if name in self.instance_handlers:
-                    raw_text_line = self.instance_handlers[name](raw_text_line)
-
-                instance[name] = raw_text_line
-
-            if not touch_eof:
-                yield instance
-
-        for name, raw_text_file in raw_text_files.items():
+        for raw_text_file in raw_text_files:
             raw_text_file.close()
 
     @property

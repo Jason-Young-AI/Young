@@ -15,6 +15,7 @@ from ynmt.utilities.statistics import Statistics
 
 class InstanceFilter(object):
     def __init__(self, length_intervals):
+        assert isinstance(length_intervals, dict), f'#1 arg {length_intervals} should be a Dict().'
         self.length_intervals = length_intervals
 
     def __call__(self, instance):
