@@ -22,11 +22,13 @@ from ynmt.utilities.distributed import reduce_all, gather_all
 
 class Trainer(object):
     def __init__(self,
+        life_cycle,
         task, model, scheduler, optimizer,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period,
         device_descriptor, logger, visualizer,
     ):
+        self.life_cycle = life_cycle
         self.task = task
         self.model = model
         self.scheduler = scheduler
@@ -115,6 +117,9 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         for accumulated_train_batch in accumulated_train_batches:
+            if self.step >= self.life_cycle:
+                break
+
             # train
             self.model.train(True) # Set to training mode may take some time, but it can aviod wrong operation of subclasses.
             self.train(accumulated_train_batch)

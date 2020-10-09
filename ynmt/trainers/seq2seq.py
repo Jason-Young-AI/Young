@@ -26,6 +26,7 @@ from ynmt.utilities.distributed import gather_all
 @register_trainer('seq2seq')
 class Seq2Seq(Trainer):
     def __init__(self,
+        life_cycle,
         task, model, scheduler, optimizer,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period,
@@ -34,6 +35,7 @@ class Seq2Seq(Trainer):
         device_descriptor, logger, visualizer
     ):
         super(Seq2Seq, self).__init__(
+            life_cycle,
             task, model, scheduler, optimizer,
             checkpoint_directory, checkpoint_name, checkpoint_keep_number,
             training_period, validation_period,
@@ -54,6 +56,7 @@ class Seq2Seq(Trainer):
         validation_criterion.to(device_descriptor)
 
         seq2seq = cls(
+            args.life_cycle,
             task, model, scheduler, optimizer,
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
             args.training_period, args.validation_period,
