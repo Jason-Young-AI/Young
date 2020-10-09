@@ -134,6 +134,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     # Launch Trainer
     logger.info(f' * Launch Trainer ...')
+    logger.info(f'   Trainer Life Cycle: {trainer.life_cycle} update steps!')
     logger.info(f'   Saving checkpoint every {args.trainer.training_period} steps;')
     logger.info(f'   Validate every {args.trainer.validation_period} steps.')
 
