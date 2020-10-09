@@ -4,14 +4,28 @@
 # Copyright (c) Jason Young (杨郑鑫).
 #
 # E-Mail: <AI.Jason.Young@outlook.com>
-# 2020-07-05 18:36
+# 2020-08-12 18:31
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.testers.beam_search import build_tester_beam_search
+import os
+
+from ynmt.testers.tester import Tester
+
+from ynmt.utilities.registration import Registration, import_modules
 
 
-def build_tester(args, vocabulary):
-    return globals()[f'build_tester_{args.name}'](args, vocabulary)
+tester_registration = Registration(Tester)
+
+
+def build_tester(args, task, device_descriptor, logger):
+    return tester_registration[args.name].setup(args, task, device_descriptor, logger)
+
+
+def register_tester(registration_name):
+    return tester_registration.register(registration_name)
+
+
+import_modules('ynmt.testers', os.path.dirname(__file__))
