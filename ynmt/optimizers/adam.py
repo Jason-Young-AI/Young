@@ -12,22 +12,10 @@
 
 import torch
 
-
-from ynmt.optimizers import Optimizer
-
-
-def build_optimizer_adam(args, model):
-    parameters = (parameter for parameter in model.parameters() if parameter.requires_grad and parameter.is_leaf)
-    adam = Adam(
-        parameters,
-        learning_rate=args.learning_rate,
-        betas=(args.beta1, args.beta2),
-        epsilon=args.epsilon
-    )
-
-    return adam
+from ynmt.optimizers import register_optimizer, Optimizer
 
 
+@register_optimizer('adam')
 class Adam(Optimizer):
     def __init__(self, parameters, learning_rate=0.001, betas=(0.9, 0.999), epsilon=1e-08):
         adam_optimizer = torch.optim.Adam(
@@ -37,3 +25,15 @@ class Adam(Optimizer):
             eps=epsilon
         )
         super(Adam, self).__init__(adam_optimizer)
+
+    @classmethod
+    def setup(cls, args, model):
+        parameters = (parameter for parameter in model.parameters() if parameter.requires_grad and parameter.is_leaf)
+        adam = cls(
+            parameters,
+            learning_rate=args.learning_rate,
+            betas=(args.beta1, args.beta2),
+            epsilon=args.epsilon
+        )
+
+        return adam

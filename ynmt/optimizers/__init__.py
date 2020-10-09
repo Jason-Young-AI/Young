@@ -10,11 +10,21 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
+
 from ynmt.optimizers.optimizer import Optimizer
 
+from ynmt.utilities.registration import Registration, import_modules
 
-from ynmt.optimizers.adam import build_optimizer_adam
+
+optimizer_registration = Registration(Optimizer)
 
 
 def build_optimizer(args, model):
-    return globals()[f'build_optimizer_{args.name}'](args, model)
+    return optimizer_registration[args.name].setup(args, model)
+
+def register_optimizer(registration_name):
+    return optimizer_registration.register(registration_name)
+
+
+import_modules('ynmt.optimizers', os.path.dirname(__file__))

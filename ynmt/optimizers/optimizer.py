@@ -14,6 +14,10 @@ class Optimizer(object):
     def __init__(self, optimizer):
         self.optimizer = optimizer
 
+    @classmethod
+    def setup(cls, args, model):
+        raise NotImplementedError
+
     @property
     def defaults(self):
         return self.optimizer.defaults
