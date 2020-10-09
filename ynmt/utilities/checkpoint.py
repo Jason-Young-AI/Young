@@ -54,6 +54,8 @@ def load_checkpoint(checkpoint_directory_or_path, name=""):
                 latest_checkpoint = None
 
         return latest_checkpoint
+    else:
+        return None
 
 
 def save_checkpoint(checkpoint, checkpoint_directory_or_path, name="", keep_number=0):
