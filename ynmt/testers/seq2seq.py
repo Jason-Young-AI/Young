@@ -160,7 +160,7 @@ class Seq2Seq(Tester):
         bleu_scorer = BLEUScorer()
         with open(output_basepath + '.' + 'trans', 'r', encoding='utf-8') as translation_file, open(self.target_path, 'r', encoding='utf-8') as reference_file:
             for tra, ref in zip(translation_file, reference_file):
-                bleu_scorer.add(tra.split(), ref.split())
+                bleu_scorer.add(tra.split(), [ref.split(), ])
 
         self.logger.info(bleu_scorer.result_string)
 
