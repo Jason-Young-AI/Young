@@ -24,6 +24,7 @@ class Trainer(object):
         task, model, scheduler, optimizer,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period,
+        report_period,
         device_descriptor, logger, visualizer,
     ):
         self.life_cycle = life_cycle
@@ -36,6 +37,7 @@ class Trainer(object):
         self.checkpoint_keep_number = checkpoint_keep_number
         self.training_period = training_period
         self.validation_period = validation_period
+        self.report_period = report_period
         self.device_descriptor = device_descriptor
         self.logger = logger
         self.visualizer = visualizer
@@ -141,7 +143,8 @@ class Trainer(object):
 
         self.update()
         reduced_train_statistics = self.reduce_statistics(self.train_statistics)
-        self.report('Train', reduced_train_statistics, self.timer.elapsed_time)
+        if self.step % self.report_period == 0:
+            self.report('Train', reduced_train_statistics, self.timer.elapsed_time)
 
     def validate(self, accumulated_valid_batches):
         self.timer.standby()
@@ -155,7 +158,8 @@ class Trainer(object):
                 self.validate_accumulated_batch(self.customize_accumulated_batch(accumulated_valid_batch))
 
         reduced_valid_statistics = self.reduce_statistics(self.valid_statistics)
-        self.report('Validate', reduced_valid_statistics, self.branch_timer.elapsed_time)
+        if self.step % self.report_period == 0:
+            self.report('Validate', reduced_valid_statistics, self.branch_timer.elapsed_time)
 
         self.timer.restart()
 

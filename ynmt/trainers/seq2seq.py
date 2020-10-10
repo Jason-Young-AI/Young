@@ -30,6 +30,7 @@ class Seq2Seq(Trainer):
         task, model, scheduler, optimizer,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period,
+        report_period,
         training_criterion, validation_criterion,
         normalization_type,
         device_descriptor, logger, visualizer
@@ -39,6 +40,7 @@ class Seq2Seq(Trainer):
             task, model, scheduler, optimizer,
             checkpoint_directory, checkpoint_name, checkpoint_keep_number,
             training_period, validation_period,
+            report_period,
             device_descriptor, logger, visualizer
         )
         self.training_criterion = training_criterion
@@ -60,6 +62,7 @@ class Seq2Seq(Trainer):
             task, model, scheduler, optimizer,
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
             args.training_period, args.validation_period,
+            args.report_period,
             training_criterion, validation_criterion,
             args.normalization_type,
             device_descriptor, logger, visualizer,
@@ -128,7 +131,7 @@ class Seq2Seq(Trainer):
         ppl = perplexity(loss_per_item)
         accuracy = correct_item / total_item * 100
 
-        report_string = f'{handle_name}@{self.step} - '
+        report_string = f'{handle_name}@{self.step}/{self.life_cycle} - '
         report_string += f'loss/item: {loss_per_item:4.2f}; '
         report_string += f'ppl: {ppl:4.2f}; '
         report_string += f'acc: {accuracy:4.2f}%; '
