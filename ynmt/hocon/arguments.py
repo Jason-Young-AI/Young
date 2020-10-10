@@ -67,14 +67,12 @@ class HOCONArguments(object):
             for name in hocon:
                 if name in HOCONArguments.RESERVED_NAME:
                     raise ValueError(f'Invalid hocon attribute name(\'{name}\')')
-                if name in self.__names:
-                    if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
-                        getattr(self, name).update(hocon[name])
-                    else:
-                        setattr(self, name, hocon[name])
-                else:
+                if name not in self.__names:
                     self.__names.append(name)
-                    setattr(self, name, HOCONArguments(hocon[name]))
+                if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
+                    getattr(self, name).update(hocon[name])
+                else:
+                    setattr(self, name, hocon[name])
         else:
             raise ValueError(f'Argument hocon(\'{hocon}\') is not a \'pyhocon.config_tree.ConfigTree\' object.')
 
