@@ -44,6 +44,7 @@ class Seq2Seq(Tester):
         self.batch_size = batch_size
         self.batch_type = batch_type
 
+    def initialize(self):
         self.total_sentence_number = 0
 
     @classmethod

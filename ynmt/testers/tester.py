@@ -47,6 +47,9 @@ class Tester(object):
     def setup(cls, args, task, device_descriptor, logger):
         raise NotImplementedError
 
+    def initialize(self):
+        raise NotImplementedError
+
     def test(self, model, batch):
         raise NotImplementedError
 
