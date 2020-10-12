@@ -43,17 +43,27 @@ class Task(object):
     def build_datasets(self, args):
         def produce_dataset(semi_dataset_paths, shard_size):
             # Produce dataset(which is made up of dataset shards) from semi-datasets
-            dataset = Dataset(self.structure)
+            dataset_size = 0
+            shard_number = 0
+            dataset_shard = Dataset(self.structure)
             for semi_dataset_path in semi_dataset_paths:
                 semi_dataset = load_data(semi_dataset_path)
                 for instance in semi_dataset:
-                    if len(dataset) == shard_size:
-                        yield dataset
-                        dataset = Dataset(self.structure)
+                    if len(dataset_shard) == shard_size:
+                        dataset_size += len(dataset_shard)
+                        shard_number += 1
+                        self.logger.info(f'   No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
+                        yield dataset_shard
+                        dataset_shard = Dataset(self.structure)
                     else:
-                        dataset.add(instance)
-            if len(dataset) != 0:
-                yield dataset
+                        dataset_shard.add(instance)
+            if len(dataset_shard) != 0:
+                dataset_size += len(dataset_shard)
+                shard_number += 1
+                self.logger.info(f'   No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
+                yield dataset_shard
+
+            self.logger.info(f'   Dataset has {shard_number} shards and the total size is {dataset_size}.')
 
         # 1. Build Training Dataset
         self.logger.info(f'Building training dataset ...')
@@ -67,11 +77,8 @@ class Task(object):
 
         self.logger.info(f' * Producing Dataset with shard size of {args.shard_size} ...')
         training_dataset = produce_dataset(training_semi_dataset_paths, args.shard_size)
-        self.logger.info(f'   The construction of dataset is complete.')
-
-        self.logger.info(f' > Saving Training Dataset to {args.datasets.training} ...')
         dump_datas(args.datasets.training, training_dataset)
-        self.logger.info(f'   Training Dataset has been saved.')
+        self.logger.info(f'   Training Dataset has been saved to {args.datasets.training}.')
 
         self.logger.info(f' - Removing semi-dataset ...')
         for training_semi_dataset_path in training_semi_dataset_paths:
@@ -90,11 +97,8 @@ class Task(object):
 
         self.logger.info(f' * Producing Dataset with shard size of {args.shard_size} ...')
         validation_dataset = produce_dataset(validation_semi_dataset_paths, args.shard_size)
-        self.logger.info(f'   The construction of dataset is complete.')
-
-        self.logger.info(f' > Saving Validation Dataset to {args.datasets.validation} ...')
         dump_datas(args.datasets.validation, validation_dataset)
-        self.logger.info(f'   Validation Dataset has been saved.')
+        self.logger.info(f'   Validation Dataset has been saved to {args.datasets.validation}.')
 
         self.logger.info(f' - Removing semi-dataset ...')
         for validation_semi_dataset_path in validation_semi_dataset_paths:
