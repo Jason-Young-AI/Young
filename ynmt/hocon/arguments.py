@@ -70,7 +70,10 @@ class HOCONArguments(object):
                 if name not in self.__names:
                     self.__names.append(name)
                 if isinstance(hocon[name], pyhocon.config_tree.ConfigTree):
-                    getattr(self, name).update(hocon[name])
+                    if hasattr(self, name):
+                        getattr(self, name).update(hocon[name])
+                    else:
+                        setattr(self, name, HOCONArguments(hocon[name]))
                 else:
                     setattr(self, name, hocon[name])
         else:
