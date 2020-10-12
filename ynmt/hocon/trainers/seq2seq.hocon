@@ -1,6 +1,7 @@
 name = "seq2seq"
 normalization_type = "token"
 life_cycle = 200000
+report_period = 1
 training_period = 1000
 validation_period = 1000
 training_criterion = {
