@@ -1,0 +1,19 @@
+name = "seq2seq"
+normalization_type = "token"
+life_cycle = 200000
+wait_time = 3
+report_period = 1
+training_period = 1000
+validation_period = 1000
+training_criterion = {
+    name = "label_smoothing_cross_entropy"
+    label_smoothing_percent = 0.1
+}
+validation_criterion = {
+    name = "cross_entropy"
+}
+checkpoints = {
+    name = "seq2seq_en-ro"
+    directory = "Checkpoints"
+    keep_number = 100
+}
