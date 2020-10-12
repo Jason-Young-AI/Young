@@ -52,7 +52,9 @@ def test(args):
     assert os.path.isdir(args.checkpoint_directory), f' Checkpoint directory \'{args.checkpoint_directory}\' does not exist!'
     assert os.path.isdir(args.output_directory), f' Output directory \'{args.output_directory}\' does not exist!'
 
-    for checkpoint_name in os.listdir(args.checkpoint_directory):
+    checkpoint_names = os.listdir(args.checkpoint_directory)
+    logger.info(f'   There are {len(checkpoint_names)} checkpoints will be loaded: {checkpoint_names}')
+    for checkpoint_name in checkpoint_names:
         checkpoint_path = os.path.join(args.checkpoint_directory, checkpoint_name)
         if os.path.isfile(checkpoint_path):
             checkpoint = load_checkpoint(checkpoint_path)
@@ -76,6 +78,7 @@ def test(args):
             # Launch Tester
             logger.info(f' * Launch Tester ...')
             logger.info(f'   The testing outputs of the model will be wrote into \'{output_basepath}-*\'.')
+            tester.initialize()
             tester.launch(model, output_basepath)
 
     logger.info(f' $ Finished !')
