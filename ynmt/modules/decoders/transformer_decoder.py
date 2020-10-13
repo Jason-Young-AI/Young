@@ -43,6 +43,8 @@ class TransformerDecoder(torch.nn.Module):
         )
         self.final_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
+        self.initialize()
+
     def embed(self, x):
         x = self.embed_token(x)
         x = x * math.sqrt(self.dimension)
@@ -63,6 +65,10 @@ class TransformerDecoder(torch.nn.Module):
         x = self.final_normalization(x)
 
         return x, cross_attention_weight
+
+    def initialize(self):
+        torch.nn.init.normal_(self.embed_token.weight, mean=0, std=self.embed_token.embedding_dim ** -0.5)
+        torch.nn.init.constant_(self.embed_token.weight[self.embed_token.padding_idx], 0.0)
 
 
 class TransformerDecoderLayer(torch.nn.Module):

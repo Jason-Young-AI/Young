@@ -33,6 +33,8 @@ class MultiHeadAttention(torch.nn.Module):
 
         self.attention_linear = torch.nn.Linear(self.dimension, self.dimension)
 
+        self.initialize()
+
     def forward(self, query, key, value, attention_weight_mask):
         # query, key, value: [Batch_Size x X_Length x Head_Number * Head_Dimension]
 
@@ -63,3 +65,11 @@ class MultiHeadAttention(torch.nn.Module):
         # attention: [Query_Length x Batch_Size x Dimension]
         # attention_weight: [Batch_Size x Head_Number x Query_Length x Key_Length]
         return attention, attention_weight
+
+    def initialize(self):
+        torch.nn.init.xavier_uniform_(self.query_linear.weight, gain=1 / math.sqrt(2))
+        torch.nn.init.xavier_uniform_(self.key_linear.weight, gain=1 / math.sqrt(2))
+        torch.nn.init.xavier_uniform_(self.value_linear.weight, gain=1 / math.sqrt(2))
+
+        torch.nn.init.xavier_uniform_(self.attention_linear.weight)
+        torch.nn.init.constant_(self.attention_linear.bias, 0.0)

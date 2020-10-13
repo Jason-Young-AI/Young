@@ -80,7 +80,8 @@ class Transformer(Model):
             args.decoder.normalize_position
         )
 
-        generator = MultilayerPerceptron(args.decoder.dimension, len(task.vocabularies['target']))
+        generator = MultilayerPerceptron(args.decoder.dimension, len(task.vocabularies['target']), has_bias=False)
+        torch.nn.init.normal_(generator.linear_layers[0].weight, mean=0, std=args.decoder.dimension ** -0.5)
 
         if args.share_enc_dec_embeddings:
             transformer_decoder.embed_token.weight = transformer_encoder.embed_token.weight
@@ -89,9 +90,5 @@ class Transformer(Model):
             generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
 
         transformer = cls(args, args.dimension, transformer_encoder, transformer_decoder, generator)
-
-        for parameter in transformer.parameters():
-            if parameter.dim() > 1:
-                torch.nn.init.xavier_uniform_(parameter)
 
         return transformer
