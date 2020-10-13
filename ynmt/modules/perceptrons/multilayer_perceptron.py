@@ -18,7 +18,7 @@ non_linear_nodim = set({'ReLU', 'Tanh', 'Sigmoid'})
 
 
 class MultilayerPerceptron(torch.nn.Module):
-    def __init__(self, input_dimension, output_dimension, dimensions=list(), activation=None):
+    def __init__(self, input_dimension, output_dimension, dimensions=list(), activation=None, has_bias=True):
         super(MultilayerPerceptron, self).__init__()
         assert isinstance(dimensions, list), f'Dimensions should be List()'
 
@@ -28,7 +28,7 @@ class MultilayerPerceptron(torch.nn.Module):
 
         self.linear_layers = torch.nn.ModuleList()
         for input_dimension, output_dimension in self.io_sizes:
-            linear_layer = torch.nn.Linear(input_dimension, output_dimension)
+            linear_layer = torch.nn.Linear(input_dimension, output_dimension, bias=has_bias)
             self.linear_layers.append(linear_layer)
 
         if activation in non_linear_dim:
