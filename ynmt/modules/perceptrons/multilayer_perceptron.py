@@ -18,17 +18,24 @@ non_linear_nodim = set({'ReLU', 'Tanh', 'Sigmoid'})
 
 
 class MultilayerPerceptron(torch.nn.Module):
-    def __init__(self, input_dimension, output_dimension, dimensions=list(), activation=None, has_bias=True):
+    def __init__(
+        self, input_dimension, output_dimension, bias_flag,
+        hidden_layer_dimensions=list(), hidden_layer_bias_flags=list(), activation=None
+    ):
         super(MultilayerPerceptron, self).__init__()
-        assert isinstance(dimensions, list), f'Dimensions should be List()'
+        assert isinstance(hidden_layer_dimensions, list), f'Dimensions of hidden layer should be List()'
+        assert isinstance(hidden_layer_bias_flags, list), f'Bias flags of hidden layer should be List()'
+        assert len(hidden_layer_dimensions) == len(hidden_layer_bias_flags), f'Length of hidden_layer_dimensions & hidden_layer_dimensions mismatch'
 
-        input_dimensions = [input_dimension] + dimensions
-        output_dimensions = dimensions + [output_dimension]
+        input_dimensions = [input_dimension] + hidden_layer_dimensions
+        output_dimensions = hidden_layer_dimensions + [output_dimension]
         self.io_sizes = list(zip(input_dimensions, output_dimensions))
 
+        self.bias_flags = [bias_flag] + hidden_layer_bias_flags
+
         self.linear_layers = torch.nn.ModuleList()
-        for input_dimension, output_dimension in self.io_sizes:
-            linear_layer = torch.nn.Linear(input_dimension, output_dimension, bias=has_bias)
+        for (input_dimension, output_dimension), bias_flag in zip(self.io_sizes, self.bias_flags):
+            linear_layer = torch.nn.Linear(input_dimension, output_dimension, bias=bias_flag)
             self.linear_layers.append(linear_layer)
 
         if activation in non_linear_dim:
