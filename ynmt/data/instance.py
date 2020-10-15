@@ -13,69 +13,6 @@
 from ynmt.utilities.statistics import Statistics
 
 
-class InstanceFilter(object):
-    def __init__(self, length_intervals):
-        assert isinstance(length_intervals, dict), f'#1 arg {length_intervals} should be a Dict().'
-        self.length_intervals = length_intervals
-
-    def __call__(self, instance):
-        for attribute_name, length_interval in self.length_intervals.items():
-            assert attribute_name in instance.structure, f"No such attribute:{attribute_name} in instance:{instance}"
-            attribute_length = len(instance[attribute_name])
-            if attribute_length < length_interval[0] or length_interval[1] < attribute_length:
-                return True
-        return False
-
-
-class InstanceSizeCalculator(object):
-    def __init__(self, calculation_attrs, calculation_type):
-        assert isinstance(calculation_attrs, set), f"#1 arg {calculation_attrs} should be a Set()."
-        assert calculation_type in {'token', 'sentence'}, f"Wrong choice of calculator type."
-
-        self.calculation_attrs = calculation_attrs
-        self.calculation_type = calculation_type
-
-    def __call__(self, instance):
-        attribute_sizes = Statistics(set())
-        for attribute_name in self.calculation_attrs:
-            if self.calculation_type == 'sentence':
-                attribute_size = 1
-            if self.calculation_type == 'token':
-                attribute_size = len(instance[attribute_name])
-
-            attribute_sizes[attribute_name] = attribute_size
-
-        return attribute_sizes
-
-
-class InstanceComparator(object):
-    def __init__(self, comparision_attrs=[]):
-        assert isinstance(comparision_attrs, list), f"#1 arg {comparision_attrs} should be a List()."
-        self.comparision_attrs = set()
-        self.comparision_order = list()
-
-        for comparision_attr in comparision_attrs:
-            if comparision_attr in self.comparision_attrs:
-                continue
-            else:
-                self.comparision_attrs.add(comparision_attr)
-                self.comparision_order.append(comparision_attr)
-
-    def __call__(self, instance):
-        self.optional_attrs = instance.structure - self.comparision_attrs
-        self.required_attrs = instance.structure - self.optional_attrs
-
-        comparision_list = list()
-        for comparision_attr in self.comparision_order:
-            if comparision_attr in self.required_attrs:
-                comparision_list.append(len(instance[comparision_attr]))
-
-        for optional_attr in self.optional_attrs:
-            comparision_list.append(len(instance[optional_attr]))
-
-        return tuple(comparision_list)
-
-
 class Instance(object):
     def __init__(self, structure):
         assert isinstance(structure, set), f'Type of structure should be set().'
