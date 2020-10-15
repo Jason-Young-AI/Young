@@ -17,7 +17,7 @@ from ynmt.tasks.mixins import SeqMixin
 
 from ynmt.data.vocabulary import Vocabulary
 from ynmt.data.iterator import Iterator
-from ynmt.data.instance import Instance, InstanceFilter, InstanceSizeCalculator, InstanceComparator
+from ynmt.data.instance import Instance
 
 from ynmt.utilities.file import load_plain, load_data, dump_data
 from ynmt.utilities.sequence import tokenize, numericalize
@@ -37,15 +37,61 @@ class Seq2Seq(Task, SeqMixin):
     def setup(cls, args, logger):
         return cls(logger, args.language.source, args.language.target)
 
+    def instance_filter(self, args):
+        source_filter = args.filter.source
+        target_filter = args.filter.target
+
+        def handler(instance):
+            if len(instance.source) < source_filter[0] or source_filter[1] < len(instance.source):
+                return True
+
+            if len(instance.target) < target_filter[0] or target_filter[1] < len(instance.target):
+                return True
+
+            return False
+
+        return handler
+
+    def instance_comparator(self, args):
+        def handler(instance):
+            return (len(instance.source), len(instance.target))
+        return handler
+
+    def instance_size_calculator(self, args):
+        batch_type = args.batch_type
+        self.max_source_length = 0
+        self.max_target_length = 0
+
+        def handler(instances):
+            if batch_type == 'sentence':
+                batch_size = len(instances)
+
+            if batch_type == 'token':
+                if len(instances) == 1:
+                    self.max_source_length = 0
+                    self.max_target_length = 0
+
+                self.max_source_length = max(self.max_source_length, len(instances[-1].source))
+                self.max_target_length = max(self.max_target_length, len(instances[-1].target) - 1)
+
+                source_batch_size = len(instances) * self.max_source_length
+                target_batch_size = len(instances) * self.max_target_length
+                batch_size = max(source_batch_size, target_batch_size)
+
+            return batch_size
+        
+        return handler
+
     def training_batches(self, args):
         return Iterator(
             args.datasets.training,
             args.training_batches.batch_size,
-            InstanceSizeCalculator(self.structure, args.training_batches.batch_type),
-            instance_filter = InstanceFilter({'source': args.training_batches.filter.source, 'target': args.training_batches.filter.target}),
-            instance_comparator = InstanceComparator(['source', 'target']),
-            accumulate_number=args.training_batches.accumulate_number,
-            mode=args.training_batches.mode,
+            dock_size = args.training_batches.dock_size,
+            export_volume = args.training_batches.export_volume,
+            instance_filter = self.instance_filter(args.training_batches),
+            instance_comparator = self.instance_comparator(args.training_batches),
+            instance_size_calculator = self.instance_size_calculator(args.training_batches),
+            shuffle=args.training_batches.shuffle,
             infinite=True,
         )
 
@@ -53,7 +99,7 @@ class Seq2Seq(Task, SeqMixin):
         return Iterator(
             args.datasets.validation,
             args.validation_batches.batch_size,
-            InstanceSizeCalculator(self.structure, args.validation_batches.batch_type),
+            instance_size_calculator = self.instance_size_calculator(args.validation_batches),
         )
 
     def load_ancillary_datasets(self, args):
