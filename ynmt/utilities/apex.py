@@ -14,8 +14,6 @@ import apex
 
 
 def mix_precision(ynmt_model, ynmt_optimizer, mix_precision=False, optimization_level='O0'):
-    print(mix_precision)
-    print(optimization_level)
     if mix_precision:
         ynmt_model, ynmt_optimizer.optimizer = apex.amp.initialize(ynmt_model, ynmt_optimizer.optimizer, opt_level=optimization_level)
         ynmt_optimizer.mix_precision = mix_precision
