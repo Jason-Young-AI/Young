@@ -19,7 +19,7 @@ from ynmt.criterions import build_criterion
 from ynmt.data.batch import Batch
 from ynmt.data.attribute import pad_attribute
 
-from ynmt.utilities.statistics import perplexity
+from ynmt.utilities.statistics import perplexity, Statistics
 from ynmt.utilities.distributed import gather_all
 
 
@@ -71,8 +71,7 @@ class Seq2Seq(Trainer):
 
     def customize_accumulated_batch(self, accumulated_batch):
         accumulated_padded_batch = list()
-        normalization = 0
-
+        statistics = Statistics(set({'normalization', 'src_token_number', 'tgt_token_number'}))
         for batch in accumulated_batch:
             padded_batch = Batch(set({'source', 'target'}))
             # source side
@@ -86,19 +85,21 @@ class Seq2Seq(Trainer):
             # accumulate batch
             accumulated_padded_batch.append(padded_batch)
 
+            statistics.src_token_number += padded_batch.source.ne(self.task.vocabularies['source'].pad_index).sum().item()
+            statistics.tgt_token_number += padded_batch.target.ne(self.task.vocabularies['target'].pad_index).sum().item()
             # Calculate normalization
             if self.normalization_type == 'token':
-                valid_token_number = padded_batch.target[:, 1:].ne(self.task.vocabularies['target'].pad_index).sum().item()
-                normalization += valid_token_number
+                statistics.normalization += padded_batch.target[:, 1:].ne(self.task.vocabularies['target'].pad_index).sum().item()
             elif self.normalization_type == 'sentence':
-                normalization += len(padded_batch.target)
+                statistics.normalization += len(padded_batch.target)
 
-        return accumulated_padded_batch, normalization
+        return accumulated_padded_batch, statistics
 
     def train_accumulated_batch(self, customized_accumulated_train_batch):
-        accumulated_padded_train_batch, normalization = customized_accumulated_train_batch
-        normalization = sum(gather_all(normalization, self.device_descriptor))
-        self.train_statistics.clear()
+        accumulated_padded_train_batch, statistics = customized_accumulated_train_batch
+        normalization = sum(gather_all(statistics.normalization, self.device_descriptor))
+        self.train_statistics += statistics
+
         for padded_train_batch in accumulated_padded_train_batch:
 
             target_input = padded_train_batch.target[:, :-1]
@@ -109,10 +110,11 @@ class Seq2Seq(Trainer):
             self.train_statistics += self.training_criterion.statistics
 
             loss /= normalization
-            loss.backward()
+            self.optimizer.backward(loss)
 
     def validate_accumulated_batch(self, customized_accumulated_valid_batch):
-        accumulated_padded_valid_batch, normalization = customized_accumulated_valid_batch
+        accumulated_padded_valid_batch, statistics = customized_accumulated_valid_batch
+        self.valid_statistics += statistics
         for padded_valid_batch in accumulated_padded_valid_batch:
 
             target_input = padded_valid_batch.target[:, :-1]
@@ -122,21 +124,26 @@ class Seq2Seq(Trainer):
             loss = self.validation_criterion(logits, target_output)
             self.valid_statistics += self.validation_criterion.statistics
 
-    def report(self, handle_name, reduced_statistics, time_cost):
+    def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
         loss = reduced_statistics['loss']
         correct_item = reduced_statistics['correct_item']
         total_item = reduced_statistics['total_item']
+        src_token_number = reduced_statistics['src_token_number']
+        tgt_token_number = reduced_statistics['tgt_token_number']
 
         loss_per_item = loss / total_item
         ppl = perplexity(loss_per_item)
         accuracy = correct_item / total_item * 100
+        src_tps = src_token_number / (step_time_cost + 1e-5)
+        tgt_tps = tgt_token_number / (step_time_cost + 1e-5)
 
         report_string = f'{handle_name}@{self.step}/{self.life_cycle} - '
         report_string += f'loss/item: {loss_per_item:4.2f}; '
         report_string += f'ppl: {ppl:4.2f}; '
         report_string += f'acc: {accuracy:4.2f}%; '
         report_string += f'lr: {self.learning_rate:g}; '
-        report_string += f'{time_cost:.0f}s'
+        report_string += f'i/s: (s:{src_tps:.0f}|t:{tgt_tps:.0f}); '
+        report_string += f'{total_time_cost:.0f}sec'
         self.logger.info(report_string)
 
         l_win_name = f'{handle_name}_loss_per_item'
