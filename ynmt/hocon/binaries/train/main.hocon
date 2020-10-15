@@ -40,4 +40,8 @@ distribution = {
     ranks = [0, 1, 2, 3]
     workshop_capacity = 60
 }
+mix_precision {
+    on = False
+    optimization_level = "O0"
+}
 random_seed = 1234
