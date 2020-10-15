@@ -25,6 +25,21 @@ class Task(object):
     def setup(cls, args):
         raise NotImplementedError
 
+    def instance_filter(self, args):
+        # should return a handler, like:
+        # def handler(instance)
+        raise NotImplementedError
+
+    def instance_comparator(self, args):
+        # should return a handler, like:
+        # def handler(instance)
+        raise NotImplementedError
+
+    def instance_size_calculator(self, args):
+        # should return a handler, like:
+        # def handler(instances)
+        raise NotImplementedError
+
     def load_ancillary_datasets(self, args):
         raise NotImplementedError
 
