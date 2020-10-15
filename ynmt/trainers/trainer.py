@@ -139,12 +139,13 @@ class Trainer(object):
         return
 
     def train(self, accumulated_train_batch):
+        self.train_statistics.clear()
         self.train_accumulated_batch(self.customize_accumulated_batch(accumulated_train_batch))
 
         self.update()
         reduced_train_statistics = self.reduce_statistics(self.train_statistics)
         if self.step % self.report_period == 0:
-            self.report('Train', reduced_train_statistics, self.timer.elapsed_time)
+            self.report('Train', reduced_train_statistics, self.timer.lap(), self.timer.elapsed_time)
 
     def validate(self, accumulated_valid_batches):
         self.timer.standby()
@@ -159,11 +160,11 @@ class Trainer(object):
 
         reduced_valid_statistics = self.reduce_statistics(self.valid_statistics)
         if self.step % self.report_period == 0:
-            self.report('Validate', reduced_valid_statistics, self.branch_timer.elapsed_time)
+            self.report('Validate', reduced_valid_statistics, self.branch_timer.lap(), self.branch_timer.elapsed_time)
 
         self.timer.restart()
 
-    def report(self, handle_name, reduced_statistics, time_cost):
+    def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
         raise NotImplementedError
 
     def customize_accumulated_batch(self, accumulated_batch):
