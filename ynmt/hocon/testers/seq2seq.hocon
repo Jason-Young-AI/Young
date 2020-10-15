@@ -3,8 +3,8 @@ bpe_symbol = "@@ "
 remove_bpe = True
 searcher = {
     name = "beam"
-    beam_size = 5
-    n_best = 5
+    beam_size = 4
+    n_best = 1
     min_length = 1
     max_length = 200
     penalty = {
@@ -13,7 +13,7 @@ searcher = {
     }
 }
 
-source = "Corpora/test.en-ro.en"
-target = "Corpora/test.en-ro.ro-nobpe"
+source = "Corpora/newsdev2016.en-ro.en"
+target = "Corpora/Gold/newsdev2016.en-ro.ro"
 batch_size = 32
 batch_type = "sentence"

@@ -17,8 +17,8 @@ scheduler = {
     warmup_step = 4000
 }
 logger = {
-    name = "train"
-    path = "train.log"
+    name = "wmt16_en-ro_train"
+    path = "wmt16_en-ro_train.log"
     off = False
 }
 visualizer = {

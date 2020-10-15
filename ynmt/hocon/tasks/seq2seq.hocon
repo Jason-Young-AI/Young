@@ -15,19 +15,19 @@ vocabularies = {
 
 raw_data = {
     training = {
-        source = "Corpora/train.en-ro.en"
-        target = "Corpora/train.en-ro.ro"
+        source = "Corpora/wmt16.en-ro.en"
+        target = "Corpora/wmt16.en-ro.ro"
     }
     validation = {
-        source = "Corpora/valid.en-ro.en"
-        target = "Corpora/valid.en-ro.ro"
+        source = "Corpora/newsdev2016.en-ro.en"
+        target = "Corpora/newsdev2016.en-ro.ro"
     }
 }
 
 datasets = {
-    training = "Datasets/train.en-ro.dataset"
-    validation = "Datasets/valid.en-ro.dataset"
-    vocabularies = "Datasets/en-ro.vocab"
+    training = "Datasets/wmt16.en-ro.dataset"
+    validation = "Datasets/newsdev2016.en-ro.dataset"
+    vocabularies = "Datasets/wmt16.en-ro.vocab"
 }
 
 training_batches = {
@@ -47,6 +47,6 @@ validation_batches = {
     batch_type = "sentence"
 }
 
-number_worker = 8
+number_worker = 16
 shard_size = 1000000
 work_amount = 1000000

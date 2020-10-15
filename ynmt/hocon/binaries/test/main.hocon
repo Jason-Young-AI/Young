@@ -6,7 +6,7 @@ output_directory = "Outputs"
 checkpoint_directory = "Checkpoints"
 
 logger = {
-    name = "test"
-    path = "test.log"
+    name = "wmt16_en-ro_test"
+    path = "wmt16_en-ro_test.log"
     off = False
 }
