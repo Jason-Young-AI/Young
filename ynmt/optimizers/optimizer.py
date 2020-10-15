@@ -10,9 +10,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import apex
+
+
 class Optimizer(object):
-    def __init__(self, optimizer):
+    def __init__(self, optimizer, mix_precision=False):
         self.optimizer = optimizer
+        self.mix_precision = mix_precision
 
     @classmethod
     def setup(cls, args, model):
@@ -42,6 +46,13 @@ class Optimizer(object):
 
     def step(self):
         self.optimizer.step()
+
+    def backward(self, loss):
+        if self.mix_precision:
+            with apex.amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            loss.backward()
 
     def zero_grad(self):
         self.optimizer.zero_grad()
