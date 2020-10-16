@@ -100,12 +100,12 @@ class Iterator(object):
 
 
 class RawTextIterator(object):
-    def __init__(self, raw_text_paths, instance_handler, batch_size, batch_size_calculator):
+    def __init__(self, raw_text_paths, instance_handler, batch_size, instance_size_calculator):
         assert isinstance(raw_text_paths, list), f'raw_text_paths must be a list of path.'
         self.raw_text_paths = raw_text_paths
         self.instance_handler = instance_handler
         self.batch_size = batch_size
-        self.batch_size_calculator = batch_size_calculator
+        self.instance_size_calculator = instance_size_calculator
 
     @property
     def instances(self):
@@ -126,12 +126,12 @@ class RawTextIterator(object):
 
         for instance in self.instances:
             current_instances.append(instance)
-            current_batch_size = self.batch_size_calculator(current_instances)
+            current_batch_size = self.instance_size_calculator(current_instances)
 
             if current_batch_size > self.batch_size:
                 yield Batch(instance.structure, current_instances[:-1])
                 current_instances = current_instances[-1:]
-                current_batch_size = self.batch_size_calculator(current_instances)
+                current_batch_size = self.instance_size_calculator(current_instances)
 
             if current_batch_size == self.batch_size:
                 yield Batch(instance.structure, current_instances)
