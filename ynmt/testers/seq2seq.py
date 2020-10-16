@@ -16,7 +16,7 @@ from ynmt.testers import register_tester, Tester
 from ynmt.testers.ancillaries import BeamSearcher
 
 from ynmt.data.batch import Batch
-from ynmt.data.instance import Instance, InstanceSizeCalculator
+from ynmt.data.instance import Instance
 from ynmt.data.iterator import RawTextIterator
 from ynmt.data.attribute import pad_attribute
 
@@ -119,11 +119,26 @@ class Seq2Seq(Tester):
             instance['source'] = numericalize(tokenize(source_line), self.task.vocabularies['source'])
             return instance
 
+        def instance_size_calculator(instances):
+            self.max_source_length = 0
+            if self.batch_type == 'sentence':
+                batch_size = len(instances)
+
+            if self.batch_type == 'token':
+                if len(instances) == 1:
+                    self.max_source_length = 0
+
+                self.max_source_length = max(self.max_source_length, len(instances[-1].source))
+
+                batch_size = len(instances) * self.max_source_length
+
+            return batch_size
+ 
         input_iterator = RawTextIterator(
             [self.source_path, ],
             instance_handler,
             self.batch_size,
-            InstanceSizeCalculator(set({'source'}), self.batch_type)
+            instance_size_calculator = instance_size_calculator
         )
 
         for batch in input_iterator:
