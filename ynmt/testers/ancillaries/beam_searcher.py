@@ -101,7 +101,7 @@ class BeamSearcher(object):
         new_active_line_indices = []
         for line_index in range(finished_paths.size(0)):
             active_line_index = self.active_line_indices[line_index]
-            finished_path = finished_paths[line_index].nonzero().view(-1)
+            finished_path = finished_paths[line_index].nonzero(as_tuple=False).view(-1)
             for path_index in finished_path:
                 self.candidate_paths[active_line_index].append(
                     dict(
