@@ -80,8 +80,8 @@ python setup.py build develop
 
 In YoungNMT, we built a module, which is a encapsulation of [pyhocon](https://github.com/chimpler/pyhocon),
 that parses files which are wrote in a HOCON style to obtain arguments of system. 
-HOCON (Human-Optimized Config Object Notation) is a superset of YAML, JSON and Properties.
-So YoungNMT can load arguments from `*.json`, `*.yaml`, `*.properties` and pure HOCON files.
+HOCON (Human-Optimized Config Object Notation) is a superset of JSON.
+So YoungNMT can load arguments from `*.json` or pure HOCON files.
 
 After installation, the commonds `ynmt-preprocess`, `ynmt-train` and `ynmt-test` can be excuted directly and system arguments will be loaded from default HOCON files.
 
