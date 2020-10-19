@@ -102,12 +102,12 @@ See [Full Documentation](https://www.jason-young.me/YoungNMT) for more details.
 
 Here is an example of the WMT16 English to Romania experiment.
 
-0. preliminaries
+**Step 0. preliminaries**
 
  * Download English-Romania corpora directory from [OneDrive](https://1drv.ms/f/s!AkKq-gTqmfT0jTzX8Tj1vkhocRzW);
  * Download English-Romania configuration file from [YoungNMT-configs](https://github.com/Jason-Young-AI/YoungNMT-configs)
 
-1. Dataset preparation
+**Step 1. Dataset preparation**
 
 ```bash
 unzip -d Corpora English-Romania.zip
@@ -115,13 +115,13 @@ mkdir Datasets
 ynmt-preprocess -l  wmt16_en-ro_config/main.hocon
 ```
 
-2. Train the model on 4 GPU
+**Step 2. Train the model on 4 GPU**
 ```bash
 mkdir -p Checkpoints/WMT16_En-Ro
 CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-train -l wmt16_en-ro_config/main.hocon
 ```
 
-3. Test the model using 1 GPU
+**Step 3. Test the model using 1 GPU**
 ```bash
 mkdir -p Outputs/WMT16_En-Ro
 CUDA_VISIBLE_DEVICES=0 ynmt-test -l wmt16_en-ro_config/main.hocon
