@@ -10,7 +10,7 @@
 --------------------------------------------------------------------------------
 
 **YoungNMT** is a young but low coupling, flexible and scalable neural machine translation system.
-The system is designed for researchers and developers to realize their ideas quickly without changing the original system.   
+The system is designed for researchers and developers to realize their ideas quickly without changing the original system.
 
 --------------------------------------------------------------------------------
 
