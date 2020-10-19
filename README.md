@@ -26,7 +26,7 @@ The system is designed for researchers and developers to realize their ideas qui
 
 ## Table of Contents
 
-* [Full Documentation](https://www.jason-young.me/YoungNMT)
+* [Full Documentation](https://youngnmt.readthedocs.io/en/stable/)
 * [Requirements](#dependencies)
 * [Installation](#installation)
 * [Arguments](#arguments)
