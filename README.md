@@ -83,16 +83,16 @@ that parses files which are wrote in a HOCON style to obtain arguments of system
 HOCON (Human-Optimized Config Object Notation) is a superset of JSON.
 So YoungNMT can load arguments from `*.json` or pure HOCON files.
 
-After installation, the commonds `ynmt-preprocess`, `ynmt-train` and `ynmt-test` can be excuted directly and system arguments will be loaded from default HOCON files.
+After installation, the commonds `ynmt` `ynmt-preprocess`, `ynmt-train` and `ynmt-test` can be excuted directly and system arguments will be loaded from default HOCON files.
 
 **Save Arguments** 
 ```bash
-ynmt-preprocess -s {path to save args} -t {json|yaml|properties|hocon}
+ynmt -s {path to save args} -t {json|yaml|properties|hocon}
 ```
 
 **Load Arguments** 
 ```bash
-ynmt-preprocess -l {user's config file}
+ynmt -l {user's config file}
 ```
 
 
