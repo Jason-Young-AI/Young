@@ -4,7 +4,7 @@
   <br />
   <a href="https://github.com/Jason-Young-AI/YoungNMT/blob/master/LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/License-Apache%202.0-brightgreen" /></a>
   <a href="https://github.com/Jason-Young-AI/YoungNMT/releases"><img alt="Latest Release" src="https://img.shields.io/badge/Release-Latest-blue" /></a>
-  <a href="https://youngnmt.readthedocs.io/en/stable/"><img alt="Documentation" src="https://img.shields.io/badge/Docs-Latest-yellowgreen" /></a>
+  <a href="https://jason-young.me/YoungNMT/"><img alt="Documentation" src="https://img.shields.io/badge/Docs-Latest-yellowgreen" /></a>
 </p>
 
 --------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ The system is designed for researchers and developers to realize their ideas qui
 
 ## Table of Contents
 
-* [Full Documentation](https://youngnmt.readthedocs.io/en/stable/)
+* [Full Documentation](https://jason-young.me/YoungNMT/)
 * [Requirements](#dependencies)
 * [Installation](#installation)
 * [Arguments](#arguments)
@@ -98,7 +98,7 @@ ynmt-preprocess -l {user's config file}
 
 ## Quickstart
 
-See [Full Documentation](https://youngnmt.readthedocs.io/en/stable/) for more details.
+See [Full Documentation](https://jason-young.me/YoungNMT/) for more details.
 
 Here is an example of the WMT16 English to Romania experiment.
 
