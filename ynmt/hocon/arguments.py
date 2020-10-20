@@ -11,6 +11,7 @@
 
 
 import os
+import sys
 import pyhocon
 import argparse
 import collections
@@ -161,6 +162,9 @@ def get_arguments():
     else:
         user_arguments.save(config_save_path, output_type=config_type)
         print(f'Saving user configuration file: {config_save_path}, type={config_type}')
+
+    if not os.path.isfile(config_load_path) and config_save_path != '':
+        sys.exit(0)
 
     return user_arguments
 
