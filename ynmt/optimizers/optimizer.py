@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import apex
+from ynmt.utilities.apex import backward
 
 
 class Optimizer(object):
@@ -48,11 +48,7 @@ class Optimizer(object):
         self.optimizer.step()
 
     def backward(self, loss):
-        if self.mix_precision:
-            with apex.amp.scale_loss(loss, self.optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
+        backward(loss, self.optimizer, self.mix_precision)
 
     def zero_grad(self):
         self.optimizer.zero_grad()

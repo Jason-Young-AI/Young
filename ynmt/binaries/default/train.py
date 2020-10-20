@@ -14,7 +14,7 @@ import torch
 
 import ynmt.hocon.arguments as harg
 
-from ynmt.utilities.apex import mix_precision
+from ynmt.utilities.apex import get_apex, mix_precision
 from ynmt.utilities.random import fix_random_procedure
 from ynmt.utilities.logging import setup_logger, logging_level
 from ynmt.utilities.checkpoint import load_checkpoint
@@ -102,7 +102,11 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     model, optimizer = mix_precision(model, optimizer, mix_precision=args.mix_precision.on, optimization_level=args.mix_precision.optimization_level)
     if args.mix_precision.on:
-        logger.info(f'Training in mix precision mode, optimization level is {args.mix_precision.optimization_level}')
+        apex = get_apex()
+        if apex is not None:
+            logger.info(f'Training in mix precision mode, optimization level is {args.mix_precision.optimization_level}')
+        else:
+            logger.info(f'Not found NVIDIA-APEX module! Now training in normal mode.')
 
     if checkpoint is not None:
         if not args.reset_scheduler:
