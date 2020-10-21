@@ -16,7 +16,11 @@ The system is designed for researchers and developers to realize their ideas qui
 
 <a href="#"><img alt="Documentation" src="https://img.shields.io/badge/Notifications-Warning-red" /></a>
 
-2020.10.10
+------ 2020.10.21 ------
+
+*Version 0.1.1a0 is released, although 0.1.1a0 is an alpha version, it is more stable than version 0.1.0.*
+
+------ 2020.10.10 ------
 
 *Version 0.1.0 has some bugs (but these bugs do not affect normal use of YoungNMT):*
   * *loading exception of user define hocon files;*
