@@ -1,4 +1,4 @@
-name = "seq2seq"
+name = "simul_seq2seq"
 normalization_type = "token"
 life_cycle = 30000
 wait_time = 3
