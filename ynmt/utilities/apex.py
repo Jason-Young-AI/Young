@@ -17,7 +17,7 @@ def get_apex():
     result = importlib.util.find_spec("apex")
 
     if result is not None:
-        apex = importlib.import_module(apex)
+        apex = importlib.import_module("apex")
     else:
         apex = None
 
