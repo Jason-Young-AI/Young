@@ -51,7 +51,7 @@ class Trainer(object):
         self.timer = Timer()
         self.branch_timer = Timer()
 
-    @property
+    @classmethod
     def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
         raise NotImplementedError
 
