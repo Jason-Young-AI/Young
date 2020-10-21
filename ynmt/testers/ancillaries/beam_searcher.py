@@ -33,6 +33,7 @@ class BeamSearcher(object):
         self.beta = beta
 
         self.parallel_line_number = None
+        self.finished = False
 
     def initialize(self, parallel_line_number, device_descriptor):
         self.current_depth = 0
@@ -81,6 +82,8 @@ class BeamSearcher(object):
             device=device_descriptor
         ).unsqueeze(-1).repeat(1, self.reserved_path_number)
 
+        self.finished = False
+
     @property
     def current_nodes(self):
         return self.reserved_paths[:, :, -1]
@@ -89,8 +92,7 @@ class BeamSearcher(object):
     def found_nodes(self):
         return self.reserved_paths
 
-    @property
-    def finished(self):
+    def update(self):
         finished_paths = self.current_nodes.eq(self.terminal_node)
 
         if self.current_depth == self.max_depth + 1:
@@ -131,9 +133,9 @@ class BeamSearcher(object):
         self.path_offset = torch.index_select(self.path_offset, 0, new_active_line_indices)
 
         if len(new_active_line_indices) == 0:
-            return True
+            self.finished = True
         else:
-            return False
+            self.finished = False
 
     def search(self, adjacent_node_log_probs):
         assert adjacent_node_log_probs.size(0) == self.parallel_line_number

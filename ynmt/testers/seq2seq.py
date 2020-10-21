@@ -87,9 +87,6 @@ class Seq2Seq(Tester):
         self.searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.searcher.finished:
-            source_mask = source_mask.index_select(0, self.searcher.path_offset.reshape(-1))
-            codes = codes.index_select(0, self.searcher.path_offset.reshape(-1))
-
             previous_prediction = self.searcher.found_nodes.reshape(
                 self.searcher.parallel_line_number * self.searcher.reserved_path_number,
                 -1
@@ -111,6 +108,10 @@ class Seq2Seq(Tester):
                 -1
             )
             self.searcher.search(prediction_distribution)
+            self.searcher.update()
+
+            source_mask = source_mask.index_select(0, self.searcher.path_offset.reshape(-1))
+            codes = codes.index_select(0, self.searcher.path_offset.reshape(-1))
 
     def input(self):
         def instance_handler(lines):
