@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/youngnmt_logo.png" width="150">
+  <img src="https://github.com/Jason-Young-AI/YoungNMT/blob/master/docs/youngnmt_logo.png" width="150">
   <br />
   <br />
   <a href="https://github.com/Jason-Young-AI/YoungNMT/blob/master/LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/License-Apache%202.0-brightgreen" /></a>
