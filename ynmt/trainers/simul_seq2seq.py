@@ -91,6 +91,8 @@ class SimulSeq2Seq(Seq2Seq):
             while read_start_position <= read_position and read_position <= read_end_position:
                 if write_position == target_output.shape[1]:
                     break
+                if read_position == read_end_position:
+                    write_position = target_output.shape[1] - 1
 
                 partial_source = padded_train_batch.source[:, :read_position + 1]
                 if read_position == read_end_position:
@@ -129,6 +131,8 @@ class SimulSeq2Seq(Seq2Seq):
             while read_start_position <= read_position and read_position <= read_end_position:
                 if write_position == target_output.shape[1]:
                     break
+                if read_position == read_end_position:
+                    write_position = target_output.shape[1] - 1
 
                 partial_source = padded_valid_batch.source[:, :read_position + 1]
                 if read_position == read_end_position:
