@@ -109,13 +109,15 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
             logger.info(f'Not found NVIDIA-APEX module! Now training in normal mode.')
 
     if checkpoint is not None:
-        if not args.reset_scheduler:
-            scheduler.load_state_dict(checkpoint['scheduler'])
+        if args.reset_scheduler:
             logger.info(f' | Reset Scheduler.')
+        else:
+            scheduler.load_state_dict(checkpoint['scheduler'])
 
-        if not args.reset_optimizer:
-            optimizer.load_state_dict(checkpoint['optimizer'])
+        if args.reset_optimizer:
             logger.info(f' | Reset Optimizer.')
+        else:
+            optimizer.load_state_dict(checkpoint['optimizer'])
 
         logger.info(f' | Loading Parameters ...')
         model.load_state_dict(checkpoint['model'], strict=False)
