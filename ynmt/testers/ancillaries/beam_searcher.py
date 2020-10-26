@@ -33,7 +33,6 @@ class BeamSearcher(object):
         self.beta = beta
 
         self.parallel_line_number = None
-        self.finished = False
 
     def initialize(self, parallel_line_number, device_descriptor):
         self.current_depth = 0
@@ -67,9 +66,9 @@ class BeamSearcher(object):
             for _ in range(self.parallel_line_number)
         )
 
-        self.active_line_indices = torch.arange(self.parallel_line_number, device=device_descriptor)
+        self.line_original_indices = torch.arange(self.parallel_line_number, device=device_descriptor)
         self.line_order = torch.arange(self.parallel_line_number, device=device_descriptor)
-        self.finished_lines = torch.full(
+        self.line_finished_flags = torch.full(
             [self.parallel_line_number],
             False,
             dtype=torch.bool,
@@ -82,8 +81,6 @@ class BeamSearcher(object):
             device=device_descriptor
         ).unsqueeze(-1).repeat(1, self.reserved_path_number)
 
-        self.finished = False
-
     @property
     def current_nodes(self):
         return self.reserved_paths[:, :, -1]
@@ -92,50 +89,53 @@ class BeamSearcher(object):
     def found_nodes(self):
         return self.reserved_paths
 
+    @property
+    def finished(self):
+        if len(self.line_original_indices) == 0:
+            return True
+        else:
+            return False
+
     def update(self):
-        finished_paths = self.current_nodes.eq(self.terminal_node)
+        path_finished_flags = self.current_nodes.eq(self.terminal_node)
+        current_line_number = self.current_nodes.size(0)
 
         if self.current_depth == self.max_depth + 1:
-            finished_paths.fill_(True)
+            path_finished_flags.fill_(True)
 
-        self.finished_lines |= finished_paths[:, 0].eq(True)
+        self.line_finished_flags |= path_finished_flags[:, 0].eq(True)
 
-        new_active_line_indices = []
-        for line_index in range(finished_paths.size(0)):
-            active_line_index = self.active_line_indices[line_index]
-            finished_path = finished_paths[line_index].nonzero(as_tuple=False).view(-1)
-            for path_index in finished_path:
-                self.candidate_paths[active_line_index].append(
+        active_line_indices = []
+        for line_index in range(current_line_number):
+            line_original_index = self.line_original_indices[line_index]
+            finished_path_indices = path_finished_flags[line_index].nonzero(as_tuple=False).view(-1)
+            for finished_path_index in finished_path_indices:
+                self.candidate_paths[line_original_index].append(
                     dict(
-                        log_prob = self.reserved_path_log_probs[line_index, path_index].item(),
-                        score = self.reserved_path_scores[line_index, path_index].item(),
-                        path = self.reserved_paths[line_index, path_index, 1:]
+                        log_prob = self.reserved_path_log_probs[line_index, finished_path_index].item(),
+                        score = self.reserved_path_scores[line_index, finished_path_index].item(),
+                        path = self.reserved_paths[line_index, finished_path_index, 1:]
                     )
                 )
-            if self.finished_lines[line_index] and len(self.candidate_paths[active_line_index]) >= self.candidate_path_number:
-                self.candidate_paths[active_line_index] = sorted(self.candidate_paths[active_line_index], key=lambda x: x['score'], reverse=True)
-                self.candidate_paths[active_line_index] = self.candidate_paths[active_line_index][:self.candidate_path_number]
+            if self.line_finished_flags[line_index] and len(self.candidate_paths[line_original_index]) >= self.candidate_path_number:
+                self.candidate_paths[line_original_index] = sorted(self.candidate_paths[line_original_index], key=lambda x: x['score'], reverse=True)
+                self.candidate_paths[line_original_index] = self.candidate_paths[line_original_index][:self.candidate_path_number]
                 self.parallel_line_number -= 1
             else:
-                new_active_line_indices.append(line_index)
+                active_line_indices.append(line_index)
 
-        new_active_line_indices = torch.tensor(
-            new_active_line_indices,
+        active_line_indices = torch.tensor(
+            active_line_indices,
             dtype=torch.long,
-            device=self.active_line_indices.device
+            device=self.line_original_indices.device
         )
 
-        self.active_line_indices = torch.index_select(self.active_line_indices, 0, new_active_line_indices)
-        self.reserved_path_log_probs = torch.index_select(self.reserved_path_log_probs, 0, new_active_line_indices)
-        self.reserved_path_scores = torch.index_select(self.reserved_path_scores, 0, new_active_line_indices)
-        self.reserved_paths = torch.index_select(self.reserved_paths, 0, new_active_line_indices)
-        self.finished_lines = torch.index_select(self.finished_lines, 0, new_active_line_indices)
-        self.path_offset = torch.index_select(self.path_offset, 0, new_active_line_indices)
-
-        if len(new_active_line_indices) == 0:
-            self.finished = True
-        else:
-            self.finished = False
+        self.line_original_indices = torch.index_select(self.line_original_indices, 0, active_line_indices)
+        self.reserved_path_log_probs = torch.index_select(self.reserved_path_log_probs, 0, active_line_indices)
+        self.reserved_path_scores = torch.index_select(self.reserved_path_scores, 0, active_line_indices)
+        self.reserved_paths = torch.index_select(self.reserved_paths, 0, active_line_indices)
+        self.line_finished_flags = torch.index_select(self.line_finished_flags, 0, active_line_indices)
+        self.path_offset = torch.index_select(self.path_offset, 0, active_line_indices)
 
     def search(self, adjacent_node_log_probs):
         assert adjacent_node_log_probs.size(0) == self.parallel_line_number
