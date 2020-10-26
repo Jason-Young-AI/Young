@@ -88,10 +88,9 @@ class SimulSeq2Seq(Tester):
             read_start_position = min(self.wait_time + 1, read_end_position) # +1 for the bos token. When wait_time is 0, first read bos token
 
         read_position = read_start_position
-        write_position = 0
 
         while read_start_position <= read_position and read_position <= read_end_position:
-            partial_source = torch.index_select(source[:, :read_position + 1], 0, self.searcher.active_line_indices)
+            partial_source = torch.index_select(source[:, :read_position + 1], 0, self.searcher.line_original_indices)
 
             partial_source_mask = model.get_source_mask(partial_source)
             partial_codes = model.encoder(partial_source, partial_source_mask)
@@ -137,6 +136,7 @@ class SimulSeq2Seq(Tester):
                 else:
                     break
 
+            read_position += 1
             if self.searcher.finished:
                 break
 
