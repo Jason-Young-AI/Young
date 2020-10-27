@@ -49,17 +49,15 @@ class Seq2Seq(Tester):
 
     @classmethod
     def setup(cls, args, task, device_descriptor, logger):
-        searcher = None
-        if args.searcher.name == 'beam':
-            searcher = BeamSearcher(
-                reserved_path_number = args.searcher.beam_size,
-                candidate_path_number = args.searcher.n_best,
-                search_space_size = len(task.vocabularies['target']),
-                initial_node = task.vocabularies['target'].bos_index,
-                terminal_node = task.vocabularies['target'].eos_index,
-                min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
-                alpha = args.searcher.penalty.alpha, beta = args.searcher.penalty.beta
-            )
+        searcher = BeamSearcher(
+            reserved_path_number = args.searcher.beam_size,
+            candidate_path_number = args.searcher.n_best,
+            search_space_size = len(task.vocabularies['target']),
+            initial_node = task.vocabularies['target'].bos_index,
+            terminal_node = task.vocabularies['target'].eos_index,
+            min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
+            alpha = args.searcher.penalty.alpha, beta = args.searcher.penalty.beta
+        )
 
         output_names = ['trans', 'trans-detailed']
 
