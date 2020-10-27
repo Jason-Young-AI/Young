@@ -11,3 +11,4 @@
 
 
 from ynmt.testers.ancillaries.beam_searcher import BeamSearcher
+from ynmt.testers.ancillaries.greedy_searcher import GreedySearcher
