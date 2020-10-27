@@ -13,7 +13,7 @@
 import torch
 
 from ynmt.testers import register_tester, Tester
-from ynmt.testers.ancillaries import BeamSearcher
+from ynmt.testers.ancillaries import GreedySearcher
 
 from ynmt.data.batch import Batch
 from ynmt.data.instance import Instance
@@ -25,8 +25,8 @@ from ynmt.utilities.extractor import get_tiled_tensor
 from ynmt.utilities.statistics import BLEUScorer
 
 
-@register_tester('simul_seq2seq')
-class SimulSeq2Seq(Tester):
+@register_tester('wait_k')
+class WaitK(Tester):
     def __init__(self,
         task, output_names,
         searcher, bpe_symbol, remove_bpe,
@@ -35,7 +35,7 @@ class SimulSeq2Seq(Tester):
         wait_time,
         device_descriptor, logger
     ):
-        super(SimulSeq2Seq, self).__init__(task, output_names, device_descriptor, logger)
+        super(WaitK, self).__init__(task, output_names, device_descriptor, logger)
         self.searcher = searcher
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
@@ -51,21 +51,16 @@ class SimulSeq2Seq(Tester):
 
     @classmethod
     def setup(cls, args, task, device_descriptor, logger):
-        searcher = None
-        if args.searcher.name == 'beam':
-            searcher = BeamSearcher(
-                reserved_path_number = args.searcher.beam_size,
-                candidate_path_number = args.searcher.n_best,
-                search_space_size = len(task.vocabularies['target']),
-                initial_node = task.vocabularies['target'].bos_index,
-                terminal_node = task.vocabularies['target'].eos_index,
-                min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
-                alpha = args.searcher.penalty.alpha, beta = args.searcher.penalty.beta
-            )
+        searcher = GreedySearcher(
+            search_space_size = len(task.vocabularies['target']),
+            initial_node = task.vocabularies['target'].bos_index,
+            terminal_node = task.vocabularies['target'].eos_index,
+            min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
+        )
 
         output_names = ['trans', 'trans-detailed']
 
-        simul_seq2seq = cls(
+        wait_k = cls(
             task, output_names,
             searcher, args.bpe_symbol, args.remove_bpe,
             args.source, args.target,
@@ -74,7 +69,7 @@ class SimulSeq2Seq(Tester):
             device_descriptor, logger
         )
 
-        return simul_seq2seq
+        return wait_k
 
     def test(self, model, batch):
         source = batch.source
@@ -89,56 +84,30 @@ class SimulSeq2Seq(Tester):
 
         read_position = read_start_position
 
-        while read_start_position <= read_position and read_position <= read_end_position:
+        while not self.searcher.finished:
             partial_source = torch.index_select(source[:, :read_position + 1], 0, self.searcher.line_original_indices)
 
             partial_source_mask = model.get_source_mask(partial_source)
             partial_codes = model.encoder(partial_source, partial_source_mask)
 
-            partial_source_mask = get_tiled_tensor(partial_source_mask, 0, self.searcher.reserved_path_number)
-            partial_codes = get_tiled_tensor(partial_codes, 0, self.searcher.reserved_path_number)
+            previous_prediction = self.searcher.found_nodes
+            previous_prediction_mask = model.get_target_mask(previous_prediction)
 
-            if read_position == read_end_position:
-                write_until_finished = True
-            else:
-                write_until_finished = False
+            hidden, cross_attention_weight = model.decoder(
+                previous_prediction,
+                partial_codes,
+                previous_prediction_mask,
+                partial_source_mask
+            )
 
-            while not self.searcher.finished:
-                previous_prediction = self.searcher.found_nodes.reshape(
-                    self.searcher.parallel_line_number * self.searcher.reserved_path_number,
-                    -1
-                )
-                previous_prediction_mask = model.get_target_mask(previous_prediction)
+            logits = model.generator(hidden)
+            log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
+            prediction_distribution = log_probs[:, -1, :]
+            self.searcher.search(prediction_distribution)
 
-                hidden, cross_attention_weight = model.decoder(
-                    previous_prediction,
-                    partial_codes,
-                    previous_prediction_mask,
-                    partial_source_mask
-                )
+            self.searcher.update()
 
-                logits = model.generator(hidden)
-                log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
-                prediction_distribution = log_probs[:, -1, :].reshape(
-                    self.searcher.parallel_line_number,
-                    self.searcher.reserved_path_number,
-                    -1
-                )
-                self.searcher.search(prediction_distribution)
-
-                self.searcher.update()
-
-                partial_source_mask = partial_source_mask.index_select(0, self.searcher.path_offset.reshape(-1))
-                partial_codes = partial_codes.index_select(0, self.searcher.path_offset.reshape(-1))
-
-                if write_until_finished:
-                    continue
-                else:
-                    break
-
-            read_position += 1
-            if self.searcher.finished:
-                break
+            read_position = min(read_end_position, read_position + 1)
 
     def input(self):
         def instance_handler(lines):
@@ -176,25 +145,22 @@ class SimulSeq2Seq(Tester):
             yield padded_batch
 
     def output(self, output_basepath):
-        results = self.searcher.candidate_paths
+        results = self.searcher.results
 
         with open(output_basepath + '.' + 'trans', 'a', encoding='utf-8') as translation_file,\
             open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:
             for result in results:
                 detailed_translation_file.writelines(f'No.{self.total_sentence_number}:\n')
                 self.total_sentence_number += 1
-                for index, candidate_result in enumerate(result):
-                    log_prob = candidate_result['log_prob']
-                    score = candidate_result['score']
-                    prediction = candidate_result['path']
-                    detailed_translation_file.writelines(f'Cand.{index}: log_prob={log_prob:.3f}, score={score:.3f}\n')
-                    tokens = stringize(prediction, self.task.vocabularies['target'])
-                    sentence = ' '.join(tokens)
-                    if self.remove_bpe:
-                        sentence = (sentence + ' ').replace(self.bpe_symbol, '').strip()
-                    detailed_translation_file.writelines(sentence + '\n')
-                    if index == 0:
-                        translation_file.writelines(sentence + '\n')
+                log_prob = result['log_prob']
+                prediction = result['path']
+                detailed_translation_file.writelines(f'log_prob={log_prob:.3f}\n')
+                tokens = stringize(prediction, self.task.vocabularies['target'])
+                sentence = ' '.join(tokens)
+                if self.remove_bpe:
+                    sentence = (sentence + ' ').replace(self.bpe_symbol, '').strip()
+                detailed_translation_file.writelines(sentence + '\n')
+                translation_file.writelines(sentence + '\n')
                 detailed_translation_file.writelines(f'===================================\n')
 
     def report(self, output_basepath):
