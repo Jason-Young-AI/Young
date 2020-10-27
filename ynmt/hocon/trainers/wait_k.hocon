@@ -1,7 +1,7 @@
-name = "simul_seq2seq"
+name = "wait_k"
 normalization_type = "token"
 life_cycle = 30000
-wait_time = 3
+wait_time = 7
 report_period = 1
 training_period = 1000
 validation_period = 1000
@@ -13,7 +13,7 @@ validation_criterion = {
     name = "cross_entropy"
 }
 checkpoints = {
-    name = "seq2seq_en-ro"
+    name = "wait-k_en-ro"
     directory = "Checkpoints"
     keep_number = 100
 }

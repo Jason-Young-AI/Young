@@ -2,7 +2,6 @@ name = "seq2seq"
 bpe_symbol = "@@ "
 remove_bpe = True
 searcher = {
-    name = "beam"
     beam_size = 4
     n_best = 1
     min_length = 1

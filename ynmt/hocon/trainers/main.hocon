@@ -1,6 +1,6 @@
 seq2seq = {
     include file("seq2seq.hocon")
 }
-simul_seq2seq = {
-    include file("simul_seq2seq.hocon")
+wait_k = {
+    include file("wait_k.hocon")
 }
