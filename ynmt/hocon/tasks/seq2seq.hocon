@@ -48,5 +48,5 @@ validation_batches = {
 }
 
 number_worker = 16
-shard_size = 1000000
+shard_size = 40000
 work_amount = 1000000

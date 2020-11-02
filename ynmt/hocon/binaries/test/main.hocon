@@ -2,11 +2,11 @@ task = "seq2seq"
 tester = "seq2seq"
 device = "GPU"
 
-output_directory = "Outputs"
-checkpoint_directory = "Checkpoints"
+output_directory = "Outputs/WMT16_En-Ro"
+checkpoint_directory = "Checkpoints/WMT16_En-Ro"
 
 logger = {
-    name = "wmt16_en-ro_test"
-    path = "wmt16_en-ro_test.log"
+    name = "test_wmt16_en-ro_newsdev2016"
+    path = "test_wmt16_en-ro_newsdev2016.log"
     off = False
 }

@@ -17,13 +17,13 @@ scheduler = {
     warmup_step = 4000
 }
 logger = {
-    name = "wmt16_en-ro_train"
-    path = "wmt16_en-ro_train.log"
+    name = "train_wmt16_en-ro"
+    path = "train_wmt16_en-ro.log"
     off = False
 }
 visualizer = {
-    name = "seq2seq"
-    path = "seq2seq.vis"
+    name = "seq2seq wmt16 en-ro"
+    path = "seq2seq_wmt16_en-ro.vis"
     off = True
     server = "www.young-leigh.love"
     port = 6789
