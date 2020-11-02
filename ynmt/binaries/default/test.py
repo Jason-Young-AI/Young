@@ -13,9 +13,10 @@
 import os
 import torch
 
+from yoolkit.logging import setup_logger, logging_level
+
 import ynmt.hocon.arguments as harg
 
-from ynmt.utilities.logging import setup_logger, logging_level
 from ynmt.utilities.checkpoint import load_checkpoint
 from ynmt.utilities.distributed import get_device_descriptor
 
@@ -52,34 +53,40 @@ def test(args):
     assert os.path.isdir(args.checkpoint_directory), f' Checkpoint directory \'{args.checkpoint_directory}\' does not exist!'
     assert os.path.isdir(args.output_directory), f' Output directory \'{args.output_directory}\' does not exist!'
 
-    checkpoint_names = os.listdir(args.checkpoint_directory)
+    listed_names = os.listdir(args.checkpoint_directory)
+    checkpoint_names = list()
+    checkpoint_paths = list()
+    for listed_name in listed_names:
+        listed_path = os.path.join(args.checkpoint_directory, listed_name)
+        if os.path.isfile(listed_path):
+            checkpoint_names.append(listed_name)
+            checkpoint_paths.append(listed_path)
+
     logger.info(f'   There are {len(checkpoint_names)} checkpoints will be loaded: {checkpoint_names}')
-    for checkpoint_name in checkpoint_names:
-        checkpoint_path = os.path.join(args.checkpoint_directory, checkpoint_name)
-        if os.path.isfile(checkpoint_path):
-            checkpoint = load_checkpoint(checkpoint_path)
-            logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
+    for checkpoint_name, checkpoint_path in zip(checkpoint_names, checkpoint_paths):
+        checkpoint = load_checkpoint(checkpoint_path)
+        logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
 
-            # Build Model
-            logger.info(f' * Building Model ...')
-            model = build_model(checkpoint['model_args'], task)
-            logger.info(f'   Loading Parameters ...')
-            model.load_state_dict(checkpoint['model'], strict=False)
-            logger.info(f'   Loaded.')
+        # Build Model
+        logger.info(f' * Building Model ...')
+        model = build_model(checkpoint['model_args'], task)
+        logger.info(f'   Loading Parameters ...')
+        model.load_state_dict(checkpoint['model'], strict=False)
+        logger.info(f'   Loaded.')
 
-            logger.info(f' + Moving model to device of Tester ...')
-            model.to(device_descriptor)
-            logger.info(f' - Completed.')
+        logger.info(f' + Moving model to device of Tester ...')
+        model.to(device_descriptor)
+        logger.info(f' - Completed.')
 
-            checkpoint_basename = os.path.splitext(checkpoint_name)[0]
+        checkpoint_basename = os.path.splitext(checkpoint_name)[0]
 
-            output_basepath = os.path.join(args.output_directory, checkpoint_basename)
+        output_basepath = os.path.join(args.output_directory, checkpoint_basename)
 
-            # Launch Tester
-            logger.info(f' * Launch Tester ...')
-            logger.info(f'   The testing outputs of the model will be wrote into \'{output_basepath}-*\'.')
-            tester.initialize()
-            tester.launch(model, output_basepath)
+        # Launch Tester
+        logger.info(f' * Launch Tester ...')
+        logger.info(f'   The testing outputs of the model will be wrote into \'{output_basepath}-*\'.')
+        tester.initialize()
+        tester.launch(model, output_basepath)
 
     logger.info(f' $ Finished !')
 
