@@ -20,6 +20,7 @@ logger = {
     name = "train_wmt16_en-ro"
     path = "train_wmt16_en-ro.log"
     off = False
+    console_report = True
 }
 visualizer = {
     name = "seq2seq wmt16 en-ro"

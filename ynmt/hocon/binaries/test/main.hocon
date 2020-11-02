@@ -9,4 +9,5 @@ logger = {
     name = "test_wmt16_en-ro_newsdev2016"
     path = "test_wmt16_en-ro_newsdev2016.log"
     off = False
+    console_report = True
 }

@@ -20,7 +20,7 @@ from ynmt.utilities.random import fix_random_procedure
 
 
 def preprocess(args):
-    logger = setup_logger(name=args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.disabled = args.logger.off
 

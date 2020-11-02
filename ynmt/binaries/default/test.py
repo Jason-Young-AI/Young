@@ -26,7 +26,7 @@ from ynmt.testers import build_tester
 
 
 def test(args):
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     if args.device == 'CPU':
         logger.info(' * Test on CPU ...')

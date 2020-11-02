@@ -31,7 +31,7 @@ from ynmt.trainers import build_trainer
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_consule=args.logger.console_report)
     fix_random_procedure(args.random_seed)
 
     visualizer = setup_visualizer(

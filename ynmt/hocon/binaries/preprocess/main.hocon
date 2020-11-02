@@ -6,4 +6,5 @@ logger = {
     name = "preprocess_wmt16_en-ro"
     path = "preprocess_wmt16_en-ro.log"
     off = False
+    console_report = True
 }
