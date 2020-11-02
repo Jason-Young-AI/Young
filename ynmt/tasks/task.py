@@ -10,10 +10,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.data.dataset import Dataset
+from yoolkit.cio import mk_temp, rm_temp, load_data, dump_data, dump_datas
+from yoolkit.multiprocessing import multi_process
 
-from ynmt.utilities.file import mk_temp, rm_temp, load_data, dump_data, dump_datas
-from ynmt.utilities.multiprocessing import multi_process
+from ynmt.data.dataset import Dataset
 
 
 class Task(object):
