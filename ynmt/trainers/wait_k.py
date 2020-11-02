@@ -4,7 +4,7 @@
 # Copyright (c) Jason Young (杨郑鑫).
 #
 # E-Mail: <AI.Jason.Young@outlook.com>
-# 2020-06-29 18:33
+# 2020-11-02 05:50
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -12,14 +12,16 @@
 
 import torch
 
+from yoolkit.statistics import Statistics
+
 from ynmt.trainers import register_trainer, Trainer
 
-from ynmt.criterions import build_criterion
+from ynmt.criterions import CrossEntropy, LabelSmoothingCrossEntropy
 
 from ynmt.data.batch import Batch
 from ynmt.data.attribute import pad_attribute
 
-from ynmt.utilities.statistics import perplexity, Statistics
+from ynmt.utilities.metrics import perplexity
 from ynmt.utilities.distributed import gather_all
 
 
@@ -54,8 +56,15 @@ class WaitK(Trainer):
     @classmethod
     def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
 
-        training_criterion = build_criterion(args.training_criterion, task)
-        validation_criterion = build_criterion(args.validation_criterion, task)
+        training_criterion = LabelSmoothingCrossEntropy(
+            len(task.vocabularies['target']),
+            args.label_smoothing_percent,
+            task.vocabularies['target'].pad_index
+        )
+        validation_criterion = CrossEntropy(
+            len(task.vocabularies['target']),
+            task.vocabularies['target'].pad_index
+        )
 
         training_criterion.to(device_descriptor)
         validation_criterion.to(device_descriptor)

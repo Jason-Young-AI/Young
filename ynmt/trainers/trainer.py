@@ -6,14 +6,15 @@
 # E-Mail: <AI.Jason.Young@outlook.com>
 # 2020-03-31 22:56
 #
-# This source code is licensed under the Apache-2.0 license found in the
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
 import torch
 
-from ynmt.utilities.timer import Timer
-from ynmt.utilities.statistics import Statistics
+from yoolkit.timer import Timer
+from yoolkit.statistics import Statistics
+
 from ynmt.utilities.checkpoint import save_checkpoint
 from ynmt.utilities.distributed import reduce_all, gather_all
 
@@ -61,7 +62,7 @@ class Trainer(object):
 
     def reduce_statistics(self, statistics):
         statistics_list = gather_all(statistics, self.device_descriptor)
-        reduced_statistics = sum(statistics_list, Statistics())
+        reduced_statistics = sum(statistics_list, Statistics(set()))
         return reduced_statistics
 
     def update(self):

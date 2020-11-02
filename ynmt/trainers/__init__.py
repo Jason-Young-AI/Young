@@ -6,15 +6,15 @@
 # E-Mail: <AI.Jason.Young@outlook.com>
 # 2020-03-31 22:56
 #
-# This source code is licensed under the Apache-2.0 license found in the
+# This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
 import os
 
-from ynmt.trainers.trainer import Trainer
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.trainers.trainer import Trainer
 
 
 trainer_registration = Registration(Trainer)
