@@ -51,10 +51,8 @@ except FileNotFoundError:
 # Required Packages and Optional Packages
 # Required
 REQUIRED = [
-        'numpy',
         'torch',
-        'visdom',
-        'pyhocon',
+        'YoungToolkit',
         ]
 
 # Optional
