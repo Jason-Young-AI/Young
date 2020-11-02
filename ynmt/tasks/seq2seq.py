@@ -12,6 +12,8 @@
 
 import collections
 
+from yoolkit.cio import load_plain, load_data, dump_data
+
 from ynmt.tasks import register_task, Task
 from ynmt.tasks.mixins import SeqMixin
 
@@ -19,7 +21,6 @@ from ynmt.data.vocabulary import Vocabulary
 from ynmt.data.iterator import Iterator
 from ynmt.data.instance import Instance
 
-from ynmt.utilities.file import load_plain, load_data, dump_data
 from ynmt.utilities.sequence import tokenize, numericalize
 
 
@@ -138,11 +139,11 @@ class Seq2Seq(Task, SeqMixin):
             source_vocabulary = shared_vocabulary
             target_vocabulary = shared_vocabulary
         else:
-            self.logger.info(f' * Source vocabulary will be built within limits of size: {source_vocabulary_size_limit}')
+            self.logger.info(f' * Source vocabulary will be built within limits of size: {args.vocabularies.size_limit.source}')
             source_vocabulary = Vocabulary(list(source_token_counter.items()), args.vocabularies.size_limit.source)
             self.logger.info(f'   Source vocabulary size is {len(source_vocabulary)}')
 
-            self.logger.info(f' * Target vocabulary will be built within limits of size: {target_vocabulary_size_limit}')
+            self.logger.info(f' * Target vocabulary will be built within limits of size: {args.vocabularies.size_limit.target}')
             target_vocabulary = Vocabulary(list(target_token_counter.items()), args.vocabularies.size_limit.target)
             self.logger.info(f'   Target vocabulary size is {len(target_vocabulary)}')
 
