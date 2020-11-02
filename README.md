@@ -45,17 +45,14 @@ The system is designed for researchers and developers to realize their ideas qui
 It's better to configure and install the following dependency packages by the user:
 * Python version >= 3.6
 * [PyTorch](http://pytorch.org/) version >= 1.4.0
-* [NumPy](https://github.com/numpy/numpy/)
 
 The following dependency packages will be installed automatically during system installation. If there are errors, please configure them manually.
-* [pyhocon](https://github.com/chimpler/pyhocon) is used to parse configuration files.
-* [visdom](https://github.com/facebookresearch/visdom) is used to visualize training process.
+* [YoungToolkit](https://github.com/Jason-Young-AI/YoungToolkit.git) is a Toolkit for a series of Young projects.
 
 **Optional**
 
 * [NCCL](https://github.com/NVIDIA/nccl) is used to train models on NVIDIA GPU.
 * [apex](https://github.com/NVIDIA/apex) is used to train models with mixed precision.
-* [pynvml](https://github.com/gpuopenanalytics/pynvml) is used to manage and monitor NVIDIA GPU.
 
 ## Installation
 
