@@ -12,7 +12,7 @@
 
 import torch
 
-from ynmt.utilities.statistics import Statistics
+from yoolkit.statistics import Statistics
 
 
 class Criterion(torch.nn.Module):
@@ -21,10 +21,6 @@ class Criterion(torch.nn.Module):
         self.label_number = label_number
         self.ignore_index = ignore_index
         self.statistics = Statistics(set())
-
-    @classmethod
-    def setup(cls, args, task):
-        raise NotImplementedError
 
     def forward(self, logits, ground_truth):
         assert logits.dim() - 1 == ground_truth.dim(), f'Wrong number of dimension: #1 arg:{logits.size()}, #2 arg: {ground_truth.size()}'

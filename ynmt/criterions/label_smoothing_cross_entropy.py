@@ -12,10 +12,9 @@
 
 import torch
 
-from ynmt.criterions import register_criterion, Criterion
+from ynmt.criterions import Criterion
 
 
-@register_criterion('label_smoothing_cross_entropy')
 class LabelSmoothingCrossEntropy(Criterion):
     def __init__(self, label_number, label_smoothing_percent, ignore_index):
         assert 0.0 < label_smoothing_percent and label_smoothing_percent < 1.0
@@ -28,16 +27,6 @@ class LabelSmoothingCrossEntropy(Criterion):
 
         self.label_smoothing_percent = label_smoothing_percent
         self.kl_div_loss = torch.nn.KLDivLoss(reduction='sum')
-
-    @classmethod
-    def setup(cls, args, task):
-        vocabulary = task.vocabularies['target']
-
-        return cls(
-            len(vocabulary),
-            args.label_smoothing_percent,
-            vocabulary.pad_index
-        )
 
     def compute_loss(self, logits, ground_truth, valid_mask):
         # logits: [Batch_Size * Target_Length x Label_Number]
