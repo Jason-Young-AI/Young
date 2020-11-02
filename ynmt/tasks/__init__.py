@@ -12,9 +12,9 @@
 
 import os
 
-from ynmt.tasks.task import Task
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.tasks.task import Task
 
 
 task_registration = Registration(Task)

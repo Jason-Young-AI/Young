@@ -12,9 +12,9 @@
 
 import os
 
-from ynmt.models.model import Model
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.models.model import Model
 
 
 model_registration = Registration(Model)

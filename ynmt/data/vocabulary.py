@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.utilities.constant import Constant
+from yoolkit.constant import Constant
 
 
 constant = Constant()

@@ -10,12 +10,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from yoolkit.logging import setup_logger, logging_level
+
 import ynmt.hocon.arguments as harg
 
 from ynmt.tasks import build_task
 
 from ynmt.utilities.random import fix_random_procedure
-from ynmt.utilities.logging import setup_logger, logging_level
 
 
 def preprocess(args):

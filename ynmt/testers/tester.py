@@ -12,7 +12,7 @@
 
 import torch
 
-from ynmt.utilities.timer import Timer
+from yoolkit.timer import Timer
 
 
 class Tester(object):

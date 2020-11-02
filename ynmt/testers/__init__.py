@@ -12,9 +12,9 @@
 
 import os
 
-from ynmt.testers.tester import Tester
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.testers.tester import Tester
 
 
 tester_registration = Registration(Tester)

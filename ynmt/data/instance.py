@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.utilities.statistics import Statistics
+from yoolkit.statistics import Statistics
 
 
 class Instance(object):

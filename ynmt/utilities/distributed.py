@@ -13,7 +13,7 @@
 import torch
 import threading
 
-from ynmt.utilities.file import dumps, loads
+from yoolkit.gio import dumps, loads
 
 
 def get_device_descriptor(device, index):

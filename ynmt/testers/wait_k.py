@@ -20,9 +20,9 @@ from ynmt.data.instance import Instance
 from ynmt.data.iterator import RawTextIterator
 from ynmt.data.attribute import pad_attribute
 
+from ynmt.utilities.metrics import BLEUScorer
 from ynmt.utilities.sequence import stringize, numericalize, tokenize
 from ynmt.utilities.extractor import get_tiled_tensor
-from ynmt.utilities.statistics import BLEUScorer
 
 
 @register_tester('wait_k')

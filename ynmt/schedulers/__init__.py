@@ -12,9 +12,9 @@
 
 import os
 
-from ynmt.schedulers.scheduler import Scheduler
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.schedulers.scheduler import Scheduler
 
 
 scheduler_registration = Registration(Scheduler)

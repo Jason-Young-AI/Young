@@ -12,10 +12,11 @@
 
 import random
 
+from yoolkit.cio import load_datas
+from yoolkit.statistics import Statistics
+
 from ynmt.data.batch import Batch
-from ynmt.utilities.file import load_datas
 from ynmt.utilities.random import shuffled
-from ynmt.utilities.statistics import Statistics
 
 
 class Iterator(object):

@@ -12,9 +12,9 @@
 
 import os
 
-from ynmt.optimizers.optimizer import Optimizer
+from yoolkit.registration import Registration, import_modules
 
-from ynmt.utilities.registration import Registration, import_modules
+from ynmt.optimizers.optimizer import Optimizer
 
 
 optimizer_registration = Registration(Optimizer)
