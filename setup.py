@@ -20,7 +20,7 @@ import setuptools
 PACKAGE_INFO = {}
 
 PACKAGE_INFO['Name'] = 'YoungNMT'
-PACKAGE_INFO['Version'] = '0.1.1a1'
+PACKAGE_INFO['Version'] = '0.1.1a2'
 PACKAGE_INFO['Author'] = 'Jason-Young-AI'
 PACKAGE_INFO['EMail'] = 'AI.Jason.Young@gmail.com'
 PACKAGE_INFO['Source_URL'] = 'https://github.com/Jason-Young-AI/YoungNMT.git'
