@@ -18,7 +18,7 @@ from ynmt.modules.encoders import TransformerEncoder
 from ynmt.modules.decoders import TransformerDecoder
 from ynmt.modules.perceptrons import MultilayerPerceptron
 
-from ynmt.utilities.extractor import get_padding_mask, get_future_mask
+from ynmt.utilities.extractor import get_padding_mask, get_foresee_mask
 
 
 @register_model('transformer')
@@ -52,7 +52,11 @@ class Transformer(Model):
     def get_target_mask(self, target):
         target_pad_index = self.decoder.embed_token.padding_idx
         target_mask = get_padding_mask(target, target_pad_index).unsqueeze(1)
-        target_mask = target_mask | get_future_mask(target).unsqueeze(0)
+        foresee_mask = get_foresee_mask(
+            target.size(-1), target.size(-1),
+            target.device,
+        ).unsqueeze(0)
+        target_mask = target_mask | foresee_mask
         return target_mask
 
     @classmethod
