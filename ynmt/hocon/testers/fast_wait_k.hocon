@@ -1,0 +1,13 @@
+name = "fast_wait_k"
+bpe_symbol = "@@ "
+remove_bpe = True
+searcher = {
+    min_length = 1
+    max_length = 200
+}
+
+source = "Corpora/newsdev2016.en-ro.en"
+target = "Corpora/Gold/newsdev2016.en-ro.ro"
+batch_size = 32
+batch_type = "sentence"
+wait_source_time = 7

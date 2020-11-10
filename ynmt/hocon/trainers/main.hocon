@@ -4,3 +4,6 @@ seq2seq = {
 wait_k = {
     include file("wait_k.hocon")
 }
+fast_wait_k = {
+    include file("fast_wait_k.hocon")
+}

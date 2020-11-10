@@ -1,3 +1,6 @@
 transformer_base = {
     include file("transformer/base.hocon") 
 }
+fast_wait_k_transformer_base = {
+    include file("fast_wait_k_transformer/base.hocon") 
+}
