@@ -13,6 +13,8 @@
 import math
 import numbers
 
+from yoolkit.statistics import Statistics
+
 
 def merge_dict(left_dict, right_dict, restrict):
     union = getattr(set, 'union')
