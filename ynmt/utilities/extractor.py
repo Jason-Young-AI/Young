@@ -46,9 +46,8 @@ def get_model_parameters_number(model):
     return parameters_number
 
 
-def get_future_mask(tensor):
-    dimension = tensor.size(-1)
-    return torch.triu(torch.ones([dimension, dimension], dtype=torch.bool, device=tensor.device), diagonal=1)
+def get_foresee_mask(in_dimension, out_dimension, device, foresee_number=0):
+    return torch.triu(torch.ones([in_dimension, out_dimension], dtype=torch.bool, device=device), diagonal=foresee_number+1)
 
 
 def get_padding_mask(tensor, padding_index):
