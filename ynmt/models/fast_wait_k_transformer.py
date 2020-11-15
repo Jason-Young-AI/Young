@@ -33,7 +33,7 @@ class FastWaitKTransformer(Model):
         self.generator = generator
 
     def forward(self, source, target, wait_source_time):
-        source_mask = self.get_source_mask(source, wait_source_time)
+        source_mask = self.get_source_mask(source)
         target_mask = self.get_target_mask(target)
         cross_mask = self.get_cross_mask(source, target, wait_source_time)
 
@@ -45,12 +45,12 @@ class FastWaitKTransformer(Model):
 
         return prediction, cross_attention_weight
 
-    def get_source_mask(self, source, wait_source_time):
+    def get_source_mask(self, source):
         source_pad_index = self.encoder.embed_token.padding_idx
         source_mask = get_padding_mask(source, source_pad_index).unsqueeze(1)
         foresee_mask = get_foresee_mask(
             source.size(-1), source.size(-1),
-            source.device, foresee_number=wait_source_time
+            source.device,
         ).unsqueeze(0)
         source_mask = source_mask | foresee_mask
         return source_mask

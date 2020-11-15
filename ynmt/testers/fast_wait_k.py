@@ -79,10 +79,8 @@ class FastWaitK(Tester):
 
         while not self.searcher.finished:
             temp_source = torch.index_select(source, 0, self.searcher.line_original_indices)
-            source_mask = model.get_source_mask(temp_source, self.wait_source_time)
+            source_mask = model.get_source_mask(temp_source)
             codes = model.encoder(temp_source, source_mask)
-            #source_mask = torch.index_select(source_mask, 0, self.searcher.line_original_indices)
-            #codes = torch.index_select(codes, 0, self.searcher.line_original_indices)
 
             previous_prediction = self.searcher.found_nodes
             previous_prediction_mask = model.get_target_mask(previous_prediction)
