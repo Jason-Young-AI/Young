@@ -62,11 +62,11 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     # Load Ancillary Datasets
     logger.info(f' * Loading Ancillary Datasets ...')
-    task.load_ancillary_datasets(args.task)
+    task.load_ancillary_datasets(args.task.args)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
     # Build Model
-    logger.info(f' * Building Model ...')
+    logger.info(f' * Building Model: \'{args.model.name}\'...')
     model = build_model(args.model, task)
     parameters_number = get_model_parameters_number(model)
     parameters_number_str = str()
@@ -113,15 +113,15 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         if args.reset_scheduler:
             logger.info(f' | Reset Scheduler.')
         else:
-            scheduler.load_state_dict(checkpoint['scheduler'])
+            scheduler.load_state_dict(checkpoint['scheduler_state'])
 
         if args.reset_optimizer:
             logger.info(f' | Reset Optimizer.')
         else:
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            optimizer.load_state_dict(checkpoint['optimizer_state'])
 
         logger.info(f' | Loading Parameters ...')
-        model.load_state_dict(checkpoint['model'], strict=False)
+        model.load_state_dict(checkpoint['model_state'], strict=False)
         logger.info(f' - Completed.')
 
     # Build Trainer
@@ -147,8 +147,8 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     # Launch Trainer
     logger.info(f' * Launch Trainer ...')
     logger.info(f'   Trainer Life Cycle: {trainer.life_cycle} update steps!')
-    logger.info(f'   Saving checkpoint every {args.trainer.training_period} steps;')
-    logger.info(f'   Validate every {args.trainer.validation_period} steps.')
+    logger.info(f'   Saving checkpoint every {trainer.training_period} steps;')
+    logger.info(f'   Validate every {trainer.validation_period} steps.')
 
     trainer.launch(training_batches, validation_batches)
 
@@ -161,9 +161,9 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 
     task = build_task(args.task, logger)
 
-    distributed_data_sender(task.validation_batches(args.task), batch_queues, workshop_semaphore, world_size, ranks)
+    distributed_data_sender(task.validation_batches(args.task.args), batch_queues, workshop_semaphore, world_size, ranks)
 
-    distributed_data_sender(task.training_batches(args.task), batch_queues, workshop_semaphore, world_size, ranks)
+    distributed_data_sender(task.training_batches(args.task.args), batch_queues, workshop_semaphore, world_size, ranks)
 
 
 def train(args):
@@ -240,11 +240,7 @@ def train(args):
 
 
 def main():
-    args = harg.get_arguments()
-    train_args = harg.get_partial_arguments(args, 'binaries.train')
-    train_args.task = harg.get_partial_arguments(args, f'tasks.{train_args.task}')
-    train_args.model = harg.get_partial_arguments(args, f'models.{train_args.model}')
-    train_args.trainer = harg.get_partial_arguments(args, f'trainers.{train_args.trainer}')
+    train_args = harg.get_arguments('train')
     train(train_args)
 
 

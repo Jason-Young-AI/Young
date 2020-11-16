@@ -42,7 +42,7 @@ def test(args):
 
     # Load Ancillary Datasets
     logger.info(f' * Loading Ancillary Datasets ...')
-    task.load_ancillary_datasets(args.task)
+    task.load_ancillary_datasets(args.task.args)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
     # Build Tester
@@ -68,10 +68,11 @@ def test(args):
         logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
 
         # Build Model
-        logger.info(f' * Building Model ...')
-        model = build_model(checkpoint['model_args'], task)
+        model_settings = checkpoint["model_settings"]
+        logger.info(f' * Building Model \'{model_settings.name}\' ...')
+        model = build_model(model_settings, task)
         logger.info(f'   Loading Parameters ...')
-        model.load_state_dict(checkpoint['model'], strict=False)
+        model.load_state_dict(checkpoint['model_state'], strict=False)
         logger.info(f'   Loaded.')
 
         logger.info(f' + Moving model to device of Tester ...')
@@ -92,10 +93,7 @@ def test(args):
 
 
 def main():
-    args = harg.get_arguments()
-    test_args = harg.get_partial_arguments(args, 'binaries.test')
-    test_args.task = harg.get_partial_arguments(args, f'tasks.{test_args.task}')
-    test_args.tester = harg.get_partial_arguments(args, f'testers.{test_args.tester}')
+    test_args = harg.get_arguments('test')
     test(test_args)
 
 

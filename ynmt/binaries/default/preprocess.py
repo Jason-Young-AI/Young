@@ -31,20 +31,18 @@ def preprocess(args):
     logger.info(f'The construction of Task is complete.')
 
     logger.info(f'Building Ancillary Datasets ...')
-    task.build_ancillary_datasets(args.task)
+    task.build_ancillary_datasets(args.task.args)
     logger.info(f'The construction of Ancillary Datasets is complete.')
 
     logger.info(f'Building Datasets ...')
-    task.build_datasets(args.task)
+    task.build_datasets(args.task.args)
     logger.info(f'The construction of Datasets is complete.')
 
     logger.info(f' $ Finished !')
 
 
 def main():
-    args = harg.get_arguments()
-    preprocess_args = harg.get_partial_arguments(args, 'binaries.preprocess')
-    preprocess_args.task = harg.get_partial_arguments(args, f'tasks.{preprocess_args.task}')
+    preprocess_args = harg.get_arguments('preprocess')
     preprocess(preprocess_args)
 
 
