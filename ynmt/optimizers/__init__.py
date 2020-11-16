@@ -20,8 +20,9 @@ from ynmt.optimizers.optimizer import Optimizer
 optimizer_registration = Registration(Optimizer)
 
 
-def build_optimizer(args, model):
-    return optimizer_registration[args.name].setup(args, model)
+def build_optimizer(settings, model):
+    return optimizer_registration[settings.name].setup(settings, model)
+
 
 def register_optimizer(registration_name):
     return optimizer_registration.register(registration_name)

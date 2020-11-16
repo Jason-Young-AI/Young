@@ -14,10 +14,10 @@ import torch
 
 
 class Model(torch.nn.Module):
-    def __init__(self, args):
+    def __init__(self, settings):
         super(Model, self).__init__()
-        self.args = args 
+        self.settings = settings
 
     @classmethod
-    def setup(cls, args, task):
+    def setup(cls, settings, task):
         raise NotImplementedError

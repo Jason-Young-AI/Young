@@ -29,13 +29,13 @@ from ynmt.utilities.extractor import get_tiled_tensor
 class Seq2Seq(Tester):
     def __init__(self,
         task, output_names,
-        searcher, bpe_symbol, remove_bpe,
+        beam_searcher, bpe_symbol, remove_bpe,
         source_path, target_path,
         batch_size, batch_type,
         device_descriptor, logger
     ):
         super(Seq2Seq, self).__init__(task, output_names, device_descriptor, logger)
-        self.searcher = searcher
+        self.beam_searcher = beam_searcher
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
 
@@ -48,22 +48,23 @@ class Seq2Seq(Tester):
         self.total_sentence_number = 0
 
     @classmethod
-    def setup(cls, args, task, device_descriptor, logger):
-        searcher = BeamSearcher(
-            reserved_path_number = args.searcher.beam_size,
-            candidate_path_number = args.searcher.n_best,
+    def setup(cls, settings, task, device_descriptor, logger):
+        args = settings.args
+        beam_searcher = BeamSearcher(
+            reserved_path_number = args.beam_searcher.beam_size,
+            candidate_path_number = args.beam_searcher.n_best,
             search_space_size = len(task.vocabularies['target']),
             initial_node = task.vocabularies['target'].bos_index,
             terminal_node = task.vocabularies['target'].eos_index,
-            min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
-            alpha = args.searcher.penalty.alpha, beta = args.searcher.penalty.beta
+            min_depth = args.beam_searcher.min_length, max_depth = args.beam_searcher.max_length,
+            alpha = args.beam_searcher.penalty.alpha, beta = args.beam_searcher.penalty.beta
         )
 
         output_names = ['trans', 'trans-detailed']
 
         seq2seq = cls(
             task, output_names,
-            searcher, args.bpe_symbol, args.remove_bpe,
+            beam_searcher, args.bpe_symbol, args.remove_bpe,
             args.source, args.target,
             args.batch_size, args.batch_type,
             device_descriptor, logger
@@ -79,14 +80,14 @@ class Seq2Seq(Tester):
         source_mask = model.get_source_mask(source)
         codes = model.encoder(source, source_mask)
 
-        source_mask = get_tiled_tensor(source_mask, 0, self.searcher.reserved_path_number)
-        codes = get_tiled_tensor(codes, 0, self.searcher.reserved_path_number)
+        source_mask = get_tiled_tensor(source_mask, 0, self.beam_searcher.reserved_path_number)
+        codes = get_tiled_tensor(codes, 0, self.beam_searcher.reserved_path_number)
 
-        self.searcher.initialize(parallel_line_number, self.device_descriptor)
+        self.beam_searcher.initialize(parallel_line_number, self.device_descriptor)
 
-        while not self.searcher.finished:
-            previous_prediction = self.searcher.found_nodes.reshape(
-                self.searcher.parallel_line_number * self.searcher.reserved_path_number,
+        while not self.beam_searcher.finished:
+            previous_prediction = self.beam_searcher.found_nodes.reshape(
+                self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
                 -1
             )
             previous_prediction_mask = model.get_target_mask(previous_prediction)
@@ -101,15 +102,15 @@ class Seq2Seq(Tester):
             logits = model.generator(hidden)
             log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
             prediction_distribution = log_probs[:, -1, :].reshape(
-                self.searcher.parallel_line_number,
-                self.searcher.reserved_path_number,
+                self.beam_searcher.parallel_line_number,
+                self.beam_searcher.reserved_path_number,
                 -1
             )
-            self.searcher.search(prediction_distribution)
-            self.searcher.update()
+            self.beam_searcher.search(prediction_distribution)
+            self.beam_searcher.update()
 
-            source_mask = source_mask.index_select(0, self.searcher.path_offset.reshape(-1))
-            codes = codes.index_select(0, self.searcher.path_offset.reshape(-1))
+            source_mask = source_mask.index_select(0, self.beam_searcher.path_offset.reshape(-1))
+            codes = codes.index_select(0, self.beam_searcher.path_offset.reshape(-1))
 
     def input(self):
         def instance_handler(lines):
@@ -147,7 +148,7 @@ class Seq2Seq(Tester):
             yield padded_batch
 
     def output(self, output_basepath):
-        results = self.searcher.candidate_paths
+        results = self.beam_searcher.candidate_paths
 
         with open(output_basepath + '.' + 'trans', 'a', encoding='utf-8') as translation_file,\
             open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:

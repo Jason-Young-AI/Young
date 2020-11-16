@@ -22,7 +22,7 @@ class Task(object):
         self.structure = structure
 
     @classmethod
-    def setup(cls, args):
+    def setup(cls, settings):
         raise NotImplementedError
 
     def instance_filter(self, args):

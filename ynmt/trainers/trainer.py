@@ -53,7 +53,7 @@ class Trainer(object):
         self.branch_timer = Timer()
 
     @classmethod
-    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
         raise NotImplementedError
 
     @property
@@ -95,10 +95,10 @@ class Trainer(object):
         if self.rank == 0:
             checkpoint = dict(
                 step = self.step,
-                model = self.model.state_dict(),
-                optimizer = self.optimizer.state_dict(),
-                scheduler = self.scheduler.state_dict(),
-                model_args = self.model.args
+                model_state = self.model.state_dict(),
+                optimizer_state = self.optimizer.state_dict(),
+                scheduler_state = self.scheduler.state_dict(),
+                model_settings = self.model.settings
             )
             self.logger.info(f'Saving checkpoint ... ')
             save_checkpoint(checkpoint, self.checkpoint_directory, self.checkpoint_name, self.checkpoint_keep_number)

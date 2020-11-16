@@ -23,8 +23,8 @@ from ynmt.utilities.extractor import get_padding_mask, get_foresee_mask
 
 @register_model('fast_wait_k_transformer')
 class FastWaitKTransformer(Model):
-    def __init__(self, args, dimension, encoder, decoder, generator):
-        super(FastWaitKTransformer, self).__init__(args)
+    def __init__(self, settings, dimension, encoder, decoder, generator):
+        super(FastWaitKTransformer, self).__init__(settings)
         assert dimension == encoder.dimension
         assert dimension == decoder.dimension
         self.dimension = dimension
@@ -76,7 +76,8 @@ class FastWaitKTransformer(Model):
         return cross_mask
 
     @classmethod
-    def setup(cls, args, task):
+    def setup(cls, settings, task):
+        args = settings.args
         transformer_encoder = TransformerEncoder(
             task.vocabularies['source'],
             args.encoder.layer_number,
@@ -109,6 +110,6 @@ class FastWaitKTransformer(Model):
         if args.share_dec_io_embeddings:
             generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
 
-        transformer = cls(args, args.dimension, transformer_encoder, transformer_decoder, generator)
+        transformer = cls(settings, args.dimension, transformer_encoder, transformer_decoder, generator)
 
         return transformer

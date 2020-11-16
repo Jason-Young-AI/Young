@@ -51,7 +51,8 @@ class Seq2Seq(Trainer):
         self.normalization_type = normalization_type
 
     @classmethod
-    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+        args = settings.args
 
         training_criterion = LabelSmoothingCrossEntropy(
             len(task.vocabularies['target']),

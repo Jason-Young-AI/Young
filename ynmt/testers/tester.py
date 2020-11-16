@@ -44,7 +44,7 @@ class Tester(object):
         self.timer.reset()
 
     @classmethod
-    def setup(cls, args, task, device_descriptor, logger):
+    def setup(cls, settings, task, device_descriptor, logger):
         raise NotImplementedError
 
     def initialize(self):

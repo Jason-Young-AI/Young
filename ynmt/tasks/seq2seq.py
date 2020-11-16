@@ -35,7 +35,8 @@ class Seq2Seq(Task, SeqMixin):
         self.target_language = target_language
 
     @classmethod
-    def setup(cls, args, logger):
+    def setup(cls, settings, logger):
+        args = settings.args
         return cls(logger, args.language.source, args.language.target)
 
     def instance_filter(self, args):

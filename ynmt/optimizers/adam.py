@@ -27,7 +27,8 @@ class Adam(Optimizer):
         super(Adam, self).__init__(adam_optimizer)
 
     @classmethod
-    def setup(cls, args, model):
+    def setup(cls, settings, model):
+        args = settings.args
         parameters = (parameter for parameter in model.parameters() if parameter.requires_grad and parameter.is_leaf)
         adam = cls(
             parameters,

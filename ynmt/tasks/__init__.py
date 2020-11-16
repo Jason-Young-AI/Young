@@ -20,8 +20,8 @@ from ynmt.tasks.task import Task
 task_registration = Registration(Task)
 
 
-def build_task(args, logger):
-    return task_registration[args.name].setup(args, logger)
+def build_task(settings, logger):
+    return task_registration[settings.name].setup(settings, logger)
 
 
 def register_task(registration_name):

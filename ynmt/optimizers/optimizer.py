@@ -19,7 +19,7 @@ class Optimizer(object):
         self.mix_precision = mix_precision
 
     @classmethod
-    def setup(cls, args, model):
+    def setup(cls, settings, model):
         raise NotImplementedError
 
     @property

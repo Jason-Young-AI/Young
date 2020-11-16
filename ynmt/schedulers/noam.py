@@ -35,6 +35,7 @@ class Noam(Scheduler):
         self.dimension = state_dict['dimension']
 
     @classmethod
-    def setup(cls, args, model):
+    def setup(cls, settings, model):
+        args = settings.args
         noam = cls(model.dimension, args.warmup_step)
         return noam

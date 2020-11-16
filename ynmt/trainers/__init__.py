@@ -20,8 +20,8 @@ from ynmt.trainers.trainer import Trainer
 trainer_registration = Registration(Trainer)
 
 
-def build_trainer(args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
-    return trainer_registration[args.name].setup(args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer)
+def build_trainer(settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    return trainer_registration[settings.name].setup(settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer)
 
 
 def register_trainer(registration_name):

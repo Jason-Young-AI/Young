@@ -15,7 +15,7 @@ class Scheduler(object):
         pass
 
     @classmethod
-    def setup(cls, args, model):
+    def setup(cls, settings, model):
         raise NotImplementedError
 
     def learning_rate(self, step):
