@@ -54,7 +54,8 @@ class FastWaitK(Trainer):
         self.wait_source_time = wait_source_time
 
     @classmethod
-    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+        args = settings.args
 
         training_criterion = LabelSmoothingCrossEntropy(
             len(task.vocabularies['target']),
@@ -118,7 +119,7 @@ class FastWaitK(Trainer):
             target_input = padded_train_batch.target[:, :-1]
             target_output = padded_train_batch.target[:, 1:]
 
-            logits, attention_weight = self.model(padded_train_batch.source, target_input, self.wait_source_time)
+            logits, attention_weight = self.model(padded_train_batch.source, target_input, self.wait_source_time + 1) # +1 for bos
             loss = self.training_criterion(logits, target_output)
             self.train_statistics += self.training_criterion.statistics
 
@@ -133,7 +134,7 @@ class FastWaitK(Trainer):
             target_input = padded_valid_batch.target[:, :-1]
             target_output = padded_valid_batch.target[:, 1:]
 
-            logits, attention_weight = self.model(padded_valid_batch.source, target_input, self.wait_source_time)
+            logits, attention_weight = self.model(padded_valid_batch.source, target_input, self.wait_source_time + 1) # +1 for bos
             loss = self.validation_criterion(logits, target_output)
             self.valid_statistics += self.validation_criterion.statistics
 

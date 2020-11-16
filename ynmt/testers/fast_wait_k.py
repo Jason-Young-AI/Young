@@ -29,14 +29,14 @@ from ynmt.utilities.extractor import get_tiled_tensor
 class FastWaitK(Tester):
     def __init__(self,
         task, output_names,
-        searcher, bpe_symbol, remove_bpe,
+        greedy_searcher, bpe_symbol, remove_bpe,
         source_path, target_path,
         batch_size, batch_type,
         wait_source_time,
         device_descriptor, logger
     ):
         super(FastWaitK, self).__init__(task, output_names, device_descriptor, logger)
-        self.searcher = searcher
+        self.greedy_searcher = greedy_searcher
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
 
@@ -50,19 +50,20 @@ class FastWaitK(Tester):
         self.total_sentence_number = 0
 
     @classmethod
-    def setup(cls, args, task, device_descriptor, logger):
-        searcher = GreedySearcher(
+    def setup(cls, settings, task, device_descriptor, logger):
+        args = settings.args
+        greedy_searcher = GreedySearcher(
             search_space_size = len(task.vocabularies['target']),
             initial_node = task.vocabularies['target'].bos_index,
             terminal_node = task.vocabularies['target'].eos_index,
-            min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
+            min_depth = args.greedy_searcher.min_length, max_depth = args.greedy_searcher.max_length,
         )
 
         output_names = ['trans', 'trans-detailed']
 
         fast_wait_k = cls(
             task, output_names,
-            searcher, args.bpe_symbol, args.remove_bpe,
+            greedy_searcher, args.bpe_symbol, args.remove_bpe,
             args.source, args.target,
             args.batch_size, args.batch_type,
             args.wait_source_time,
@@ -75,16 +76,16 @@ class FastWaitK(Tester):
         source = batch.source
         parallel_line_number, _ = source.size()
 
-        self.searcher.initialize(parallel_line_number, self.device_descriptor)
+        self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
-        while not self.searcher.finished:
-            temp_source = torch.index_select(source, 0, self.searcher.line_original_indices)
+        while not self.greedy_searcher.finished:
+            temp_source = torch.index_select(source, 0, self.greedy_searcher.line_original_indices)
             source_mask = model.get_source_mask(temp_source)
             codes = model.encoder(temp_source, source_mask)
 
-            previous_prediction = self.searcher.found_nodes
+            previous_prediction = self.greedy_searcher.found_nodes
             previous_prediction_mask = model.get_target_mask(previous_prediction)
-            cross_mask = model.get_cross_mask(temp_source, previous_prediction, self.wait_source_time)
+            cross_mask = model.get_cross_mask(temp_source, previous_prediction, self.wait_source_time + 1) # +1 for bos
 
             hidden, cross_attention_weight = model.decoder(
                 previous_prediction,
@@ -96,9 +97,9 @@ class FastWaitK(Tester):
             logits = model.generator(hidden)
             log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
             prediction_distribution = log_probs[:, -1, :]
-            self.searcher.search(prediction_distribution)
+            self.greedy_searcher.search(prediction_distribution)
 
-            self.searcher.update()
+            self.greedy_searcher.update()
 
     def input(self):
         def instance_handler(lines):
@@ -136,7 +137,7 @@ class FastWaitK(Tester):
             yield padded_batch
 
     def output(self, output_basepath):
-        results = self.searcher.results
+        results = self.greedy_searcher.results
 
         with open(output_basepath + '.' + 'trans', 'a', encoding='utf-8') as translation_file,\
             open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:
