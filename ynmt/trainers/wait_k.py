@@ -33,7 +33,7 @@ class WaitK(Trainer):
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period,
         report_period,
-        wait_time,
+        wait_source_time,
         training_criterion, validation_criterion,
         normalization_type,
         device_descriptor, logger, visualizer
@@ -51,10 +51,11 @@ class WaitK(Trainer):
 
         self.normalization_type = normalization_type
 
-        self.wait_time = wait_time
+        self.wait_source_time = wait_source_time
 
     @classmethod
-    def setup(cls, args, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+        args = settings.args
 
         training_criterion = LabelSmoothingCrossEntropy(
             len(task.vocabularies['target']),
@@ -75,7 +76,7 @@ class WaitK(Trainer):
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
             args.training_period, args.validation_period,
             args.report_period,
-            args.wait_time,
+            args.wait_source_time,
             training_criterion, validation_criterion,
             args.normalization_type,
             device_descriptor, logger, visualizer,
@@ -118,10 +119,10 @@ class WaitK(Trainer):
             target_output = padded_train_batch.target[:, 1:]
 
             read_end_position = padded_train_batch.source.shape[1] - 1
-            if self.wait_time == -1:
+            if self.wait_source_time == -1:
                 read_start_position = read_end_position
             else:
-                read_start_position = min(self.wait_time + 1, read_end_position) # +1 for the bos token. When wait_time is 0, first read bos token
+                read_start_position = min(self.wait_source_time + 1, read_end_position) # +1 for the bos token. When wait_source_time is 0, first read bos token
 
             read_position = read_start_position
             write_position = 0
@@ -156,10 +157,10 @@ class WaitK(Trainer):
             target_output = padded_valid_batch.target[:, 1:]
 
             read_end_position = padded_valid_batch.source.shape[1] - 1
-            if self.wait_time == -1:
+            if self.wait_source_time == -1:
                 read_start_position = read_end_position
             else:
-                read_start_position = min(self.wait_time + 1, read_end_position) # +1 for the bos token. When wait_time is 0, first read bos token
+                read_start_position = min(self.wait_source_time + 1, read_end_position) # +1 for the bos token. When wait_source_time is 0, first read bos token
 
             read_position = read_start_position
             write_position = 0

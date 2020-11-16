@@ -29,14 +29,14 @@ from ynmt.utilities.extractor import get_tiled_tensor
 class WaitK(Tester):
     def __init__(self,
         task, output_names,
-        searcher, bpe_symbol, remove_bpe,
+        greedy_searcher, bpe_symbol, remove_bpe,
         source_path, target_path,
         batch_size, batch_type,
-        wait_time,
+        wait_source_time,
         device_descriptor, logger
     ):
         super(WaitK, self).__init__(task, output_names, device_descriptor, logger)
-        self.searcher = searcher
+        self.greedy_searcher = greedy_searcher
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
 
@@ -44,28 +44,29 @@ class WaitK(Tester):
         self.target_path = target_path
         self.batch_size = batch_size
         self.batch_type = batch_type
-        self.wait_time = wait_time
+        self.wait_source_time = wait_source_time
 
     def initialize(self):
         self.total_sentence_number = 0
 
     @classmethod
-    def setup(cls, args, task, device_descriptor, logger):
-        searcher = GreedySearcher(
+    def setup(cls, settings, task, device_descriptor, logger):
+        args = settings.args
+        greedy_searcher = GreedySearcher(
             search_space_size = len(task.vocabularies['target']),
             initial_node = task.vocabularies['target'].bos_index,
             terminal_node = task.vocabularies['target'].eos_index,
-            min_depth = args.searcher.min_length, max_depth = args.searcher.max_length,
+            min_depth = args.greedy_searcher.min_length, max_depth = args.greedy_searcher.max_length,
         )
 
         output_names = ['trans', 'trans-detailed']
 
         wait_k = cls(
             task, output_names,
-            searcher, args.bpe_symbol, args.remove_bpe,
+            greedy_searcher, args.bpe_symbol, args.remove_bpe,
             args.source, args.target,
             args.batch_size, args.batch_type,
-            args.wait_time,
+            args.wait_source_time,
             device_descriptor, logger
         )
 
@@ -74,23 +75,23 @@ class WaitK(Tester):
     def test(self, model, batch):
         source = batch.source
         parallel_line_number, _ = source.size()
-        self.searcher.initialize(parallel_line_number, self.device_descriptor)
+        self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         read_end_position = source.shape[1] - 1
-        if self.wait_time == -1:
+        if self.wait_source_time == -1:
             read_start_position = read_end_position
         else:
-            read_start_position = min(self.wait_time + 1, read_end_position) # +1 for the bos token. When wait_time is 0, first read bos token
+            read_start_position = min(self.wait_source_time + 1, read_end_position) # +1 for the bos token. When wait_source_time is 0, first read bos token
 
         read_position = read_start_position
 
-        while not self.searcher.finished:
-            partial_source = torch.index_select(source[:, :read_position + 1], 0, self.searcher.line_original_indices)
+        while not self.greedy_searcher.finished:
+            partial_source = torch.index_select(source[:, :read_position + 1], 0, self.greedy_searcher.line_original_indices)
 
             partial_source_mask = model.get_source_mask(partial_source)
             partial_codes = model.encoder(partial_source, partial_source_mask)
 
-            previous_prediction = self.searcher.found_nodes
+            previous_prediction = self.greedy_searcher.found_nodes
             previous_prediction_mask = model.get_target_mask(previous_prediction)
 
             hidden, cross_attention_weight = model.decoder(
@@ -103,9 +104,9 @@ class WaitK(Tester):
             logits = model.generator(hidden)
             log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
             prediction_distribution = log_probs[:, -1, :]
-            self.searcher.search(prediction_distribution)
+            self.greedy_searcher.search(prediction_distribution)
 
-            self.searcher.update()
+            self.greedy_searcher.update()
 
             read_position = min(read_end_position, read_position + 1)
 
@@ -145,7 +146,7 @@ class WaitK(Tester):
             yield padded_batch
 
     def output(self, output_basepath):
-        results = self.searcher.results
+        results = self.greedy_searcher.results
 
         with open(output_basepath + '.' + 'trans', 'a', encoding='utf-8') as translation_file,\
             open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:
