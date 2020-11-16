@@ -72,8 +72,12 @@ def save_checkpoint(checkpoint, checkpoint_directory_or_path, name="", keep_numb
         steps = sorted(list(checkpoints.keys()), reverse=True)
         for step in steps[keep_number:]:
             remove_checkpoint(checkpoints[step])
+    else:
+        raise IOError(f'Invalid saved address: {checkpoint_directory_or_path}')
 
 
 def remove_checkpoint(checkpoint_path):
     if os.path.isfile(checkpoint_path):
         os.remove(checkpoint_path)
+    else:
+        raise IOError(f'Invalid address: {checkpoint_path}')
