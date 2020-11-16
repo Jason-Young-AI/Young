@@ -1,0 +1,20 @@
+task = {
+    name = "seq2seq"
+    args = { include "../../tasks/seq2seq.hocon" }
+}
+tester = {
+    name = "wait_k"
+    args = { include "../../testers/wait_k.hocon" }
+}
+
+device = "GPU"
+
+output_directory = "Outputs/Wait-K/WMT16EnRo"
+checkpoint_directory = "Checkpoints/Wait-K/WMT16EnRo"
+
+logger = {
+    name = "test_wait-k_wmt16enro"
+    path = "test_wait-k_wmt16enro.log"
+    off = False
+    console_report = True
+}

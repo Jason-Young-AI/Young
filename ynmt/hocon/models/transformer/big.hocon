@@ -1,0 +1,23 @@
+dimension = 1024
+encoder = {
+    layer_number = 6
+    dimension = 1024
+    feedforward_dimension = 4096
+    head_number = 16
+    dropout_probability = 0.3
+    attention_dropout_probability = 0.3
+    feedforward_dropout_probability = 0.3
+    normalize_position = "before"
+}
+decoder = {
+    layer_number = 6
+    dimension = 1024
+    feedforward_dimension = 4096
+    head_number = 16
+    dropout_probability = 0.3
+    attention_dropout_probability = 0.3
+    feedforward_dropout_probability = 0.3
+    normalize_position = "before"
+}
+share_enc_dec_embeddings = True
+share_dec_io_embeddings = True

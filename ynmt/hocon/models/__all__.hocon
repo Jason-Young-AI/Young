@@ -1,0 +1,6 @@
+transformer_base = {
+    include file("transformer/base.hocon") 
+}
+transformer_big = {
+    include file("transformer/big.hocon") 
+}

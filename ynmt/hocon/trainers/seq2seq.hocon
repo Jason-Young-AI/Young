@@ -1,4 +1,3 @@
-name = "seq2seq"
 normalization_type = "token"
 life_cycle = 30000
 report_period = 1
@@ -6,7 +5,7 @@ training_period = 1000
 validation_period = 1000
 label_smoothing_percent = 0.1
 checkpoints = {
-    name = "seq2seq_wmt16_en-ro"
-    directory = "Checkpoints/WMT16_En-Ro"
+    name = "seq2seq_wmt16enro"
+    directory = "Checkpoints/Seq2Seq/WMT16EnRo"
     keep_number = 100
 }

@@ -1,0 +1,18 @@
+models = {
+    include file("models/__all__.hocon")
+}
+optimizers = {
+    include file("optimizers/__all__.hocon")
+}
+schedulers = {
+    include file("schedulers/__all__.hocon")
+}
+tasks = {
+    include file("tasks/__all__.hocon")
+}
+testers = {
+    include file("testers/__all__.hocon")
+}
+trainers = {
+    include file("trainers/__all__.hocon")
+}

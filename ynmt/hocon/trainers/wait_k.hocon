@@ -1,13 +1,13 @@
-name = "wait_k"
+wait_source_time = 7
+
 normalization_type = "token"
 life_cycle = 30000
-wait_time = 7
 report_period = 1
 training_period = 1000
 validation_period = 1000
 label_smoothing_percent = 0.1
 checkpoints = {
-    name = "wait-k_wmt16_en-ro"
-    directory = "Checkpoints/WMT16_En-Ro"
+    name = "wait-k_wmt16enro"
+    directory = "Checkpoints/Wait-K/WMT16EnRo"
     keep_number = 100
 }

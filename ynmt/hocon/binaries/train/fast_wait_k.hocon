@@ -1,0 +1,62 @@
+checkpoint = ""
+
+task = {
+    name = "seq2seq"
+    args = { include "../../tasks/seq2seq.hocon" }
+}
+model = {
+    name = "fast_wait_k_transformer"
+    args = { include "../../models/transformer/base.hocon"}
+}
+
+trainer = {
+    name = "fast_wait_k"
+    args = { include "../../trainers/fast_wait_k.hocon" }
+}
+scheduler = {
+    name = "noam"
+    args = { include "../../schedulers/noam.hocon" }
+}
+optimizer = {
+    name = "adam"
+    args = { include "../../optimizers/adam.hocon" }
+}
+
+reset_trainer = False
+reset_scheduler = False
+reset_optimizer = False
+
+logger = {
+    name = "train_fast-wait-k_wmt16enro"
+    path = "train_fast-wait-k_wmt16enro.log"
+    off = False
+    console_report = True
+}
+
+visualizer = {
+    name = "fast-wait-k wmt16enro"
+    path = "fast-wait-k_wmt16enro.vis"
+    off = True
+    server = "www.young-leigh.love"
+    port = 6789
+    username = "Guest_Visdom"
+    password = "Happy_Visual_001"
+    offline = True
+    overwrite = True
+}
+
+distribution = {
+    device = "GPU"
+    master_ip = "127.0.0.1"
+    master_port = "12345"
+    world_size = 4
+    ranks = [0, 1, 2, 3]
+    workshop_capacity = 60
+}
+
+mix_precision {
+    on = False
+    optimization_level = "O0"
+}
+
+random_seed = 1234

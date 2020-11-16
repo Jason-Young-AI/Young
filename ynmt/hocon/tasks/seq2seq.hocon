@@ -1,5 +1,3 @@
-name = seq2seq
-
 language = {
     source = 'en'
     target = 'ro'
@@ -25,9 +23,9 @@ raw_data = {
 }
 
 datasets = {
-    training = "Datasets/wmt16.en-ro.dataset"
-    validation = "Datasets/newsdev2016.en-ro.dataset"
-    vocabularies = "Datasets/wmt16.en-ro.vocab"
+    training = "Datasets/seq2seq_wmt16enro.train.dataset"
+    validation = "Datasets/seq2seq_wmt16enro.valid.dataset"
+    vocabularies = "Datasets/seq2seq_wmt16enro.vocab"
 }
 
 training_batches = {

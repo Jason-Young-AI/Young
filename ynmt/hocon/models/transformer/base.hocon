@@ -1,7 +1,4 @@
-name = "transformer"
 dimension = 512
-share_enc_dec_embeddings = True
-share_dec_io_embeddings = True
 encoder = {
     layer_number = 6
     dimension = 512
@@ -22,3 +19,5 @@ decoder = {
     feedforward_dropout_probability = 0.1
     normalize_position = "before"
 }
+share_enc_dec_embeddings = True
+share_dec_io_embeddings = True

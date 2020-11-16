@@ -1,9 +1,0 @@
-preprocess = {
-    include file("preprocess/main.hocon") 
-}
-train = {
-    include file("train/main.hocon") 
-}
-test = {
-    include file("test/main.hocon") 
-}
