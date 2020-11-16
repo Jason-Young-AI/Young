@@ -31,9 +31,18 @@ class Vocabulary(object):
 
     RESERVED_TOKENS = [UNK_TOKEN, PAD_TOKEN, BOS_TOKEN, EOS_TOKEN, NUL_TOKEN]
 
-    def __init__(self, tokens_and_frequencies, vocabulary_size=None):
+    def __init__(self, tokens_and_frequencies, vocabulary_size=None, special_tokens=None):
+        self.reserved_tokens = [ reserved_token for reserved_token in Vocabulary.RESERVED_TOKENS]
+
+        if special_tokens is not None:
+            for special_token in special_tokens:
+                if special_token in set(Vocabulary.RESERVED_TOKENS):
+                    continue
+                else:
+                    self.reserved_tokens.append(special_token)
+
         for token, frequency in tokens_and_frequencies:
-            if token in set(Vocabulary.RESERVED_TOKENS):
+            if token in set(self.reserved_tokens):
                 tokens_and_frequencies.remove((token, frequency))
 
         tokens_and_frequencies = sorted(tokens_and_frequencies, key=lambda x: x[0], reverse=False)
@@ -43,7 +52,7 @@ class Vocabulary(object):
         self.index_to_token = list()
         self.token_to_index = dict()
 
-        for reserved_token in Vocabulary.RESERVED_TOKENS:
+        for reserved_token in self.reserved_tokens:
             self.index_to_token.append(reserved_token)
 
         for token, frequency in self.tokens_and_frequencies[:vocabulary_size]:
