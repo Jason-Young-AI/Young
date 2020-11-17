@@ -27,8 +27,13 @@ def stringize(index_list, vocabulary):
     return token_list
 
 
-def numericalize(token_list, vocabulary):
-    bos_index = vocabulary.bos_index
-    eos_index = vocabulary.eos_index
-    index_list = [ bos_index ] + [ vocabulary.index(token) for token in token_list ] + [ eos_index ]
+def numericalize(token_list, vocabulary, add_bos=True, add_eos=True):
+    index_list = [ vocabulary.index(token) for token in token_list ]
+
+    if add_bos:
+        index_list = [ vocabulary.bos_index ] + index_list
+
+    if add_eos:
+        index_list = index_list + [ vocabulary.eos_index ]
+
     return index_list
