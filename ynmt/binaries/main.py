@@ -55,6 +55,7 @@ def main():
         print(f'----------------------------------------------------------------')
         print()
         print(f'Please use the following command to make the most of the system:')
+        print(f'0. ynmt --help')
         print(f'1. ynmt-preprocess --help')
         print(f'2. ynmt-train --help')
         print(f'3. ynmt-test --help')
