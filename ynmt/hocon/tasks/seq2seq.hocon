@@ -1,6 +1,6 @@
 language = {
-    source = 'en'
-    target = 'ro'
+    source = "en"
+    target = "ro"
 }
 
 vocabularies = {
