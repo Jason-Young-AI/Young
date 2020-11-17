@@ -16,6 +16,10 @@ The system is designed for researchers and developers to realize their ideas qui
 
 <a href="#"><img alt="Documentation" src="https://img.shields.io/badge/Notifications-Warning-red" /></a>
 
+------ 2020.11.17 ------
+
+*Version 0.1.1b0 is released.*
+
 ------ 2020.10.21 ------
 
 *Version 0.1.1a0 is released, although 0.1.1a0 is an alpha version, it is more stable than version 0.1.0.*
@@ -75,6 +79,18 @@ python setup.py install
 git clone https://github.com/Jason-Young-AI/YoungNMT.git
 cd YoungNMT
 python setup.py build develop
+```
+After installation, run `ynmt`, if you get the following information, it proves that the installation is successful.
+
+```bash
+                >   Welcome to use YoungNMT!   <                
+----------------------------------------------------------------
+
+Please use the following command to make the most of the system:
+0. ynmt --help
+1. ynmt-preprocess --help
+2. ynmt-train --help
+3. ynmt-test --help
 ```
 
 ## Arguments
