@@ -47,7 +47,7 @@ class GreedySearcher(object):
             device=device_descriptor
         )
 
-        self.results = list(dict() for i in range(self.parallel_line_number))
+        self.result = list(dict() for i in range(self.parallel_line_number))
 
         self.line_original_indices = torch.arange(self.parallel_line_number, device=device_descriptor)
 
@@ -84,8 +84,8 @@ class GreedySearcher(object):
 
         for finished_line_index in finished_line_indices:
             line_original_index = self.line_original_indices[finished_line_index]
-            self.results[line_original_index]['log_prob'] = self.path_log_probs[finished_line_index].item()
-            self.results[line_original_index]['path'] = self.paths[finished_line_index, 1:]
+            self.result[line_original_index]['log_prob'] = self.path_log_probs[finished_line_index].item()
+            self.result[line_original_index]['path'] = self.paths[finished_line_index, 1:].tolist()
             self.parallel_line_number -= 1
 
         self.line_original_indices = torch.index_select(self.line_original_indices, 0, active_line_indices)
