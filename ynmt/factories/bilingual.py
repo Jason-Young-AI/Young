@@ -14,20 +14,45 @@ import collections
 
 from yoolkit.cio import load_plain, load_data, dump_data
 
-from ynmt.tasks import register_task, Task
-from ynmt.tasks.mixins import SeqMixin
+from ynmt.factories import register_factory, Factory
+from ynmt.factories.mixins import SeqMixin
 
 from ynmt.data.vocabulary import Vocabulary
-from ynmt.data.iterator import Iterator
+from ynmt.data.iterator import Iterator, RawTextIterator
 from ynmt.data.instance import Instance
 
 from ynmt.utilities.sequence import tokenize, numericalize
 
 
-@register_task('seq2seq')
-class Seq2Seq(Task, SeqMixin):
+def get_instance_size_calculator(batch_type):
+    if batch_type == 'sentence':
+
+        def instance_size_calculator(instances):
+            batch_size = len(instances)
+            return batch_size
+
+    if batch_type == 'token':
+
+        def instance_size_calculator(instances):
+            global max_source_length, max_target_length
+            if len(instances) == 1:
+                max_source_length = 0
+                max_target_length = 0
+            max_source_length = max(max_source_length, len(instances[-1].source))
+            max_target_length = max(max_target_length, len(instances[-1].target) - 1)
+            source_batch_size = len(instances) * max_source_length
+            target_batch_size = len(instances) * max_target_length
+
+            batch_size = max(source_batch_size, target_batch_size)
+            return batch_size
+
+    return instance_size_calculator
+
+
+@register_factory('bilingual')
+class Bilingual(Factory, SeqMixin):
     def __init__(self, logger, source_language, target_language):
-        super(Seq2Seq, self).__init__(logger, set({'source', 'target'}))
+        super(Bilingual, self).__init__(logger, set({'source', 'target'}))
 
         self.vocabularies = dict()
 
@@ -39,60 +64,28 @@ class Seq2Seq(Task, SeqMixin):
         args = settings.args
         return cls(logger, args.language.source, args.language.target)
 
-    def instance_filter(self, args):
-        source_filter = args.filter.source
-        target_filter = args.filter.target
+    def training_batches(self, args):
+        source_filter = args.training_batches.filter.source
+        target_filter = args.training_batches.filter.target
 
-        def handler(instance):
+        def instance_filter(instance):
             if len(instance.source) < source_filter[0] or source_filter[1] < len(instance.source):
                 return True
-
             if len(instance.target) < target_filter[0] or target_filter[1] < len(instance.target):
                 return True
-
             return False
 
-        return handler
-
-    def instance_comparator(self, args):
-        def handler(instance):
+        def instance_comparator(instance):
             return (len(instance.source), len(instance.target))
-        return handler
 
-    def instance_size_calculator(self, args):
-        batch_type = args.batch_type
-        self.max_source_length = 0
-        self.max_target_length = 0
-
-        def handler(instances):
-            if batch_type == 'sentence':
-                batch_size = len(instances)
-
-            if batch_type == 'token':
-                if len(instances) == 1:
-                    self.max_source_length = 0
-                    self.max_target_length = 0
-
-                self.max_source_length = max(self.max_source_length, len(instances[-1].source))
-                self.max_target_length = max(self.max_target_length, len(instances[-1].target) - 1)
-
-                source_batch_size = len(instances) * self.max_source_length
-                target_batch_size = len(instances) * self.max_target_length
-                batch_size = max(source_batch_size, target_batch_size)
-
-            return batch_size
-        
-        return handler
-
-    def training_batches(self, args):
         return Iterator(
             args.datasets.training,
             args.training_batches.batch_size,
             dock_size = args.training_batches.dock_size,
             export_volume = args.training_batches.export_volume,
-            instance_filter = self.instance_filter(args.training_batches),
-            instance_comparator = self.instance_comparator(args.training_batches),
-            instance_size_calculator = self.instance_size_calculator(args.training_batches),
+            instance_filter = instance_filter,
+            instance_comparator = instance_comparator,
+            instance_size_calculator = get_instance_size_calculator(args.training_batches.batch_type),
             shuffle=args.training_batches.shuffle,
             infinite=True,
         )
@@ -101,7 +94,15 @@ class Seq2Seq(Task, SeqMixin):
         return Iterator(
             args.datasets.validation,
             args.validation_batches.batch_size,
-            instance_size_calculator = self.instance_size_calculator(args.validation_batches),
+            instance_size_calculator = get_instance_size_calculator(args.validation_batches.batch_type),
+        )
+
+    def testing_batches(self, args):
+        return RawTextIterator(
+            [args.raw_data.testing.source, args.raw_data.testing.target],
+            self.build_instance,
+            args.testing_batches.batch_size,
+            instance_size_calculator = get_instance_size_calculator(args.testing_batches.batch_type)
         )
 
     def load_ancillary_datasets(self, args):
@@ -115,13 +116,13 @@ class Seq2Seq(Task, SeqMixin):
         self.build_vocabularies(args)
 
     def build_vocabularies(self, args):
-        self.logger.info(f' * [\'Source\'] side')
+        self.logger.info(f' * [\'Source\']')
         self.logger.info(f'   corpus: {args.raw_data.training.source}')
         self.logger.info(f'   language: {self.source_language}')
         source_token_counter = self.count_tokens_of_corpus(args.raw_data.training.source, args.number_worker, args.work_amount)
         self.logger.info(f'   {len(source_token_counter)} token found')
 
-        self.logger.info(f' * [\'Target\'] side')
+        self.logger.info(f' * [\'Target\']')
         self.logger.info(f'   corpus: {args.raw_data.training.target}')
         self.logger.info(f'   language: {self.target_language}')
         target_token_counter = self.count_tokens_of_corpus(args.raw_data.training.target, args.number_worker, args.work_amount)
@@ -154,6 +155,12 @@ class Seq2Seq(Task, SeqMixin):
 
         self.logger.info(f' > Saving vocabularies to {args.datasets.vocabularies} ...')
         dump_data(args.datasets.vocabularies, self.vocabularies)
+        if args.vocabularies.save_readable:
+            for name, vocabulary in self.vocabularies.items():
+                readable_path = args.datasets.vocabularies + f'.{name}-readable'
+                with open(readable_path, 'w', encoding='utf-8') as readable_file:
+                    for token, frequency in vocabulary:
+                        readable_file.writelines(f'{token} {frequency}\n')
         self.logger.info(f'   Vocabularies has been saved.')
 
     def align_and_partition_raw_data(self, raw_data_args, partition_size):
@@ -166,7 +173,7 @@ class Seq2Seq(Task, SeqMixin):
         source_line, target_line = aligned_raw_data_item
 
         instance = Instance(self.structure)
-        instance['source'] = numericalize(tokenize(source_line), self.vocabularies['source'])
-        instance['target'] = numericalize(tokenize(target_line), self.vocabularies['target'])
+        instance['source'] = numericalize(tokenize(source_line), self.vocabularies['source'], add_bos=True, add_eos=True)
+        instance['target'] = numericalize(tokenize(target_line), self.vocabularies['target'], add_bos=True, add_eos=True)
  
         return instance

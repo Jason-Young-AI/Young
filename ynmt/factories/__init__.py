@@ -14,18 +14,18 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.tasks.task import Task
+from ynmt.factories.factory import Factory
 
 
-task_registration = Registration(Task)
+factory_registration = Registration(Factory)
 
 
-def build_task(settings, logger):
-    return task_registration[settings.name].setup(settings, logger)
+def build_factory(settings, logger):
+    return factory_registration[settings.name].setup(settings, logger)
 
 
-def register_task(registration_name):
-    return task_registration.register(registration_name)
+def register_factory(registration_name):
+    return factory_registration.register(registration_name)
 
 
-import_modules('ynmt.tasks', os.path.dirname(__file__))
+import_modules('ynmt.factories', os.path.dirname(__file__))

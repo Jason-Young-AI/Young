@@ -16,28 +16,13 @@ from yoolkit.multiprocessing import multi_process
 from ynmt.data.dataset import Dataset
 
 
-class Task(object):
+class Factory(object):
     def __init__(self, logger, structure):
         self.logger = logger
         self.structure = structure
 
     @classmethod
     def setup(cls, settings):
-        raise NotImplementedError
-
-    def instance_filter(self, args):
-        # should return a handler, like:
-        # def handler(instance)
-        raise NotImplementedError
-
-    def instance_comparator(self, args):
-        # should return a handler, like:
-        # def handler(instance)
-        raise NotImplementedError
-
-    def instance_size_calculator(self, args):
-        # should return a handler, like:
-        # def handler(instances)
         raise NotImplementedError
 
     def load_ancillary_datasets(self, args):
@@ -119,6 +104,7 @@ class Task(object):
         for validation_semi_dataset_path in validation_semi_dataset_paths:
             rm_temp(validation_semi_dataset_path)
         self.logger.info(f'   Finished removing semi-dataset.')
+
 
     def build_semi_dataset(self, aligned_raw_data_partition):
         semi_dataset = Dataset(self.structure)
