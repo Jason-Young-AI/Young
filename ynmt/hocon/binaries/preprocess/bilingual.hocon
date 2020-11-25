@@ -1,0 +1,13 @@
+factory = {
+    name = "bilingual"
+    args = { include "../../factories/bilingual.hocon" }
+}
+
+random_seed = 1234
+
+logger = {
+    name = "wmt16ende_bilingual_preprocess"
+    path = "wmt16ende_bilingual_preprocess.log"
+    off = False
+    console_report = True
+}

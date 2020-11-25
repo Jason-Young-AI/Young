@@ -7,8 +7,8 @@ optimizers = {
 schedulers = {
     include file("schedulers/__all__.hocon")
 }
-tasks = {
-    include file("tasks/__all__.hocon")
+factories = {
+    include file("factories/__all__.hocon")
 }
 testers = {
     include file("testers/__all__.hocon")

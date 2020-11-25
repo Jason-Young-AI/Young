@@ -1,0 +1,60 @@
+language = {
+    source = "en"
+    target = "de"
+}
+
+vocabularies = {
+    share = True
+    size_limit = {
+        source = 32768
+        target = 32768
+    }
+    save_readable = True
+}
+
+raw_data = {
+    training = {
+        source = "Corpora/wmt16.en-de.en"
+        target = "Corpora/wmt16.en-de.de"
+    }
+    validation = {
+        source = "Corpora/newstest2013.en-de.en"
+        target = "Corpora/newstest2013.en-de.de"
+    }
+    testing = {
+        source = "Corpora/newstest2013.en-de.en"
+        target = "Corpora/newstest2013.en-de.de"
+    }
+}
+
+datasets = {
+    training = "Datasets/wmt16ende.train.dataset"
+    validation = "Datasets/wmt16ende.valid.dataset"
+    vocabularies = "Datasets/wmt16ende.vocab"
+}
+
+training_batches = {
+    batch_size = 4096
+    batch_type = "token"
+    dock_size = 8192
+    export_volume = 2
+    shuffle = True
+    filter = {
+        source = [0, 200]
+        target = [0, 200]
+    }
+}
+
+validation_batches = {
+    batch_size = 50
+    batch_type = "sentence"
+}
+
+testing_batches = {
+    batch_size = 50
+    batch_type = "sentence"
+}
+
+number_worker = 16
+shard_size = 1000000
+work_amount = 282000

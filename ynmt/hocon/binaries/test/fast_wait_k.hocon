@@ -1,20 +1,30 @@
-task = {
-    name = "seq2seq"
-    args = { include "../../tasks/seq2seq.hocon" }
+device = "GPU"
+number_worker = 4
+
+checkpoints = {
+    name = "wmt16ende_fast-wait-k"
+    directory = "Checkpoints"
+}
+
+factory = {
+    name = "bilingual"
+    args = { include "../../factories/bilingual.hocon" }
 }
 tester = {
     name = "fast_wait_k"
     args = { include "../../testers/fast_wait_k.hocon" }
 }
 
-device = "GPU"
-
-output_directory = "Outputs/Fast-Wait-K/WMT16EnRo"
-checkpoint_directory = "Checkpoints/Fast-Wait-K/WMT16EnRo"
-
 logger = {
-    name = "test_fast-wait-k_wmt16enro"
-    path = "test_fast-wait-k_wmt16enro.log"
+    name = "wmt16ende_test_fast-wait-k"
+    path = "wmt16ende_test_fast-wait-k.log"
     off = False
     console_report = True
+}
+
+distribution = {
+    device = "GPU"
+    port = "12345"
+    number_process = 4
+    workshop_capacity = 60
 }

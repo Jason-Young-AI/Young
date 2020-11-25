@@ -2,12 +2,15 @@ wait_source_time = 7
 
 bpe_symbol = "@@ "
 remove_bpe = True
+dehyphenate = True
 greedy_searcher = {
     min_length = 1
     max_length = 200
 }
 
-source = "Corpora/newsdev2016.en-ro.en"
-target = "Corpora/Gold/newsdev2016.en-ro.ro"
-batch_size = 32
-batch_type = "sentence"
+reference_path = "Corpora/Gold/newstest2013.en-de.de"
+
+outputs = {
+    name = "wmt16ende_fast-wait-k"
+    directory = "Outputs"
+}

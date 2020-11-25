@@ -1,3 +1,0 @@
-seq2seq = {
-    include file("seq2seq.hocon") 
-}

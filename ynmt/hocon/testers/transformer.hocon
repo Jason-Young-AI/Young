@@ -1,5 +1,6 @@
 bpe_symbol = "@@ "
 remove_bpe = True
+dehyphenate = True
 beam_searcher = {
     beam_size = 4
     n_best = 1
@@ -11,7 +12,9 @@ beam_searcher = {
     }
 }
 
-source = "Corpora/newsdev2016.en-ro.en"
-target = "Corpora/Gold/newsdev2016.en-ro.ro"
-batch_size = 32
-batch_type = "sentence"
+reference_path = "Corpora/Gold/newstest2013.en-de.de"
+
+outputs = {
+    name = "wmt16ende_transformer"
+    directory = "Outputs"
+}
