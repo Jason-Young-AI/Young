@@ -73,7 +73,11 @@ class BLEUScorer(object):
 
     @property
     def brevity_penalty(self):
-        return min(1, math.exp(1 - self.total_closest_reference_length / self.total_hypothesis_length))
+        if self.total_hypothesis_length == 0:
+            print('In computation of brevity penalty, division by zero, brevity_penalty set to 1e-5!')
+            return 1e-5
+        else:
+            return min(1, math.exp(1 - self.total_closest_reference_length / self.total_hypothesis_length))
 
     def count_sentence_ngram(self, sentence, n):
         ngrams = dict()
@@ -128,12 +132,20 @@ class BLEUScorer(object):
     def precisions(self):
         precisions = list()
         for index in range(self.gram_number):
-            precisions.append(self.ngram_statistics[index].correct_ngram / self.ngram_statistics[index].total_ngram)
+            if self.ngram_statistics[index].total_ngram == 0:
+                print('In computation of precision, division by zero, precision set to 1e-5!')
+                precisions.append(1e-5)
+            else:
+                precisions.append(self.ngram_statistics[index].correct_ngram / self.ngram_statistics[index].total_ngram)
         return precisions
 
     @property
     def length_ratio(self):
-        return self.total_hypothesis_length / self.total_closest_reference_length
+        if self.total_closest_reference_length == 0:
+            print('In computation of length_ratio, division by zero, length_ratio set to inf!')
+            return float('inf')
+        else:
+            return self.total_hypothesis_length / self.total_closest_reference_length
 
     @property
     def hypothesis_length(self):
