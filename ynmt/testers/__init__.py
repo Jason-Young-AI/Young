@@ -20,8 +20,8 @@ from ynmt.testers.tester import Tester
 tester_registration = Registration(Tester)
 
 
-def build_tester(settings, task, device_descriptor, logger):
-    return tester_registration[settings.name].setup(settings, task, device_descriptor, logger)
+def build_tester(settings, factory, model, device_descriptor, logger):
+    return tester_registration[settings.name].setup(settings, factory, model, device_descriptor, logger)
 
 
 def register_tester(registration_name):

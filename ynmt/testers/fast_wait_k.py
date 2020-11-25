@@ -21,150 +21,123 @@ from ynmt.data.iterator import RawTextIterator
 from ynmt.data.attribute import pad_attribute
 
 from ynmt.utilities.metrics import BLEUScorer
-from ynmt.utilities.sequence import stringize, numericalize, tokenize
+from ynmt.utilities.sequence import stringize, numericalize, tokenize, dehyphenate
 from ynmt.utilities.extractor import get_tiled_tensor
 
 
 @register_tester('fast_wait_k')
 class FastWaitK(Tester):
     def __init__(self,
-        task, output_names,
-        greedy_searcher, bpe_symbol, remove_bpe,
-        source_path, target_path,
-        batch_size, batch_type,
+        factory, model,
+        greedy_searcher,
+        bpe_symbol, remove_bpe, dehyphenate,
+        reference_path,
         wait_source_time,
+        output_directory, output_name,
         device_descriptor, logger
     ):
-        super(FastWaitK, self).__init__(task, output_names, device_descriptor, logger)
+        super(FastWaitK, self).__init__(factory, model, output_directory, output_name, device_descriptor, logger)
         self.greedy_searcher = greedy_searcher
+
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
+        self.dehyphenate = dehyphenate
+        self.reference_path = reference_path
 
-        self.source_path = source_path
-        self.target_path = target_path
-        self.batch_size = batch_size
-        self.batch_type = batch_type
         self.wait_source_time = wait_source_time
 
-    def initialize(self):
-        self.total_sentence_number = 0
-
     @classmethod
-    def setup(cls, settings, task, device_descriptor, logger):
+    def setup(cls, settings, factory, model, device_descriptor, logger):
         args = settings.args
+
         greedy_searcher = GreedySearcher(
-            search_space_size = len(task.vocabularies['target']),
-            initial_node = task.vocabularies['target'].bos_index,
-            terminal_node = task.vocabularies['target'].eos_index,
+            search_space_size = len(factory.vocabularies['target']),
+            initial_node = factory.vocabularies['target'].bos_index,
+            terminal_node = factory.vocabularies['target'].eos_index,
             min_depth = args.greedy_searcher.min_length, max_depth = args.greedy_searcher.max_length,
         )
 
-        output_names = ['trans', 'trans-detailed']
-
-        fast_wait_k = cls(
-            task, output_names,
-            greedy_searcher, args.bpe_symbol, args.remove_bpe,
-            args.source, args.target,
-            args.batch_size, args.batch_type,
+        tester = cls(
+            factory, model,
+            greedy_searcher,
+            args.bpe_symbol, args.remove_bpe, args.dehyphenate,
+            args.reference_path,
             args.wait_source_time,
+            args.outputs.directory, args.outputs.name,
             device_descriptor, logger
         )
 
-        return fast_wait_k
+        return tester
 
-    def test(self, model, batch):
-        source = batch.source
-        parallel_line_number, _ = source.size()
+    def initialize(self, output_extension):
+        output_basepath = self.output_basepath + '.' + output_extension
+
+        self.total_sentence_number = 0
+
+        self.trans_path = output_basepath + '.trans'
+        with open(self.trans_path, 'w', encoding='utf-8') as trans_file:
+            trans_file.truncate()
+
+    def customize_batch(self, batch):
+        padded_batch = Batch(set({'source', }))
+        padded_source_attributes, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
+        padded_batch.source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
+        return padded_batch
+
+    def test(self, customized_batch):
+        source = customized_batch.source
+        parallel_line_number, max_source_length = source.size()
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.greedy_searcher.finished:
             temp_source = torch.index_select(source, 0, self.greedy_searcher.line_original_indices)
-            source_mask = model.get_source_mask(temp_source)
-            codes = model.encoder(temp_source, source_mask)
+            source_mask = self.model.get_source_mask(temp_source)
+            codes = self.model.encoder(temp_source, source_mask)
 
             previous_prediction = self.greedy_searcher.found_nodes
-            previous_prediction_mask = model.get_target_mask(previous_prediction)
-            cross_mask = model.get_cross_mask(temp_source, previous_prediction, self.wait_source_time + 1) # +1 for bos
+            previous_prediction_mask = self.model.get_target_mask(previous_prediction)
+            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(previous_prediction, temp_source, self.wait_source_time + 1) # +1 for bos
 
-            hidden, cross_attention_weight = model.decoder(
+            hidden, cross_attention_weight = self.model.decoder(
                 previous_prediction,
                 codes,
                 previous_prediction_mask,
-                cross_mask
+                cross_attention_weight_mask
             )
 
-            logits = model.generator(hidden)
+            logits = self.model.generator(hidden)
             log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
             prediction_distribution = log_probs[:, -1, :]
             self.greedy_searcher.search(prediction_distribution)
-
             self.greedy_searcher.update()
 
-    def input(self):
-        def instance_handler(lines):
-            (source_line, ) = lines
-            instance = Instance(set({'source', }))
-            instance['source'] = numericalize(tokenize(source_line), self.task.vocabularies['source'])
-            return instance
+        return self.greedy_searcher.result
 
-        def instance_size_calculator(instances):
-            self.max_source_length = 0
-            if self.batch_type == 'sentence':
-                batch_size = len(instances)
+    def output(self, result):
+        parallel_line_number = len(result)
 
-            if self.batch_type == 'token':
-                if len(instances) == 1:
-                    self.max_source_length = 0
+        with open(self.trans_path, 'a', encoding='utf-8') as trans_file:
+            for line_index in range(parallel_line_number):
+                lprob = result[line_index]['log_prob']
+                trans = result[line_index]['path']
 
-                self.max_source_length = max(self.max_source_length, len(instances[-1].source))
+                trans_tokens = stringize(trans, self.factory.vocabularies['target'])
+                trans_sentence = ' '.join(trans_tokens)
 
-                batch_size = len(instances) * self.max_source_length
-
-            return batch_size
- 
-        input_iterator = RawTextIterator(
-            [self.source_path, ],
-            instance_handler,
-            self.batch_size,
-            instance_size_calculator = instance_size_calculator
-        )
-
-        for batch in input_iterator:
-            padded_batch = Batch(set({'source', }))
-            padded_attributes, _ = pad_attribute(batch.source, self.task.vocabularies['source'].pad_index)
-            padded_batch.source = torch.tensor(padded_attributes, dtype=torch.long, device=self.device_descriptor)
-            yield padded_batch
-
-    def output(self, output_basepath):
-        results = self.greedy_searcher.results
-
-        with open(output_basepath + '.' + 'trans', 'a', encoding='utf-8') as translation_file,\
-            open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:
-            for result in results:
-                detailed_translation_file.writelines(f'No.{self.total_sentence_number}:\n')
-                self.total_sentence_number += 1
-                log_prob = result['log_prob']
-                prediction = result['path']
-                detailed_translation_file.writelines(f'log_prob={log_prob:.3f}\n')
-                tokens = stringize(prediction, self.task.vocabularies['target'])
-                sentence = ' '.join(tokens)
+                # Final Trans
                 if self.remove_bpe:
-                    sentence = (sentence + ' ').replace(self.bpe_symbol, '').strip()
-                detailed_translation_file.writelines(sentence + '\n')
-                translation_file.writelines(sentence + '\n')
-                detailed_translation_file.writelines(f'===================================\n')
+                    trans_sentence = (trans_sentence + ' ').replace(self.bpe_symbol, '').strip()
+                if self.dehyphenate:
+                    trans_sentence = dehyphenate(trans_sentence)
+                trans_file.writelines(trans_sentence + '\n')
 
-    def report(self, output_basepath):
-        if self.target_path is None:
-            return
-
+    def report(self):
         bleu_scorer = BLEUScorer()
-        with open(output_basepath + '.' + 'trans', 'r', encoding='utf-8') as translation_file, open(self.target_path, 'r', encoding='utf-8') as reference_file:
-            for tra, ref in zip(translation_file, reference_file):
-                bleu_scorer.add(tra.split(), [ref.split(), ])
+        bleu_scorer.initialize()
+        with open(self.trans_path, 'r', encoding='utf-8') as trans_file, open(self.reference_path, 'r', encoding='utf-8') as reference_file:
+            for trans_sentence, reference_sentence in zip(trans_file, reference_file):
+                bleu_scorer.add(trans_sentence.split(), [reference_sentence.split(), ])
 
-        self.logger.info(bleu_scorer.result_string)
-
-        with open(output_basepath + '.' + 'trans-detailed', 'a', encoding='utf-8') as detailed_translation_file:
-            detailed_translation_file.writelines(bleu_scorer.result_string)
+        bleu_score = bleu_scorer.result_string
+        self.logger.info(bleu_score)
