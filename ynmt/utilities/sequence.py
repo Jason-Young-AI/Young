@@ -10,6 +10,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import re
+
+
 def tokenize(string):
     token_list = string.strip().split()
     return token_list
@@ -20,7 +23,7 @@ def stringize(index_list, vocabulary):
     for index in index_list:
         if index == vocabulary.eos_index:
             break
-        if index in {vocabulary.pad_index, vocabulary.bos_index}:
+        if index in vocabulary.RESERVED_TOKENS:
             continue
         else:
             token_list.append(vocabulary.token(index))
@@ -37,3 +40,7 @@ def numericalize(token_list, vocabulary, add_bos=True, add_eos=True):
         index_list = index_list + [ vocabulary.eos_index ]
 
     return index_list
+
+
+def dehyphenate(sequence):
+    return re.sub(r'(\S)-(\S)', r'\1 ##AT##-##AT## \2', sequence).replace('##AT##', '@')
