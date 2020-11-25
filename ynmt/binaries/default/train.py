@@ -23,11 +23,12 @@ from ynmt.utilities.checkpoint import load_checkpoint
 from ynmt.utilities.extractor import get_model_parameters_number
 from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
-from ynmt.tasks import build_task
+from ynmt.factories import build_factory
 from ynmt.models import build_model
 from ynmt.schedulers import build_scheduler
 from ynmt.optimizers import build_optimizer
 from ynmt.trainers import build_trainer
+from ynmt.testers import build_tester
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
@@ -50,24 +51,25 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.disabled = True
         visualizer.disabled = True
 
+    testing_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
     validation_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
     training_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
 
     ## Building Something
     
-    # Build Task
-    logger.info(f' * Building Task: \'{args.task.name}\' ...')
-    task = build_task(args.task, logger)
-    logger.info(f'   The construction of Task is complete.')
+    # Build factory
+    logger.info(f' * Building factory: \'{args.factory.name}\' ...')
+    factory = build_factory(args.factory, logger)
+    logger.info(f'   The construction of factory is complete.')
 
     # Load Ancillary Datasets
     logger.info(f' * Loading Ancillary Datasets ...')
-    task.load_ancillary_datasets(args.task.args)
+    factory.load_ancillary_datasets(args.factory.args)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
     # Build Model
     logger.info(f' * Building Model: \'{args.model.name}\'...')
-    model = build_model(args.model, task)
+    model = build_model(args.model, factory)
     parameters_number = get_model_parameters_number(model)
     parameters_number_str = str()
     for name, number in parameters_number.items():
@@ -82,24 +84,17 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
     logger.info(f' * Moving model to device of Trainer ...')
     model.to(device_descriptor)
-    logger.info(f'   Completed.')
-
-    # Loading Checkpoint
-    checkpoint = load_checkpoint(args.checkpoint)
-    if checkpoint is None:
-        logger.info(f' * Training from scratch.')
-    else:
-        logger.info(f' * Training from checkpoint \'{args.checkpoint}\' at {checkpoint["step"]} steps.')
+    logger.info(f'   Complete.')
 
     # Build Scheduler
     logger.info(f' * Building Learning Rate Scheduler \'{args.scheduler.name}\' ...')
     scheduler = build_scheduler(args.scheduler, model)
-    logger.info(f'   Completed.')
+    logger.info(f'   Complete.')
 
     # Build Optimizer
     logger.info(f' * Building Optimizer \'{args.optimizer.name}\' ...')
     optimizer = build_optimizer(args.optimizer, model)
-    logger.info(f'   Completed.')
+    logger.info(f'   Complete.')
 
     model, optimizer = mix_precision(model, optimizer, mix_precision=args.mix_precision.on, optimization_level=args.mix_precision.optimization_level)
     if args.mix_precision.on:
@@ -108,6 +103,13 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
             logger.info(f'Training in mix precision mode, optimization level is {args.mix_precision.optimization_level}')
         else:
             logger.info(f'Not found NVIDIA-APEX module! Now training in normal mode.')
+
+    # Loading Checkpoint
+    checkpoint = load_checkpoint(args.checkpoint)
+    if checkpoint is None:
+        logger.info(f' * Training from scratch.')
+    else:
+        logger.info(f' * Training from checkpoint \'{args.checkpoint}\' at {checkpoint["step"]} steps.')
 
     if checkpoint is not None:
         if args.reset_scheduler:
@@ -121,16 +123,23 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
             optimizer.load_state_dict(checkpoint['optimizer_state'])
 
         logger.info(f' | Loading Parameters ...')
-        model.load_state_dict(checkpoint['model_state'], strict=False)
-        logger.info(f' - Completed.')
+        model.personalized_load_state(checkpoint['model_state'])
+        logger.info(f' - Complete.')
+
+    # Build Tester
+    logger.info(f' * Building Tester \'{args.tester.name}\' ...')
+    tester = build_tester(args.tester, factory, model, device_descriptor, logger)
+    logger.info(f'   The construction of tester is complete.')
 
     # Build Trainer
     logger.info(f' * Building Trainer \'{args.trainer.name}\' ...')
-    trainer = build_trainer(args.trainer, task, model, scheduler, optimizer, device_descriptor, logger, visualizer)
-    logger.info(f'   The construction of trainer is complete.')
+    trainer = build_trainer(args.trainer, factory, model, scheduler, optimizer, tester, device_descriptor, logger, visualizer)
 
     if checkpoint is not None and not args.reset_trainer:
+        logger.info(f' | Reset Step.')
         trainer.step = checkpoint['step']
+
+    logger.info(f' - The construction of trainer is complete.')
 
     if visualizer.disabled:
         logger.info(f' * Visualizer Disabled.')
@@ -150,24 +159,27 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f'   Saving checkpoint every {trainer.training_period} steps;')
     logger.info(f'   Validate every {trainer.validation_period} steps.')
 
-    trainer.launch(training_batches, validation_batches)
+    trainer.launch(training_batches, validation_batches, testing_batches)
 
     visualizer.close()
 
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+    logger.disabled = True
+
     fix_random_procedure(args.random_seed)
 
-    task = build_task(args.task, logger)
+    factory = build_factory(args.factory, logger)
+    factory.load_ancillary_datasets(args.factory.args)
 
-    distributed_data_sender(task.validation_batches(args.task.args), batch_queues, workshop_semaphore, world_size, ranks)
-
-    distributed_data_sender(task.training_batches(args.task.args), batch_queues, workshop_semaphore, world_size, ranks)
+    distributed_data_sender(factory.testing_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks, order_index=True)
+    distributed_data_sender(factory.validation_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
+    distributed_data_sender(factory.training_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
 
 
 def train(args):
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'])
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     device = args.distribution.device
     master_ip = args.distribution.master_ip

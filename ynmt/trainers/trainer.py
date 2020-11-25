@@ -10,6 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
 import torch
 
 from yoolkit.timer import Timer
@@ -22,23 +23,28 @@ from ynmt.utilities.distributed import reduce_all, gather_all
 class Trainer(object):
     def __init__(self,
         life_cycle,
-        task, model, scheduler, optimizer,
+        factory, model, scheduler, optimizer, tester,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-        training_period, validation_period,
-        report_period,
+        training_period, validation_period, report_period,
         device_descriptor, logger, visualizer,
     ):
+        assert os.path.isdir(checkpoint_directory), f'#6 arg(\'checkpoint_directory\') checkpoint directory: \'{checkpoint_directory}\' does not exist!'
         self.life_cycle = life_cycle
-        self.task = task
+
+        self.factory = factory
         self.model = model
         self.scheduler = scheduler
         self.optimizer = optimizer
+        self.tester = tester
+
         self.checkpoint_directory = checkpoint_directory
         self.checkpoint_name = checkpoint_name
         self.checkpoint_keep_number = checkpoint_keep_number
+
         self.training_period = training_period
         self.validation_period = validation_period
         self.report_period = report_period
+
         self.device_descriptor = device_descriptor
         self.logger = logger
         self.visualizer = visualizer
@@ -53,7 +59,7 @@ class Trainer(object):
         self.branch_timer = Timer()
 
     @classmethod
-    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, factory, model, scheduler, optimizer, tester, device_descriptor, logger, visualizer):
         raise NotImplementedError
 
     @property
@@ -110,7 +116,7 @@ class Trainer(object):
         self.timer.restart()
         return
 
-    def launch(self, accumulated_train_batches, accumulated_valid_batches):
+    def launch(self, accumulated_train_batches, accumulated_valid_batches, test_batches):
         self.train_statistics.clear()
         self.timer.reset()
         self.timer.launch()
@@ -129,6 +135,8 @@ class Trainer(object):
             if self.step % self.validation_period == 0:
                 self.model.train(False)
                 self.validate(accumulated_valid_batches)
+                self.tester.initialize(f'step_{self.step}')
+                self.tester.launch(test_batches)
 
             # save
             if self.step % self.training_period == 0:

@@ -29,10 +29,9 @@ from ynmt.utilities.distributed import gather_all
 class FastWaitK(Trainer):
     def __init__(self,
         life_cycle,
-        task, model, scheduler, optimizer,
+        factory, model, scheduler, optimizer, tester,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-        training_period, validation_period,
-        report_period,
+        training_period, validation_period, report_period,
         wait_source_time,
         training_criterion, validation_criterion,
         normalization_type,
@@ -40,10 +39,9 @@ class FastWaitK(Trainer):
     ):
         super(FastWaitK, self).__init__(
             life_cycle,
-            task, model, scheduler, optimizer,
+            factory, model, scheduler, optimizer, tester,
             checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-            training_period, validation_period,
-            report_period,
+            training_period, validation_period, report_period,
             device_descriptor, logger, visualizer
         )
         self.training_criterion = training_criterion
@@ -54,34 +52,33 @@ class FastWaitK(Trainer):
         self.wait_source_time = wait_source_time
 
     @classmethod
-    def setup(cls, settings, task, model, scheduler, optimizer, device_descriptor, logger, visualizer):
+    def setup(cls, settings, factory, model, scheduler, optimizer, tester, device_descriptor, logger, visualizer):
         args = settings.args
 
         training_criterion = LabelSmoothingCrossEntropy(
-            len(task.vocabularies['target']),
+            len(factory.vocabularies['target']),
             args.label_smoothing_percent,
-            task.vocabularies['target'].pad_index
+            factory.vocabularies['target'].pad_index
         )
         validation_criterion = CrossEntropy(
-            len(task.vocabularies['target']),
-            task.vocabularies['target'].pad_index
+            len(factory.vocabularies['target']),
+            factory.vocabularies['target'].pad_index
         )
 
         training_criterion.to(device_descriptor)
         validation_criterion.to(device_descriptor)
 
-        fast_wait_k = cls(
+        trainer = cls(
             args.life_cycle,
-            task, model, scheduler, optimizer,
+            factory, model, scheduler, optimizer, tester,
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
-            args.training_period, args.validation_period,
-            args.report_period,
+            args.training_period, args.validation_period, args.report_period,
             args.wait_source_time,
             training_criterion, validation_criterion,
             args.normalization_type,
             device_descriptor, logger, visualizer,
         )
-        return fast_wait_k
+        return trainer
 
     def customize_accumulated_batch(self, accumulated_batch):
         accumulated_padded_batch = list()
@@ -89,21 +86,21 @@ class FastWaitK(Trainer):
         for batch in accumulated_batch:
             padded_batch = Batch(set({'source', 'target'}))
             # source side
-            padded_source_attribute, _ = pad_attribute(batch['source'], self.task.vocabularies['source'].pad_index)
-            padded_batch['source'] = torch.tensor(padded_source_attribute, dtype=torch.long, device=self.device_descriptor)
+            padded_source_attribute, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
+            padded_batch.source = torch.tensor(padded_source_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # target side
-            padded_target_attribute, _ = pad_attribute(batch['target'], self.task.vocabularies['target'].pad_index)
-            padded_batch['target'] = torch.tensor(padded_target_attribute, dtype=torch.long, device=self.device_descriptor)
+            padded_target_attribute, _ = pad_attribute(batch.target, self.factory.vocabularies['target'].pad_index)
+            padded_batch.target = torch.tensor(padded_target_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # accumulate batch
             accumulated_padded_batch.append(padded_batch)
 
-            statistics.src_token_number += padded_batch.source.ne(self.task.vocabularies['source'].pad_index).sum().item()
-            statistics.tgt_token_number += padded_batch.target.ne(self.task.vocabularies['target'].pad_index).sum().item()
+            statistics.src_token_number += padded_batch.source.ne(self.factory.vocabularies['source'].pad_index).sum().item()
+            statistics.tgt_token_number += padded_batch.target.ne(self.factory.vocabularies['target'].pad_index).sum().item()
             # Calculate normalization
             if self.normalization_type == 'token':
-                statistics.normalization += padded_batch.target[:, 1:].ne(self.task.vocabularies['target'].pad_index).sum().item()
+                statistics.normalization += padded_batch.target[:, 1:].ne(self.factory.vocabularies['target'].pad_index).sum().item()
             elif self.normalization_type == 'sentence':
                 statistics.normalization += len(padded_batch.target)
 
