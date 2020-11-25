@@ -87,7 +87,7 @@ def gather_all(data, device_descriptor, data_size=8 * 1024):
 
     serialized_data = dumps(data)
     serialized_data_size = len(serialized_data)
-    assert serialized_data_size <= data_size, f'Data size exceeds data_size: {data_size}'
+    assert serialized_data_size <= data_size, f'Data size ({serialized_data_size}) exceeds data_size: {data_size}'
 
     quotient, remainder = divmod(serialized_data_size, 256)
     distributed_tensor[0] = quotient
