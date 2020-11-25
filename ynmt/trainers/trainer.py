@@ -135,6 +135,7 @@ class Trainer(object):
             if self.step % self.validation_period == 0:
                 self.model.train(False)
                 self.validate(accumulated_valid_batches)
+                self.test(test_batches)
 
             # save
             if self.step % self.training_period == 0:
@@ -169,9 +170,12 @@ class Trainer(object):
         if self.step % self.report_period == 0:
             self.report('Validate', reduced_valid_statistics, self.branch_timer.lap(), self.branch_timer.elapsed_time)
 
+        self.timer.restart()
+
+    def test(self, test_batches):
+        self.timer.standby()
         self.tester.initialize(f'step_{self.step}')
         self.tester.launch(test_batches)
-
         self.timer.restart()
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
