@@ -102,46 +102,51 @@ So YoungNMT can load arguments from `*.json` or pure HOCON files.
 
 After installation, the commonds `ynmt` `ynmt-preprocess`, `ynmt-train` and `ynmt-test` can be excuted directly and system arguments will be loaded from default HOCON files.
 
-**Save Arguments** 
+**Save Default Arguments** 
+The following command will save all default arguments of modules of YoungNMT.
 ```bash
 ynmt -s {path to save args} -t {json|yaml|properties|hocon}
 ```
-
-**Load Arguments** 
+If you want to save default arguments of a specified type of preprocess, train or test. The following commands will help.
+Let's take command `ynmt-train` as an example:
 ```bash
-ynmt -l {user's config file}
+ynmt-train --name transformer -s transformer.json -t json
 ```
-
+This command will save the default **train**ing arguments of **transformer** to file `transformer.json`.
 
 ## Quickstart
 
 See [Full Documentation](https://jason-young.me/YoungNMT/) for more details.
 
-Here is an example of the WMT16 English to Romania experiment.
+Here is an example of the WMT16 English to German Transformer experiment.
 
 **Step 0. preliminaries**
 
- * Download English-Romania corpora directory from [OneDrive](https://1drv.ms/f/s!AkKq-gTqmfT0jTzX8Tj1vkhocRzW);
- * Download English-Romania configuration file from [YoungNMT-configs](https://github.com/Jason-Young-AI/YoungNMT-configs)
+ * Download corpora from [OneDrive](http://storage.live.com/items/F4F499EA04FAAA42\!1846:/WMT16_English-Romania.zip);
+ * Download configuration file from [YoungNMT-configs](https://github.com/Jason-Young-AI/YoungNMT-configs);
+ ```bash
+ git clone https://github.com/Jason-Young-AI/YoungNMT-configs.git
+ ```
 
 **Step 1. Dataset preparation**
 
 ```bash
-unzip -d Corpora English-Romania.zip
-mkdir Datasets
-ynmt-preprocess -l  wmt16_en-ro_config/main.hocon
+unzip -d Corpora WMT16_English-German.zip
+mkdir -p Datasets
+ynmt-preprocess --name bilingual -l YoungNMT-configs/Transformer/wmt16_en-de/preprocess.hocon
 ```
 
 **Step 2. Train the model on 4 GPU**
 ```bash
-mkdir -p Checkpoints/WMT16_En-Ro
-CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-train -l wmt16_en-ro_config/main.hocon
+mkdir -p Outputs
+mkdir -p Checkpoints
+CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-train --name transformer -l YoungNMT-configs/Transformer/wmt16_en-de/train.hocon
 ```
 
-**Step 3. Test the model using 1 GPU**
+**Step 3. Test the model using 4 GPU**
 ```bash
-mkdir -p Outputs/WMT16_En-Ro
-CUDA_VISIBLE_DEVICES=0 ynmt-test -l wmt16_en-ro_config/main.hocon
+mkdir -p Outputs
+CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-test --name transformer -l YoungNMT-configs/Transformer/wmt16_en-de/test.hocon
 ```
 
 ## Models and Configurations
