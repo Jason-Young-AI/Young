@@ -114,7 +114,7 @@ class BeamSearcher(object):
                     dict(
                         log_prob = self.reserved_path_log_probs[line_index, finished_path_index].item(),
                         score = self.reserved_path_scores[line_index, finished_path_index].item(),
-                        path = self.reserved_paths[line_index, finished_path_index, 1:]
+                        path = self.reserved_paths[line_index, finished_path_index, 1:].tolist()
                     )
                 )
             if self.line_finished_flags[line_index] and len(self.candidate_paths[line_original_index]) >= self.candidate_path_number:
