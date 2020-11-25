@@ -21,10 +21,10 @@ from ynmt.modules.perceptrons import MultilayerPerceptron
 from ynmt.utilities.extractor import get_padding_mask, get_foresee_mask
 
 
-@register_model('fast_wait_k_transformer')
-class FastWaitKTransformer(Model):
+@register_model('fast_wait_k')
+class FastWaitK(Model):
     def __init__(self, settings, dimension, encoder, decoder, generator):
-        super(FastWaitKTransformer, self).__init__(settings)
+        super(FastWaitK, self).__init__(settings)
         assert dimension == encoder.dimension
         assert dimension == decoder.dimension
         self.dimension = dimension
@@ -35,11 +35,11 @@ class FastWaitKTransformer(Model):
     def forward(self, source, target, wait_source_time):
         source_mask = self.get_source_mask(source)
         target_mask = self.get_target_mask(target)
-        cross_mask = self.get_cross_mask(source, target, wait_source_time)
+        cross_attention_weight_mask = self.get_cross_attention_weight_mask(target, source, wait_source_time)
 
         codes = self.encoder(source, source_mask)
 
-        hidden, cross_attention_weight = self.decoder(target, codes, target_mask, cross_mask)
+        hidden, cross_attention_weight = self.decoder(target, codes, target_mask, cross_attention_weight_mask)
 
         prediction = self.generator(hidden)
 
@@ -65,21 +65,21 @@ class FastWaitKTransformer(Model):
         target_mask = target_mask | foresee_mask
         return target_mask
 
-    def get_cross_mask(self, source, target, wait_source_time):
+    def get_cross_attention_weight_mask(self, target, source, wait_source_time):
         source_pad_index = self.encoder.embed_token.padding_idx
-        cross_mask = get_padding_mask(source, source_pad_index).unsqueeze(1)
+        cross_attention_weight_mask = get_padding_mask(source, source_pad_index).unsqueeze(1)
         foresee_mask = get_foresee_mask(
             target.size(-1), source.size(-1),
             target.device, foresee_number=wait_source_time
         ).unsqueeze(0)
-        cross_mask = cross_mask | foresee_mask
-        return cross_mask
+        cross_attention_weight_mask = cross_attention_weight_mask | foresee_mask
+        return cross_attention_weight_mask
 
     @classmethod
-    def setup(cls, settings, task):
+    def setup(cls, settings, factory):
         args = settings.args
-        transformer_encoder = TransformerEncoder(
-            task.vocabularies['source'],
+        encoder = TransformerEncoder(
+            factory.vocabularies['source'],
             args.encoder.layer_number,
             args.encoder.dimension,
             args.encoder.feedforward_dimension,
@@ -89,8 +89,8 @@ class FastWaitKTransformer(Model):
             args.encoder.feedforward_dropout_probability,
             args.encoder.normalize_position
         )
-        transformer_decoder = TransformerDecoder(
-            task.vocabularies['target'],
+        decoder = TransformerDecoder(
+            factory.vocabularies['target'],
             args.decoder.layer_number,
             args.decoder.dimension,
             args.decoder.feedforward_dimension,
@@ -101,15 +101,18 @@ class FastWaitKTransformer(Model):
             args.decoder.normalize_position
         )
 
-        generator = MultilayerPerceptron(args.decoder.dimension, len(task.vocabularies['target']), False)
-        torch.nn.init.normal_(generator.linear_layers[0].weight, mean=0, std=args.decoder.dimension ** -0.5)
+        generator = MultilayerPerceptron(decoder.dimension, len(factory.vocabularies['target']), False)
+        torch.nn.init.normal_(generator.linear_layers[0].weight, mean=0, std=decoder.dimension ** -0.5)
 
         if args.share_enc_dec_embeddings:
-            transformer_decoder.embed_token.weight = transformer_encoder.embed_token.weight
+            decoder.embed_token.weight = encoder.embed_token.weight
 
         if args.share_dec_io_embeddings:
-            generator.linear_layers[0].weight = transformer_decoder.embed_token.weight
+            generator.linear_layers[0].weight = decoder.embed_token.weight
 
-        transformer = cls(settings, args.dimension, transformer_encoder, transformer_decoder, generator)
+        model = cls(settings, args.dimension, encoder, decoder, generator)
 
-        return transformer
+        return model
+
+    def personalized_loading_model_state(self, model_state):
+        self.load_state_dict(model_state, strict=False)

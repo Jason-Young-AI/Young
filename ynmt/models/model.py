@@ -19,5 +19,8 @@ class Model(torch.nn.Module):
         self.settings = settings
 
     @classmethod
-    def setup(cls, settings, task):
+    def setup(cls, settings, factory):
+        raise NotImplementedError
+
+    def personalized_load_state(self, model_state):
         raise NotImplementedError

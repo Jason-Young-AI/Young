@@ -20,8 +20,8 @@ from ynmt.models.model import Model
 model_registration = Registration(Model)
 
 
-def build_model(settings, task):
-    return model_registration[settings.name].setup(settings, task)
+def build_model(settings, factory):
+    return model_registration[settings.name].setup(settings, factory)
 
 
 def register_model(registration_name):
