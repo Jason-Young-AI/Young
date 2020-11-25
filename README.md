@@ -133,20 +133,26 @@ Here is an example of the WMT16 English to German Transformer experiment.
 ```bash
 unzip -d Corpora WMT16_English-German.zip
 mkdir -p Datasets
-ynmt-preprocess --name bilingual -l YoungNMT-configs/Transformer/wmt16_en-de/preprocess.hocon
+ynmt-preprocess \
+    --name bilingual \
+    -l YoungNMT-configs/Transformer/wmt16_en-de/preprocess.hocon
 ```
 
 **Step 2. Train the model on 4 GPU**
 ```bash
 mkdir -p Outputs
 mkdir -p Checkpoints
-CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-train --name transformer -l YoungNMT-configs/Transformer/wmt16_en-de/train.hocon
+CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-train \
+    --name transformer \
+    -l YoungNMT-configs/Transformer/wmt16_en-de/train.hocon
 ```
 
 **Step 3. Test the model using 4 GPU**
 ```bash
 mkdir -p Outputs
-CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-test --name transformer -l YoungNMT-configs/Transformer/wmt16_en-de/test.hocon
+CUDA_VISIBLE_DEVICES=0,1,2,3 ynmt-test \
+    --name transformer \
+    -l YoungNMT-configs/Transformer/wmt16_en-de/test.hocon
 ```
 
 ## Models and Configurations
