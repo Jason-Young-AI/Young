@@ -14,7 +14,7 @@ from yoolkit.logging import setup_logger, logging_level
 
 import ynmt.hocon.arguments as harg
 
-from ynmt.tasks import build_task
+from ynmt.factories import build_factory
 
 from ynmt.utilities.random import fix_random_procedure
 
@@ -26,16 +26,16 @@ def preprocess(args):
 
     fix_random_procedure(args.random_seed)
 
-    logger.info(f'Building Task: \'{args.task.name}\' ...')
-    task = build_task(args.task, logger)
-    logger.info(f'The construction of Task is complete.')
+    logger.info(f'Building Factory: \'{args.factory.name}\' ...')
+    factory = build_factory(args.factory, logger)
+    logger.info(f'The construction of Factory is complete.')
 
     logger.info(f'Building Ancillary Datasets ...')
-    task.build_ancillary_datasets(args.task.args)
+    factory.build_ancillary_datasets(args.factory.args)
     logger.info(f'The construction of Ancillary Datasets is complete.')
 
     logger.info(f'Building Datasets ...')
-    task.build_datasets(args.task.args)
+    factory.build_datasets(args.factory.args)
     logger.info(f'The construction of Datasets is complete.')
 
     logger.info(f' $ Finished !')
