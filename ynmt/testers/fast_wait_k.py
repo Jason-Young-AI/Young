@@ -137,7 +137,7 @@ class FastWaitK(Tester):
         bleu_scorer.initialize()
         with open(self.trans_path, 'r', encoding='utf-8') as trans_file, open(self.reference_path, 'r', encoding='utf-8') as reference_file:
             for trans_sentence, reference_sentence in zip(trans_file, reference_file):
-                bleu_scorer.add(trans_sentence.split(), [reference_sentence.split(), ])
+                bleu_scorer.add(trans_sentence.lower().split(), [reference_sentence.lower().split(), ])
 
         bleu_score = bleu_scorer.result_string
         self.logger.info(bleu_score)
