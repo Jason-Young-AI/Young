@@ -25,8 +25,9 @@ from ynmt.models import build_model
 from ynmt.testers import build_tester
 
 
-def process_main(args, checkpoint_path, batch_queue, device_descriptor, workshop_semaphore, rank):
+def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_descriptor, workshop_semaphore, rank):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+
     is_station = rank == 0
     if is_station:
         logger.disabled = False | args.logger.off
@@ -47,32 +48,37 @@ def process_main(args, checkpoint_path, batch_queue, device_descriptor, workshop
     factory.load_ancillary_datasets(args.factory.args)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
-    # Load Checkpoint & Build Model
-    checkpoint = load_checkpoint(checkpoint_path)
-    logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
-    model_settings = checkpoint["model_settings"]
-    logger.info(f' * Building Model \'{model_settings.name}\' ...')
-    model = build_model(model_settings, factory)
+    logger.info(f'   There are {len(checkpoint_names)} checkpoints will be loaded: {checkpoint_names}')
 
-    logger.info(f'   Loading Parameters ...')
-    model.load_state_dict(checkpoint['model_state'], strict=True)
-    logger.info(f'   Loaded.')
+    for index, (checkpoint_name, checkpoint_path) in enumerate(zip(checkpoint_names, checkpoint_paths)):
+        logger.info(f' > Now test {index}/{len(checkpoint_names)} checkpoint \'{checkpoint_name}\'')
 
-    logger.info(f' * Moving model to device of Tester ...')
-    model.to(device_descriptor)
-    logger.info(f'   Complete.')
+        # Load Checkpoint & Build Model
+        checkpoint = load_checkpoint(checkpoint_path)
+        logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
+        model_settings = checkpoint["model_settings"]
+        logger.info(f' * Building Model \'{model_settings.name}\' ...')
+        model = build_model(model_settings, factory)
 
-    # Build Tester
-    logger.info(f' * Building Tester \'{args.tester.name}\' ...')
-    tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-    logger.info(f'   The construction of tester is complete.')
+        logger.info(f'   Loading Parameters ...')
+        model.load_state_dict(checkpoint['model_state'], strict=True)
+        logger.info(f'   Loaded.')
 
-    # Launch Tester
-    logger.info(f' * Launch Tester ...')
-    step = checkpoint['step']
-    tester.initialize(f'step_{step}')
-    tester.launch(testing_batches)
+        logger.info(f' * Moving model to device of Tester ...')
+        model.to(device_descriptor)
+        logger.info(f'   Complete.')
 
+        # Build Tester
+        logger.info(f' * Building Tester \'{args.tester.name}\' ...')
+        tester = build_tester(args.tester, factory, model, device_descriptor, logger)
+        logger.info(f'   The construction of tester is complete.')
+
+        # Launch Tester
+        logger.info(f' * Launch Tester ...')
+        step = checkpoint['step']
+        tester.launch(f'step_{step}', testing_batches)
+
+        logger.info(f' . Finished testing checkpoint \'{checkpoint_name}\'')
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
@@ -99,8 +105,6 @@ def test(args):
         checkpoint_names.append(checkpoint_name)
         checkpoint_paths.append(checkpoint_path)
 
-    logger.info(f'   There are {len(checkpoints)} checkpoints will be loaded: {checkpoint_names}')
-
     # Distribution Testing
     device = args.distribution.device
     master_ip = "127.0.0.1"
@@ -122,57 +126,53 @@ def test(args):
     distributed_manager = DistributedManager()
     workshop_semaphore = torch.multiprocessing.Semaphore(world_size * workshop_capacity)
 
-    for checkpoint_name, checkpoint_path in zip(checkpoint_names, checkpoint_paths):
-        logger.info(f' * Now test checkpoint \'{checkpoint_name}\'')
+    consumers = list()
+    batch_queues = list()
+    for process_index in range(number_process):
+        device_descriptor = get_device_descriptor(device, process_index)
+        batch_queue = torch.multiprocessing.Queue(workshop_capacity)
 
-        consumers = list()
-        batch_queues = list()
-        for process_index in range(number_process):
-            device_descriptor = get_device_descriptor(device, process_index)
-            batch_queue = torch.multiprocessing.Queue(workshop_capacity)
-
-            main_args = [args, checkpoint_path, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index]]
-            init_args = [device, master_ip, master_port, world_size, ranks[process_index]]
-            consumer = torch.multiprocessing.Process(
-                target=distributed_main,
-                args=(
-                    process_main,
-                    main_args,
-                    init_args,
-                    distributed_manager.exception_queue,
-                ),
-                daemon=True
-            )
-            distributed_manager.manage(consumer)
-            consumer.start()
-            logger.info(f' * No.{process_index} Testing Process start ...')
-            logger.info(f'   PID: {consumer.pid};')
-            logger.info(f'   Rank: {ranks[process_index]}/{world_size};')
-            logger.info(f'   Device: {device_descriptor}.')
-
-            consumers.append(consumer)
-            batch_queues.append(batch_queue)
-
-        producer = torch.multiprocessing.Process(
-            target=build_batches,
+        main_args = [args, checkpoint_names, checkpoint_paths, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index]]
+        init_args = [device, master_ip, master_port, world_size, ranks[process_index]]
+        consumer = torch.multiprocessing.Process(
+            target=distributed_main,
             args=(
-                args,
-                batch_queues,
-                workshop_semaphore,
-                world_size,
-                ranks,
+                process_main,
+                main_args,
+                init_args,
+                distributed_manager.exception_queue,
             ),
             daemon=True
         )
-        distributed_manager.manage(producer)
-        producer.start()
-        logger.info(f' = [Producer] = Batch Producer Process start (PID: {producer.pid}).')
+        distributed_manager.manage(consumer)
+        consumer.start()
+        logger.info(f' * No.{process_index} Testing Process start ...')
+        logger.info(f'   PID: {consumer.pid};')
+        logger.info(f'   Rank: {ranks[process_index]}/{world_size};')
+        logger.info(f'   Device: {device_descriptor}.')
 
-        for consumer in consumers:
-            consumer.join()
-        producer.join()
+        consumers.append(consumer)
+        batch_queues.append(batch_queue)
 
-        logger.info(f' ! Finished testing checkpoint \'{checkpoint_name}\'')
+    producer = torch.multiprocessing.Process(
+        target=build_batches,
+        args=(
+            args,
+            batch_queues,
+            workshop_semaphore,
+            world_size,
+            ranks,
+        ),
+        daemon=True
+    )
+    distributed_manager.manage(producer)
+    producer.start()
+    logger.info(f' = [Producer] = Batch Producer Process start (PID: {producer.pid}).')
+
+    for consumer in consumers:
+        consumer.join()
+    producer.join()
+
     logger.info(f' $ Finished !')
 
 
