@@ -23,7 +23,7 @@ def stringize(index_list, vocabulary):
     for index in index_list:
         if index == vocabulary.eos_index:
             break
-        if index in vocabulary.RESERVED_TOKENS:
+        if index in set(vocabulary.reserved_tokens):
             continue
         else:
             token_list.append(vocabulary.token(index))
