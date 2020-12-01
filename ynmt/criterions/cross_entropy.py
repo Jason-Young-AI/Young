@@ -16,7 +16,7 @@ from ynmt.criterions import Criterion
 
 
 class CrossEntropy(Criterion):
-    def __init__(self, label_number, ignore_index):
+    def __init__(self, label_number, ignore_index=-1):
         super(CrossEntropy, self).__init__(label_number, ignore_index)
         self.nll_loss = torch.nn.NLLLoss(ignore_index=self.ignore_index, reduction='sum')
 

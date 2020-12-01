@@ -16,13 +16,16 @@ from ynmt.criterions import Criterion
 
 
 class LabelSmoothingCrossEntropy(Criterion):
-    def __init__(self, label_number, label_smoothing_percent, ignore_index):
+    def __init__(self, label_number, label_smoothing_percent, ignore_index=-1):
         assert 0.0 < label_smoothing_percent and label_smoothing_percent < 1.0
 
         super(LabelSmoothingCrossEntropy, self).__init__(label_number, ignore_index)
 
         smoothed_distribution = torch.full([label_number], label_smoothing_percent / (label_number - 2))
-        smoothed_distribution[ignore_index] = 0
+        if self.ignore_index == -1:
+            pass
+        else:
+            smoothed_distribution[ignore_index] = 0
         self.register_buffer('smoothed_distribution', smoothed_distribution)
 
         self.label_smoothing_percent = label_smoothing_percent

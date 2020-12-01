@@ -16,7 +16,7 @@ from yoolkit.statistics import Statistics
 
 
 class Criterion(torch.nn.Module):
-    def __init__(self, label_number, ignore_index):
+    def __init__(self, label_number, ignore_index=-1):
         super(Criterion, self).__init__()
         self.label_number = label_number
         self.ignore_index = ignore_index
