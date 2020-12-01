@@ -19,22 +19,11 @@ constant.PAD = '<__PAD__>'
 constant.BOS = '<__BOS__>'
 constant.EOS = '<__EOS__>'
 
-constant.NUL = '<__NUL__>'
-constant.LEN = '<__LEN__>'
-
-constant.MSK = '<__MSK__>'
-constant.SEP = '<__SEP__>'
-constant.CLS = '<__CLS__>'
-
 
 class Vocabulary(object):
 
     RESERVED_TOKENS = [
-        constant.UNK,
-        constant.PAD, constant.BOS, constant.EOS,
-        constant.NUL,
-        constant.LEN,
-        constant.MSK, constant.SEP, constant.CLS,
+        constant.UNK, constant.PAD, constant.BOS, constant.EOS,
     ]
 
     def __init__(self, tokens_and_frequencies, vocabulary_size=None, special_tokens=None):
@@ -128,43 +117,3 @@ class Vocabulary(object):
     @property
     def eos_index(self):
         return self.index(constant.EOS)
-
-    @property
-    def nul_token(self):
-        return constant.NUL
-
-    @property
-    def nul_index(self):
-        return self.index(constant.NUL)
-
-    @property
-    def len_token(self):
-        return constant.LEN
-
-    @property
-    def len_index(self):
-        return self.index(constant.LEN)
-
-    @property
-    def msk_token(self):
-        return constant.MSK
-
-    @property
-    def msk_index(self):
-        return self.index(constant.MSK)
-
-    @property
-    def sep_token(self):
-        return constant.SEP
-
-    @property
-    def sep_index(self):
-        return self.index(constant.SEP)
-
-    @property
-    def cls_token(self):
-        return constant.CLS
-
-    @property
-    def cls_index(self):
-        return self.index(constant.CLS)
