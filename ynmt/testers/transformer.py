@@ -170,6 +170,6 @@ class Transformer(Tester):
                 bleu_scorer.add(trans_sentence.lower().split(), [reference_sentence.lower().split(), ])
 
         bleu_score = bleu_scorer.result_string
-        self.logger.info(bleu_score)
+        self.logger.info('   ' + bleu_score)
         with open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.writelines(bleu_score)

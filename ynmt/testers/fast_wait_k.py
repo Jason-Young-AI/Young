@@ -140,4 +140,4 @@ class FastWaitK(Tester):
                 bleu_scorer.add(trans_sentence.lower().split(), [reference_sentence.lower().split(), ])
 
         bleu_score = bleu_scorer.result_string
-        self.logger.info(bleu_score)
+        self.logger.info('   ' + bleu_score)
