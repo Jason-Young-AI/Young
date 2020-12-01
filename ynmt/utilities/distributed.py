@@ -76,7 +76,7 @@ def distributed_data_receive_as_generator(data_queue, workshop_semaphore):
 
 def gather_all(data, device_descriptor, data_size=8 * 1024):
     data_size_limit = 256 * 256
-    assert data_size < data_size_limit, 'Error: data_size exceeds data_size_limit'
+    assert data_size <= data_size_limit, 'Error: data_size exceeds data_size_limit'
 
     world_size = torch.distributed.get_world_size()
     gathered_datas = list()
