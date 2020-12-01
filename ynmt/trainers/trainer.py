@@ -174,8 +174,7 @@ class Trainer(object):
 
     def test(self, test_batches):
         self.timer.standby()
-        self.tester.initialize(f'step_{self.step}')
-        self.tester.launch(test_batches)
+        self.tester.launch(f'step_{self.step}', test_batches)
         self.timer.restart()
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
