@@ -28,4 +28,4 @@ def register_trainer(registration_name):
     return trainer_registration.register(registration_name)
 
 
-import_modules('ynmt.trainers', os.path.dirname(__file__))
+import_modules(os.path.dirname(__file__), package='ynmt.trainers')

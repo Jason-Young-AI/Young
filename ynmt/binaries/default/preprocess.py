@@ -11,6 +11,7 @@
 
 
 from yoolkit.logging import setup_logger, logging_level
+from yoolkit.registration import import_modules
 
 import ynmt.hocon.arguments as harg
 
@@ -20,6 +21,7 @@ from ynmt.utilities.random import fix_random_procedure
 
 
 def preprocess(args):
+    import_modules(args.user_defined_modules_directory)
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.disabled = args.logger.off

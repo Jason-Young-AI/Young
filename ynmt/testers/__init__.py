@@ -28,4 +28,4 @@ def register_tester(registration_name):
     return tester_registration.register(registration_name)
 
 
-import_modules('ynmt.testers', os.path.dirname(__file__))
+import_modules(os.path.dirname(__file__), package='ynmt.testers')

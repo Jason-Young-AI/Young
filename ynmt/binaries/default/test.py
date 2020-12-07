@@ -14,6 +14,7 @@ import os
 import torch
 
 from yoolkit.logging import setup_logger, logging_level
+from yoolkit.registration import import_modules
 
 import ynmt.hocon.arguments as harg
 
@@ -91,6 +92,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 
 
 def test(args):
+    import_modules(args.user_defined_modules_directory)
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     # Find checkpoints
