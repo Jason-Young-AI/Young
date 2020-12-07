@@ -72,9 +72,9 @@ class BilingualWithAuxinf(Factory, SeqMixin):
         target_filter = args.training_batches.filter.target
 
         def instance_filter(instance):
-            if len(instance.source) < source_filter[0] or source_filter[1] < len(instance.source):
+            if len(instance.source) - 2 < source_filter[0] or source_filter[1] < len(instance.source) - 2:
                 return True
-            if len(instance.target) < target_filter[0] or target_filter[1] < len(instance.target):
+            if len(instance.target) - 2 < target_filter[0] or target_filter[1] < len(instance.target) - 2:
                 return True
             return False
 
@@ -138,18 +138,19 @@ class BilingualWithAuxinf(Factory, SeqMixin):
 
             shared_vocabulary_size_limit = min(args.vocabularies.size_limit.source, args.vocabularies.size_limit.target)
             self.logger.info(f' * Shared vocabulary will be built within limits of size: {shared_vocabulary_size_limit}')
-            shared_vocabulary = Vocabulary(list(merged_token_counter.items()), shared_vocabulary_size_limit)
+            special_tokens = args.vocabularies.special_tokens.source + args.vocabularies.special_tokens.target
+            shared_vocabulary = Vocabulary(list(merged_token_counter.items()), shared_vocabulary_size_limit, special_tokens=special_tokens)
             self.logger.info(f'   Shared vocabulary size is {len(shared_vocabulary)}')
 
             source_vocabulary = shared_vocabulary
             target_vocabulary = shared_vocabulary
         else:
             self.logger.info(f' * Source vocabulary will be built within limits of size: {args.vocabularies.size_limit.source}')
-            source_vocabulary = Vocabulary(list(source_token_counter.items()), args.vocabularies.size_limit.source)
+            source_vocabulary = Vocabulary(list(source_token_counter.items()), args.vocabularies.size_limit.source, special_tokens=args.vocabularies.special_tokens.source)
             self.logger.info(f'   Source vocabulary size is {len(source_vocabulary)}')
 
             self.logger.info(f' * Target vocabulary will be built within limits of size: {args.vocabularies.size_limit.target}')
-            target_vocabulary = Vocabulary(list(target_token_counter.items()), args.vocabularies.size_limit.target)
+            target_vocabulary = Vocabulary(list(target_token_counter.items()), args.vocabularies.size_limit.target, special_tokens=args.vocabularies.special_tokens.target)
             self.logger.info(f'   Target vocabulary size is {len(target_vocabulary)}')
 
 

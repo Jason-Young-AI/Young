@@ -28,4 +28,4 @@ def register_factory(registration_name):
     return factory_registration.register(registration_name)
 
 
-import_modules('ynmt.factories', os.path.dirname(__file__))
+import_modules(os.path.dirname(__file__), package='ynmt.factories')
