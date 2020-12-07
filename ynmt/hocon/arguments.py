@@ -52,11 +52,11 @@ def get_command_line_argument_parser(phase_name):
         '-n',
         '--name',
         metavar='NAME',
-        default='seq2seq',
+        default='user_defined',
         choices=binary_names,
         help=('The name of configuration,\n'
               f'Choices={binary_names}\n'
-              'DEFAULT=\'seq2seq\''),
+              'DEFAULT=\'user_defined\''),
     )
 
     argument_parser.add_argument(
@@ -97,6 +97,7 @@ def get_arguments(phase_name):
 
     binary_name = command_line_arguments.name
     binary_path = os.path.join(constant.BINARIES_ARGUMENTS_DIR, phase_name, binary_name) + '.hocon'
+    print(f'Default configuration (name: [\'{binary_name}\']) is loaded from [\'{binary_path}\'].')
 
     binary_arguments = load_arguments(binary_path)
 
@@ -105,17 +106,17 @@ def get_arguments(phase_name):
     config_type = command_line_arguments.config_type
 
     if os.path.isfile(config_load_path):
-        print('User configuration found -> Using user configuration.')
+        print(f'User configuration found -> Using user configuration.')
         user_arguments = update_arguments(binary_arguments, config_load_path)
     else:
-        print('No user configuration found -> Using default configuration.')
+        print(f'No user configuration found -> Using default configuration.')
         user_arguments = binary_arguments
 
     if config_save_path == '':
-        print('Configuration saving path not specified ! Saving no configuration.')
+        print(f'Configuration saving path not specified ! Saving no configuration.')
     else:
         user_arguments.save(config_save_path, output_type=config_type)
-        print(f'Saving user configuration file: {config_save_path}, type={config_type}')
+        print(f'Saving user configuration file: [\'{config_save_path}\'], type=[\'{config_type}\'].')
 
     if config_save_path != '':
         sys.exit(0)
