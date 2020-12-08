@@ -91,7 +91,6 @@ class GreedySearcher(object):
         self.line_original_indices = torch.index_select(self.line_original_indices, 0, active_line_indices)
         self.path_log_probs = torch.index_select(self.path_log_probs, 0, active_line_indices)
         self.paths = torch.index_select(self.paths, 0, active_line_indices)
-        self.line_finished_flags = torch.index_select(self.line_finished_flags, 0, active_line_indices)
 
     def search(self, adjacent_node_log_probs):
         assert adjacent_node_log_probs.size(0) == self.parallel_line_number
