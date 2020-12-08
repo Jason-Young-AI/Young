@@ -27,6 +27,7 @@ from ynmt.testers import build_tester
 
 
 def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_descriptor, workshop_semaphore, rank):
+    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     is_station = rank == 0
@@ -40,48 +41,50 @@ def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_d
     ## Building Something
 
     # Build Factory
-    logger.info(f' * Building factory: \'{args.factory.name}\' ...')
+    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'   The construction of factory is complete.')
+    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
 
     # Load Ancillary Datasets
-    logger.info(f' * Loading Ancillary Datasets ...')
+    logger.info(f' + Loading Ancillary Datasets ...')
     factory.load_ancillary_datasets(args.factory.args)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
-    logger.info(f'   There are {len(checkpoint_names)} checkpoints will be loaded: {checkpoint_names}')
+    logger.info(f' + There are {len(checkpoint_names)} checkpoints will be loaded: {checkpoint_names}')
 
     for index, (checkpoint_name, checkpoint_path) in enumerate(zip(checkpoint_names, checkpoint_paths)):
-        logger.info(f' > Now test {index}/{len(checkpoint_names)} checkpoint \'{checkpoint_name}\'')
+        logger.info(f' > Now test {index}/{len(checkpoint_names)} checkpoint [\'{checkpoint_name}\'] ...')
 
         # Load Checkpoint & Build Model
         checkpoint = load_checkpoint(checkpoint_path)
-        logger.info(f' * Checkpoint has been loaded from \'{checkpoint_path}\'')
+        logger.info(f'   Checkpoint has been loaded from [\'{checkpoint_path}\']')
         model_settings = checkpoint["model_settings"]
-        logger.info(f' * Building Model \'{model_settings.name}\' ...')
+        logger.info(f' 1.Building Model [\'{model_settings.name}\'] ...')
         model = build_model(model_settings, factory)
+        logger.info(f'   The construction of Model [\'{model.__class__.__name__}\'] is complete.')
 
-        logger.info(f'   Loading Parameters ...')
+        logger.info(f' 2.Loading Parameters ...')
         model.load_state_dict(checkpoint['model_state'], strict=True)
         logger.info(f'   Loaded.')
 
-        logger.info(f' * Moving model to device of Tester ...')
+        logger.info(f' 3.Moving model to the specified device ...')
         model.to(device_descriptor)
         logger.info(f'   Complete.')
 
         # Build Tester
-        logger.info(f' * Building Tester \'{args.tester.name}\' ...')
+        logger.info(f' 4.Building Tester [\'{args.tester.name}\'] ...')
         tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-        logger.info(f'   The construction of tester is complete.')
+        logger.info(f'   The construction of Tester [\'tester.__class__.__name__\'] is complete.')
 
         # Launch Tester
-        logger.info(f' * Launch Tester ...')
+        logger.info(f' 5.Launch Tester ...')
         step = checkpoint['step']
         tester.launch(f'step_{step}', testing_batches)
 
-        logger.info(f' . Finished testing checkpoint \'{checkpoint_name}\'')
+        logger.info(f'   Finished testing checkpoint [\'{checkpoint_name}\']')
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
+    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
     logger.disabled = True
 
@@ -92,11 +95,10 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 
 
 def test(args):
-    import_modules(args.user_defined_modules_directory)
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     # Find checkpoints
-    assert os.path.isdir(args.checkpoints.directory), f' Checkpoint directory \'{args.checkpoints.directory}\' does not exist!'
+    assert os.path.isdir(args.checkpoints.directory), f'Checkpoint directory \'{args.checkpoints.directory}\' does not exist!'
 
     checkpoints = find_all_checkpoints(args.checkpoints.directory, args.checkpoints.name)
 

@@ -21,24 +21,24 @@ from ynmt.utilities.random import fix_random_procedure
 
 
 def preprocess(args):
-    import_modules(args.user_defined_modules_directory)
+    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.disabled = args.logger.off
 
     fix_random_procedure(args.random_seed)
 
-    logger.info(f'Building Factory: \'{args.factory.name}\' ...')
+    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'The construction of Factory is complete.')
+    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
 
-    logger.info(f'Building Ancillary Datasets ...')
+    logger.info(f' + Building Ancillary Datasets ...')
     factory.build_ancillary_datasets(args.factory.args)
-    logger.info(f'The construction of Ancillary Datasets is complete.')
+    logger.info(f'   The construction of Ancillary Datasets is complete.')
 
-    logger.info(f'Building Datasets ...')
+    logger.info(f' + Building Datasets ...')
     factory.build_datasets(args.factory.args)
-    logger.info(f'The construction of Datasets is complete.')
+    logger.info(f'   The construction of Datasets is complete.')
 
     logger.info(f' $ Finished !')
 
