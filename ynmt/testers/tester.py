@@ -52,7 +52,7 @@ class Tester(object):
 
         self.timer.reset()
 
-        self.logger.info(f' - Test complete.')
+        self.logger.info(f'   Test complete.')
 
     def test_indexed_batches(self, indexed_testing_batches):
         batch_number = len(indexed_testing_batches)

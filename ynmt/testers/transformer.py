@@ -88,11 +88,11 @@ class Transformer(Tester):
         return padded_batch
 
     def test(self, customized_batch):
-        source = customized_batch.source
-        parallel_line_number, max_source_length = source.size()
+        original_source = customized_batch.source
+        parallel_line_number, max_source_length = original_source.size()
 
-        source_mask = self.model.get_source_mask(source)
-        codes = self.model.encoder(source, source_mask)
+        source_mask = self.model.get_source_mask(original_source)
+        codes = self.model.encoder(original_source, source_mask)
 
         source_mask = get_tiled_tensor(source_mask, 0, self.beam_searcher.reserved_path_number)
         codes = get_tiled_tensor(codes, 0, self.beam_searcher.reserved_path_number)
@@ -100,16 +100,16 @@ class Transformer(Tester):
         self.beam_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.beam_searcher.finished:
-            previous_prediction = self.beam_searcher.found_nodes.reshape(
+            target = self.beam_searcher.found_nodes.reshape(
                 self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
                 -1
             )
-            previous_prediction_mask = self.model.get_target_mask(previous_prediction)
+            target_mask = self.model.get_target_mask(target)
 
             hidden, cross_attention_weight = self.model.decoder(
-                previous_prediction,
+                target,
                 codes,
-                previous_prediction_mask,
+                target_mask,
                 source_mask
             )
 
@@ -171,5 +171,6 @@ class Transformer(Tester):
 
         bleu_score = bleu_scorer.result_string
         self.logger.info('   ' + bleu_score)
+
         with open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.writelines(bleu_score)

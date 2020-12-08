@@ -85,24 +85,24 @@ class FastWaitK(Tester):
         return padded_batch
 
     def test(self, customized_batch):
-        source = customized_batch.source
-        parallel_line_number, max_source_length = source.size()
+        original_source = customized_batch.source
+        parallel_line_number, max_source_length = original_source.size()
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.greedy_searcher.finished:
-            temp_source = torch.index_select(source, 0, self.greedy_searcher.line_original_indices)
-            source_mask = self.model.get_source_mask(temp_source)
-            codes = self.model.encoder(temp_source, source_mask)
+            source = torch.index_select(original_source, 0, self.greedy_searcher.line_original_indices)
+            source_mask = self.model.get_source_mask(source)
+            codes = self.model.encoder(source, source_mask)
 
-            previous_prediction = self.greedy_searcher.found_nodes
-            previous_prediction_mask = self.model.get_target_mask(previous_prediction)
-            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(previous_prediction, temp_source, self.wait_source_time + 1) # +1 for bos
+            target = self.greedy_searcher.found_nodes
+            target_mask = self.model.get_target_mask(target)
+            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(target, source, self.wait_source_time + 1) # +1 for bos
 
             hidden, cross_attention_weight = self.model.decoder(
-                previous_prediction,
+                target,
                 codes,
-                previous_prediction_mask,
+                target_mask,
                 cross_attention_weight_mask
             )
 
