@@ -52,7 +52,7 @@ class Factory(object):
                     if len(dataset_shard) == shard_size:
                         dataset_size += len(dataset_shard)
                         shard_number += 1
-                        self.logger.info(f'   No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
+                        self.logger.info(f'    No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
                         yield dataset_shard
                         dataset_shard = Dataset(self.structure)
                     else:
@@ -60,50 +60,50 @@ class Factory(object):
             if len(dataset_shard) != 0:
                 dataset_size += len(dataset_shard)
                 shard_number += 1
-                self.logger.info(f'   No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
+                self.logger.info(f'    No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
                 yield dataset_shard
 
-            self.logger.info(f'   Dataset has {shard_number} shards and the total size is {dataset_size}.')
+            self.logger.info(f'    Dataset has {shard_number} shards and the total size is {dataset_size}.')
 
         # 1. Build Training Dataset
-        self.logger.info(f'Building training dataset ...')
-        self.logger.info(f' * Raw Data will be aligned and partitioned, several semi-datasets with size of {args.work_amount} will be generated.')
+        self.logger.info(f'  1.Building training dataset ...')
+        self.logger.info(f'  . Raw Data will be aligned and partitioned, several semi-datasets with size of {args.work_amount} will be generated.')
         training_semi_dataset_paths = multi_process(
             self.build_semi_dataset,
             self.align_and_partition_raw_data(args.raw_data.training, args.work_amount),
             args.number_worker
         )
-        self.logger.info(f'   The construction of semi-datasets is complete.')
+        self.logger.info(f'  ..The construction of semi-datasets is complete.')
 
-        self.logger.info(f' * Producing Dataset with shard size of {args.shard_size} ...')
+        self.logger.info(f'  . Producing Dataset with shard size of {args.shard_size} ...')
         training_dataset = produce_dataset(training_semi_dataset_paths, args.shard_size)
         dump_datas(args.datasets.training, training_dataset)
-        self.logger.info(f'   Training Dataset has been saved to {args.datasets.training}.')
+        self.logger.info(f'  ..Training Dataset has been saved to {args.datasets.training}.')
 
-        self.logger.info(f' - Removing semi-dataset ...')
+        self.logger.info(f'  . Removing semi-dataset ...')
         for training_semi_dataset_path in training_semi_dataset_paths:
             rm_temp(training_semi_dataset_path)
-        self.logger.info(f'   Finished removing semi-dataset.')
+        self.logger.info(f'  ..Finished removing semi-dataset.')
 
         # 2. Build Validation Dataset
-        self.logger.info(f'Building validation dataset ...')
-        self.logger.info(f' * Raw Data will be aligned and partitioned, several semi-datasets with size of {args.work_amount} will be generated.')
+        self.logger.info(f'  2.Building validation dataset ...')
+        self.logger.info(f'  . Raw Data will be aligned and partitioned, several semi-datasets with size of {args.work_amount} will be generated.')
         validation_semi_dataset_paths = multi_process(
             self.build_semi_dataset,
             self.align_and_partition_raw_data(args.raw_data.validation, args.work_amount),
             args.number_worker
         )
-        self.logger.info(f'   The construction of semi-datasets is complete.')
+        self.logger.info(f'  ..The construction of semi-datasets is complete.')
 
-        self.logger.info(f' * Producing Dataset with shard size of {args.shard_size} ...')
+        self.logger.info(f'  . Producing Dataset with shard size of {args.shard_size} ...')
         validation_dataset = produce_dataset(validation_semi_dataset_paths, args.shard_size)
         dump_datas(args.datasets.validation, validation_dataset)
-        self.logger.info(f'   Validation Dataset has been saved to {args.datasets.validation}.')
+        self.logger.info(f'  ..Validation Dataset has been saved to {args.datasets.validation}.')
 
-        self.logger.info(f' - Removing semi-dataset ...')
+        self.logger.info(f'  . Removing semi-dataset ...')
         for validation_semi_dataset_path in validation_semi_dataset_paths:
             rm_temp(validation_semi_dataset_path)
-        self.logger.info(f'   Finished removing semi-dataset.')
+        self.logger.info(f'  ..Finished removing semi-dataset.')
 
 
     def build_semi_dataset(self, aligned_raw_data_partition):
