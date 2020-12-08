@@ -52,7 +52,7 @@ except FileNotFoundError:
 # Required
 REQUIRED = [
         'torch',
-        'YoungToolkit',
+        'YoungToolkit>=0.1.3',
         ]
 
 # Optional
