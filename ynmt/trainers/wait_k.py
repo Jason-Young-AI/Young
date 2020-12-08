@@ -135,12 +135,12 @@ class WaitK(Trainer):
                     partial_target_input = target_input[:, :write_position + 1]
                     partial_target_output = target_output[:, :write_position + 1]
 
-                logits, attention_weight = self.model(partial_source, partial_target_input)
+                logits, cross_attention_weight = self.model(partial_source, partial_target_input)
                 loss = self.training_criterion(logits[:, write_position:], partial_target_output[:, write_position:])
                 self.train_statistics += self.training_criterion.statistics
 
-                read_position += 1
-                write_position += 1
+                read_position = min(read_end_position, read_position + 1)
+                write_position = partial_target_output.shape[1]
 
                 loss /= normalization
                 self.optimizer.backward(loss)
@@ -177,8 +177,8 @@ class WaitK(Trainer):
                 loss = self.validation_criterion(logits[:, write_position:], partial_target_output[:, write_position:])
                 self.valid_statistics += self.validation_criterion.statistics
 
-                read_position += 1
-                write_position += 1
+                read_position = min(read_end_position, read_position + 1)
+                write_position = partial_target_output.shape[1]
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
         loss = reduced_statistics['loss']
