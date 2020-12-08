@@ -41,9 +41,9 @@ class FastWaitK(Model):
 
         hidden, cross_attention_weight = self.decoder(target, codes, target_mask, cross_attention_weight_mask)
 
-        prediction = self.generator(hidden)
+        logits = self.generator(hidden)
 
-        return prediction, cross_attention_weight
+        return logits, cross_attention_weight
 
     def get_source_mask(self, source):
         source_pad_index = self.encoder.embed_token.padding_idx
