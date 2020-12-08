@@ -28,4 +28,4 @@ def register_optimizer(registration_name):
     return optimizer_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), package='ynmt.optimizers')
+import_modules(os.path.dirname(__file__), 'ynmt.optimizers')

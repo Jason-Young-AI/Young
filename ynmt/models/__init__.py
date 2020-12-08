@@ -28,4 +28,4 @@ def register_model(registration_name):
     return model_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), package='ynmt.models')
+import_modules(os.path.dirname(__file__), 'ynmt.models')

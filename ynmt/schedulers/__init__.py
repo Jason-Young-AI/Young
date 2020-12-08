@@ -28,4 +28,4 @@ def register_scheduler(registration_name):
     return scheduler_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), package='ynmt.schedulers')
+import_modules(os.path.dirname(__file__), 'ynmt.schedulers')
