@@ -35,7 +35,7 @@ logger = {
     name = "wmt16ende_train_wait-k"
     path = "wmt16ende_train_wait-k.log"
     off = False
-    console_report = False
+    console_report = True
 }
 
 visualizer = {
