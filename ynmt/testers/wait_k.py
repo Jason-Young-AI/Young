@@ -85,12 +85,12 @@ class WaitK(Tester):
         return padded_batch
 
     def test(self, customized_batch):
-        source = customized_batch.source
-        parallel_line_number, max_source_length = source.size()
+        original_source = customized_batch.source
+        parallel_line_number, max_source_length = original_source.size()
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
-        read_end_position = source.shape[1] - 1
+        read_end_position = original_source.shape[1] - 1
         if self.wait_source_time == -1:
             read_start_position = read_end_position
         else:
@@ -99,19 +99,19 @@ class WaitK(Tester):
         read_position = read_start_position
 
         while not self.greedy_searcher.finished:
-            partial_source = torch.index_select(source[:, :read_position + 1], 0, self.greedy_searcher.line_original_indices)
+            source = torch.index_select(original_source[:, :read_position + 1], 0, self.greedy_searcher.line_original_indices)
 
-            partial_source_mask = self.model.get_source_mask(partial_source)
-            partial_codes = self.model.encoder(partial_source, partial_source_mask)
+            source_mask = self.model.get_source_mask(source)
+            codes = self.model.encoder(source, source_mask)
 
-            previous_prediction = self.greedy_searcher.found_nodes
-            previous_prediction_mask = self.model.get_target_mask(previous_prediction)
+            target = self.greedy_searcher.found_nodes
+            target_mask = self.model.get_target_mask(target)
 
             hidden, cross_attention_weight = self.model.decoder(
-                previous_prediction,
-                partial_codes,
-                previous_prediction_mask,
-                partial_source_mask
+                target,
+                codes,
+                target_mask,
+                source_mask
             )
 
             logits = self.model.generator(hidden)
@@ -150,4 +150,4 @@ class WaitK(Tester):
                 bleu_scorer.add(trans_sentence.lower().split(), [reference_sentence.lower().split(), ])
 
         bleu_score = bleu_scorer.result_string
-        self.logger.info(bleu_score)
+        self.logger.info('   ' + bleu_score)
