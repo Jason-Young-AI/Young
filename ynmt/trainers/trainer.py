@@ -106,10 +106,10 @@ class Trainer(object):
                 scheduler_state = self.scheduler.state_dict(),
                 model_settings = self.model.settings
             )
-            self.logger.info(f'Saving checkpoint ... ')
+            self.logger.info(f' + Saving checkpoint ... ')
             save_checkpoint(checkpoint, self.checkpoint_directory, self.checkpoint_name, self.checkpoint_keep_number)
             self.logger.info(
-                f'Saved checkpoint to \'{self.checkpoint_directory}\' at {self.step} steps. '
+                f'   Saved checkpoint to \'{self.checkpoint_directory}\' at {self.step} steps. '
                 f'(Take: {self.branch_timer.elapsed_time:2.0f}s)'
             )
 

@@ -112,7 +112,7 @@ class Transformer(Trainer):
             target_input = padded_train_batch.target[:, :-1]
             target_output = padded_train_batch.target[:, 1:]
 
-            logits, attention_weight = self.model(padded_train_batch.source, target_input)
+            logits, cross_attention_weight = self.model(padded_train_batch.source, target_input)
             loss = self.training_criterion(logits, target_output)
             self.train_statistics += self.training_criterion.statistics
 
@@ -127,7 +127,7 @@ class Transformer(Trainer):
             target_input = padded_valid_batch.target[:, :-1]
             target_output = padded_valid_batch.target[:, 1:]
 
-            logits, attention_weight = self.model(padded_valid_batch.source, target_input)
+            logits, cross_attention_weight = self.model(padded_valid_batch.source, target_input)
             loss = self.validation_criterion(logits, target_output)
             self.valid_statistics += self.validation_criterion.statistics
 
