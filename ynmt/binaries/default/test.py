@@ -74,7 +74,7 @@ def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_d
         # Build Tester
         logger.info(f' 4.Building Tester [\'{args.tester.name}\'] ...')
         tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-        logger.info(f'   The construction of Tester [\'tester.__class__.__name__\'] is complete.')
+        logger.info(f'   The construction of Tester [\'{tester.__class__.__name__}\'] is complete.')
 
         # Launch Tester
         logger.info(f' 5.Launch Tester ...')
