@@ -1,0 +1,5 @@
+learning_rate = 1
+momentum = 0
+dampening = 0
+weight_decay = 0
+nesterov = False
