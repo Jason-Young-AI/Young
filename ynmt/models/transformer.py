@@ -98,5 +98,5 @@ class Transformer(Model):
 
         return model
 
-    def personalized_loading_model_state(self, model_state):
+    def personalized_load_state(self, model_state):
         self.load_state_dict(model_state, strict=False)
