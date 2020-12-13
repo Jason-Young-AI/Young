@@ -30,11 +30,11 @@ class Adam(Optimizer):
     def setup(cls, settings, model):
         args = settings.args
         parameters = (parameter for parameter in model.parameters() if parameter.requires_grad and parameter.is_leaf)
-        adam = cls(
+        optimizer = cls(
             parameters,
             learning_rate=args.learning_rate,
             betas=(args.beta1, args.beta2),
             epsilon=args.epsilon
         )
 
-        return adam
+        return optimizer

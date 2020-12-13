@@ -37,5 +37,5 @@ class Noam(Scheduler):
     @classmethod
     def setup(cls, settings, model):
         args = settings.args
-        noam = cls(model.dimension, args.warmup_step)
-        return noam
+        scheduler = cls(model.dimension, args.warmup_step)
+        return scheduler
