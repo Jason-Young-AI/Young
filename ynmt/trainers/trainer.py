@@ -25,7 +25,7 @@ class Trainer(object):
         life_cycle,
         factory, model, scheduler, optimizer, tester,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-        training_period, validation_period, report_period,
+        training_period, validation_period, testing_period, report_period,
         device_descriptor, logger, visualizer,
     ):
         assert os.path.isdir(checkpoint_directory), f'#6 arg(\'checkpoint_directory\') checkpoint directory: \'{checkpoint_directory}\' does not exist!'
@@ -43,6 +43,7 @@ class Trainer(object):
 
         self.training_period = training_period
         self.validation_period = validation_period
+        self.testing_period = testing_period
         self.report_period = report_period
 
         self.device_descriptor = device_descriptor
@@ -52,8 +53,8 @@ class Trainer(object):
         self.world_size = torch.distributed.get_world_size()
         self.rank = torch.distributed.get_rank()
 
-        self.train_statistics = Statistics(set())
-        self.valid_statistics = Statistics(set())
+        self.training_statistics = Statistics(set())
+        self.validation_statistics = Statistics(set())
         self.step = 0
         self.timer = Timer()
         self.branch_timer = Timer()
@@ -116,26 +117,26 @@ class Trainer(object):
         self.timer.restart()
         return
 
-    def launch(self, accumulated_train_batches, accumulated_valid_batches, test_batches):
-        self.train_statistics.clear()
+    def launch(self, accumulated_training_batches, accumulated_validation_batches, testing_batches):
+        self.training_statistics.clear()
         self.timer.reset()
         self.timer.launch()
 
         self.optimizer.zero_grad()
 
-        for accumulated_train_batch in accumulated_train_batches:
+        for accumulated_training_batch in accumulated_training_batches:
             if self.step >= self.life_cycle:
                 break
 
             # train
-            self.model.train(True) # Set to training mode may take some time, but it can aviod wrong operation of subclasses.
-            self.train(accumulated_train_batch)
+            self.train(accumulated_training_batch)
 
             # validate
             if self.step % self.validation_period == 0:
-                self.model.train(False)
-                self.validate(accumulated_valid_batches)
-                self.test(test_batches)
+                self.validate(accumulated_validation_batches)
+
+            if self.step % self.testing_period == 0:
+                self.test(testing_batches)
 
             # save
             if self.step % self.training_period == 0:
@@ -146,35 +147,37 @@ class Trainer(object):
 
         return
 
-    def train(self, accumulated_train_batch):
-        self.train_statistics.clear()
-        self.train_accumulated_batch(self.customize_accumulated_batch(accumulated_train_batch))
+    def train(self, accumulated_training_batch):
+        self.model.train(True) # Set to training mode may take some time, but it can aviod wrong operation of subclasses.
+        self.training_statistics.clear()
+        self.train_accumulated_batch(self.customize_accumulated_batch(accumulated_training_batch))
 
         self.update()
-        reduced_train_statistics = self.reduce_statistics(self.train_statistics)
+        reduced_training_statistics = self.reduce_statistics(self.training_statistics)
         if self.step % self.report_period == 0:
-            self.report('Train', reduced_train_statistics, self.timer.lap(), self.timer.elapsed_time)
+            self.report('Train', reduced_training_statistics, self.timer.lap(), self.timer.elapsed_time)
 
-    def validate(self, accumulated_valid_batches):
+    def validate(self, accumulated_validation_batches):
+        self.model.train(False)
         self.timer.standby()
 
-        self.valid_statistics.clear()
+        self.validation_statistics.clear()
         self.branch_timer.reset()
         self.branch_timer.launch()
 
         with torch.no_grad():
-            for accumulated_valid_batch in accumulated_valid_batches:
-                self.validate_accumulated_batch(self.customize_accumulated_batch(accumulated_valid_batch))
+            for accumulated_validation_batch in accumulated_validation_batches:
+                self.validate_accumulated_batch(self.customize_accumulated_batch(accumulated_validation_batch))
 
-        reduced_valid_statistics = self.reduce_statistics(self.valid_statistics)
+        reduced_validation_statistics = self.reduce_statistics(self.validation_statistics)
         if self.step % self.report_period == 0:
-            self.report('Validate', reduced_valid_statistics, self.branch_timer.lap(), self.branch_timer.elapsed_time)
+            self.report('Validate', reduced_validation_statistics, self.branch_timer.lap(), self.branch_timer.elapsed_time)
 
         self.timer.restart()
 
-    def test(self, test_batches):
+    def test(self, testing_batches):
         self.timer.standby()
-        self.tester.launch(f'step_{self.step}', test_batches)
+        self.tester.launch(f'step_{self.step}', testing_batches)
         self.timer.restart()
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
@@ -184,10 +187,10 @@ class Trainer(object):
         # accumulated_batch is a list
         raise NotImplementedError
 
-    def train_accumulated_batch(self, customized_accumulated_train_batch):
-        # customized_accumulated_train_batch is a user-definded type
+    def train_accumulated_batch(self, customized_accumulated_training_batch):
+        # customized_accumulated_training_batch is a user-definded type
         raise NotImplementedError
 
-    def validate_accumulated_batch(self, customized_accumulated_valid_batch):
-        # customized_accumulated_valid_batch is a user-definded type
+    def validate_accumulated_batch(self, customized_accumulated_validation_batch):
+        # customized_accumulated_validation_batch is a user-definded type
         raise NotImplementedError

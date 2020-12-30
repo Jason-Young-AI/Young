@@ -31,7 +31,7 @@ class Transformer(Trainer):
         life_cycle,
         factory, model, scheduler, optimizer, tester,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-        training_period, validation_period, report_period,
+        training_period, validation_period, testing_period, report_period,
         training_criterion, validation_criterion,
         normalization_type,
         device_descriptor, logger, visualizer
@@ -40,7 +40,7 @@ class Transformer(Trainer):
             life_cycle,
             factory, model, scheduler, optimizer, tester,
             checkpoint_directory, checkpoint_name, checkpoint_keep_number,
-            training_period, validation_period, report_period,
+            training_period, validation_period, testing_period, report_period,
             device_descriptor, logger, visualizer
         )
         self.training_criterion = training_criterion
@@ -69,7 +69,7 @@ class Transformer(Trainer):
             args.life_cycle,
             factory, model, scheduler, optimizer, tester,
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
-            args.training_period, args.validation_period, args.report_period,
+            args.training_period, args.validation_period, args.testing_period, args.report_period,
             training_criterion, validation_criterion,
             args.normalization_type,
             device_descriptor, logger, visualizer,
@@ -80,56 +80,57 @@ class Transformer(Trainer):
         accumulated_padded_batch = list()
         statistics = Statistics(set({'normalization', 'src_token_number', 'tgt_token_number'}))
         for batch in accumulated_batch:
-            padded_batch = Batch(set({'source', 'target'}))
             # source side
             padded_source_attribute, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
-            padded_batch.source = torch.tensor(padded_source_attribute, dtype=torch.long, device=self.device_descriptor)
+            source = torch.tensor(padded_source_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # target side
             padded_target_attribute, _ = pad_attribute(batch.target, self.factory.vocabularies['target'].pad_index)
-            padded_batch.target = torch.tensor(padded_target_attribute, dtype=torch.long, device=self.device_descriptor)
+            target = torch.tensor(padded_target_attribute, dtype=torch.long, device=self.device_descriptor)
 
             # accumulate batch
-            accumulated_padded_batch.append(padded_batch)
+            accumulated_padded_batch.append((source, target))
 
-            statistics.src_token_number += padded_batch.source.ne(self.factory.vocabularies['source'].pad_index).sum().item()
-            statistics.tgt_token_number += padded_batch.target.ne(self.factory.vocabularies['target'].pad_index).sum().item()
+            statistics.src_token_number += source.ne(self.factory.vocabularies['source'].pad_index).sum().item()
+            statistics.tgt_token_number += target.ne(self.factory.vocabularies['target'].pad_index).sum().item()
             # Calculate normalization
             if self.normalization_type == 'token':
-                statistics.normalization += padded_batch.target[:, 1:].ne(self.factory.vocabularies['target'].pad_index).sum().item()
+                statistics.normalization += target[:, 1:].ne(self.factory.vocabularies['target'].pad_index).sum().item()
             elif self.normalization_type == 'sentence':
-                statistics.normalization += len(padded_batch.target)
+                statistics.normalization += len(target)
 
         return accumulated_padded_batch, statistics
 
-    def train_accumulated_batch(self, customized_accumulated_train_batch):
-        accumulated_padded_train_batch, statistics = customized_accumulated_train_batch
+    def train_accumulated_batch(self, customized_accumulated_training_batch):
+        accumulated_padded_training_batch, statistics = customized_accumulated_training_batch
         normalization = sum(gather_all(statistics.normalization, self.device_descriptor))
-        self.train_statistics += statistics
+        self.training_statistics += statistics
 
-        for padded_train_batch in accumulated_padded_train_batch:
+        for padded_training_batch in accumulated_padded_training_batch:
+            source, target = padded_training_batch
 
-            target_input = padded_train_batch.target[:, :-1]
-            target_output = padded_train_batch.target[:, 1:]
+            target_input = target[:, :-1]
+            target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(padded_train_batch.source, target_input)
+            logits, cross_attention_weight = self.model(source, target_input)
             loss = self.training_criterion(logits, target_output)
-            self.train_statistics += self.training_criterion.statistics
+            self.training_statistics += self.training_criterion.statistics
 
             loss /= normalization
             self.optimizer.backward(loss)
 
-    def validate_accumulated_batch(self, customized_accumulated_valid_batch):
-        accumulated_padded_valid_batch, statistics = customized_accumulated_valid_batch
-        self.valid_statistics += statistics
-        for padded_valid_batch in accumulated_padded_valid_batch:
+    def validate_accumulated_batch(self, customized_accumulated_validation_batch):
+        accumulated_padded_validation_batch, statistics = customized_accumulated_validation_batch
+        self.validation_statistics += statistics
+        for padded_validation_batch in accumulated_padded_validation_batch:
+            source, target = padded_validation_batch
 
-            target_input = padded_valid_batch.target[:, :-1]
-            target_output = padded_valid_batch.target[:, 1:]
+            target_input = target[:, :-1]
+            target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(padded_valid_batch.source, target_input)
+            logits, cross_attention_weight = self.model(source, target_input)
             loss = self.validation_criterion(logits, target_output)
-            self.valid_statistics += self.validation_criterion.statistics
+            self.validation_statistics += self.validation_criterion.statistics
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
         loss = reduced_statistics['loss']
