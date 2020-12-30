@@ -3,7 +3,9 @@ user_defined_modules_directory = ""
 device = "GPU"
 number_worker = 4
 
-checkpoints = {
+checkpoint = {
+    single = True
+    path = "Checkpoints/wmt16ende_transformer_best.cp"
     name = "wmt16ende_transformer"
     directory = "Checkpoints"
 }

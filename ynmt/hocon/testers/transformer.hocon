@@ -1,4 +1,4 @@
-bpe_symbol = "@@ "
+bpe_symbol = "@@"
 remove_bpe = True
 dehyphenate = True
 beam_searcher = {

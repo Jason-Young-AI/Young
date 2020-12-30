@@ -26,7 +26,7 @@ constant.ALL_SYSTEM_COMPONENTS_ARGUMENTS_PATH = os.path.join(constant.ARGUMENTS_
 constant.BINARIES_ARGUMENTS_DIR = os.path.join(constant.ARGUMENTS_DIR, 'binaries')
 
 def get_binary_names(phase_name):
-    assert phase_name in set({'preprocess', 'train', 'test'}), f'Wrong choice of process phase: {phase_name}!'
+    assert phase_name in set({'preprocess', 'train', 'test', 'serve'}), f'Wrong choice of process phase: {phase_name}!'
 
     binary_names = list()
     phase_dir = os.path.join(constant.BINARIES_ARGUMENTS_DIR, phase_name)
@@ -106,7 +106,7 @@ def get_arguments(phase_name):
     config_type = command_line_arguments.config_type
 
     if os.path.isfile(config_load_path):
-        print(f'User configuration found -> Using user configuration.')
+        print(f'User configuration found -> Using user configuration [\'{config_load_path}\'].')
         user_arguments = update_arguments(binary_arguments, config_load_path)
     else:
         print(f'No user configuration found -> Using default configuration.')

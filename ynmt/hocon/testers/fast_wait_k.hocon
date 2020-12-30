@@ -1,6 +1,6 @@
 wait_source_time = 7
 
-bpe_symbol = "@@ "
+bpe_symbol = "@@"
 remove_bpe = True
 dehyphenate = True
 greedy_searcher = {

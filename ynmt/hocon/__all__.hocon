@@ -13,6 +13,9 @@ factories = {
 testers = {
     include file("testers/__all__.hocon")
 }
+servers = {
+    include file("servers/__all__.hocon")
+}
 trainers = {
     include file("trainers/__all__.hocon")
 }
