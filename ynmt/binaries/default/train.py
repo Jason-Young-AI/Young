@@ -53,9 +53,9 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.disabled = True
         visualizer.disabled = True
 
-    testing_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
-    validation_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
-    training_batches = distributed_data_receiver('generator', batch_queue, workshop_semaphore)
+    testing_batches = distributed_data_receiver(batch_queue, workshop_semaphore, 'small')
+    validation_batches = distributed_data_receiver(batch_queue, workshop_semaphore, 'small')
+    training_batches = distributed_data_receiver(batch_queue, workshop_semaphore, 'large')
 
     ## Building Something
     
@@ -160,7 +160,8 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f' * Launch Trainer ...')
     logger.info(f'   Trainer Life Cycle: {trainer.life_cycle} update steps!')
     logger.info(f'   Saving checkpoint every {trainer.training_period} steps;')
-    logger.info(f'   Validate every {trainer.validation_period} steps.')
+    logger.info(f'   Validate every {trainer.validation_period} steps;')
+    logger.info(f'   Test every {trainer.testing_period} steps.')
 
     trainer.launch(training_batches, validation_batches, testing_batches)
 
@@ -177,7 +178,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
     factory = build_factory(args.factory, logger)
     factory.load_ancillary_datasets(args.factory.args)
 
-    distributed_data_sender(factory.testing_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks, order_index=True)
+    distributed_data_sender(factory.testing_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
     distributed_data_sender(factory.validation_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
     distributed_data_sender(factory.training_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
 
