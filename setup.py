@@ -56,9 +56,14 @@ REQUIRED = [
         ]
 
 # Optional
+SERVER_EXTRAS = set(['waitress', 'flask', 'flask_wtf', 'wtforms'])
+FULL = SERVER_EXTRAS
+
 EXTRAS = {
-        # '': [''],
+        'full': FULL,
+        'server': SERVER_EXTRAS,
         }
+
 
 # Upload command class of the setup.py.
 class UploadCommand(setuptools.Command):
@@ -133,6 +138,7 @@ def setup_my_package():
                 'ynmt-preprocess = ynmt_cli.default.preprocess:main',
                 'ynmt-train = ynmt_cli.default.train:main',
                 'ynmt-test = ynmt_cli.default.test:main',
+                'ynmt-serve = ynmt_cli.default.serve:main',
             ],
         },
     )
