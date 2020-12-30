@@ -1,1 +1,3 @@
 recursive-include ynmt/hocon *.hocon
+recursive-include ynmt/servers/static
+recursive-include ynmt/servers/templates
