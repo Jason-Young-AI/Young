@@ -1,0 +1,3 @@
+transformer = {
+    include file("transformer.hocon")
+}

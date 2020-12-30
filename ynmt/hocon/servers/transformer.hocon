@@ -1,0 +1,12 @@
+apply_bpe = True
+bpe_codes = "wmt16.en-de.bpe_codes"
+app ={
+    secret_key = "Here Is YoungNMT app end!"
+    host = "0.0.0.0"
+    port = 5678
+}
+web ={
+    secret_key = "Here Is YoungNMT web end!"
+    host = "0.0.0.0"
+    port = 8765
+}

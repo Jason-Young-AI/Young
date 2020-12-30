@@ -1,0 +1,25 @@
+user_defined_modules_directory = ""
+
+serve_type = "app"
+device = "GPU"
+
+checkpoint_path = "server_checkpoint.cp"
+
+factory = {
+    name = "bilingual"
+    args = { include "../../factories/bilingual.hocon" }
+}
+tester = {
+    name = "transformer"
+    args = { include "../../testers/transformer.hocon" }
+}
+server = {
+    name = "transformer"
+    args = { include "../../servers/transformer.hocon" }
+}
+logger = {
+    name = "wmt16ende_server_transformer"
+    path = "wmt16ende_server_transformer.log"
+    off = False
+    console_report = True
+}
