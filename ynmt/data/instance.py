@@ -10,37 +10,45 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from yoolkit.statistics import Statistics
-
-
 class Instance(object):
-    def __init__(self, structure):
-        assert isinstance(structure, set), f'Type of structure should be set().'
-        for attribute_name in structure:
-            assert isinstance(attribute_name, str), f'Type of {attribute_name} in structure should be str().'
+    def __init__(self, **attributes):
+        self.__structure = set(attributes.keys())
+        for attribute_name, attribute_value in attributes.items():
+            self[attribute_name] = attribute_value
 
-        self.__structure = structure
-        for attribute_name in self.__structure:
-            setattr(self, attribute_name, None)
-
-    def __len__(self):
-        return len(self.__structure)
+    @property
+    def structure(self):
+        return self.__structure
 
     def __setitem__(self, attribute_name, attribute_value):
-        if attribute_name not in self.__structure:
-            self.__structure.add(attribute_name)
+        assert attribute_name in self.__structure, f'Attribute name is not defined, only {self.structure} are allowed .'
         self.__dict__[attribute_name] = attribute_value
 
     def __getitem__(self, attribute_name):
+        assert attribute_name in self.__structure, f'Attribute name is not defined, only {self.structure} are allowed .'
         return self.__dict__[attribute_name]
-
-    def __contains__(self, attribute_name):
-        return attribute_name in self.structure
 
     def __iter__(self):
         for attribute_name in self.structure:
             yield (attribute_name, self[attribute_name])
 
-    @property
-    def structure(self):
-        return self.__structure
+    def __repr__(self):
+        repres = str()
+        repres += 'Instance('
+        for index, (attribute_name, attribute_value) in enumerate(self):
+            repres += f'{attribute_name}={attribute_value!r}'
+            if index != len(self.structure) - 1:
+                repres += ', '
+        repres += ')'
+        return repres
+
+    def __eq__(self, other):
+        flag = True
+        if self.structure != other.structure:
+            flag = False
+        else:
+            for attribute_name, attribute_value in self:
+                if attribute_value != other[attribute_name]:
+                    flag = False
+
+        return flag
