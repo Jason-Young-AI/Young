@@ -59,6 +59,7 @@ def main():
         print(f'1. ynmt-preprocess --help')
         print(f'2. ynmt-train --help')
         print(f'3. ynmt-test --help')
+        print(f'4. ynmt-serve --help')
         print()
 
 
