@@ -26,30 +26,28 @@ def get_device_descriptor(device, index):
     return torch.device(device_name)
 
 
-def distributed_data_sender(data_generator, data_queues, workshop_semaphore, world_size, ranks, order_index=False):
+def distributed_data_sender(data_generator, data_queues, workshop_semaphore, world_size, ranks):
     rank2index = dict()
     for index, rank in enumerate(ranks):
         rank2index[rank] = index
 
     for index, data in enumerate(data_generator):
-            rank = index % world_size
-            if rank not in set(ranks):
-                continue
-            else:
-                workshop_semaphore.acquire()
-                if order_index:
-                    data = (index, data)
-                data_queues[rank2index[rank]].put(data)
+        rank = index % world_size
+        if rank not in set(ranks):
+            continue
+        else:
+            workshop_semaphore.acquire()
+            data_queues[rank2index[rank]].put(data)
 
     for data_queue in data_queues:
         data_queue.put(None)
 
 
-def distributed_data_receiver(receiver_type, data_queue, workshop_semaphore):
-    assert receiver_type in {'list', 'generator'}
-    if receiver_type == 'list':
+def distributed_data_receiver(data_queue, workshop_semaphore, data_scale):
+    assert data_scale in {'small', 'large'}
+    if data_scale == 'small':
         return distributed_data_receive_as_list(data_queue, workshop_semaphore)
-    if receiver_type == 'generator':
+    if data_scale == 'large':
         return distributed_data_receive_as_generator(data_queue, workshop_semaphore)
 
 
@@ -74,33 +72,36 @@ def distributed_data_receive_as_generator(data_queue, workshop_semaphore):
             yield data
 
 
-def gather_all(data, device_descriptor, data_size=8 * 1024):
-    data_size_limit = 256 * 256
-    assert data_size <= data_size_limit, 'Error: data_size exceeds data_size_limit'
+def gather_all(data, device_descriptor, data_size=8192):
+    data_size_limit = 256 * 256 * 256
+    assert data_size < data_size_limit, 'Error: data_size exceeds data_size_limit'
 
     world_size = torch.distributed.get_world_size()
     gathered_datas = list()
 
-    distributed_tensor = torch.zeros(data_size + 2, dtype=torch.uint8, device=device_descriptor)
-    gathered_tensors = [torch.zeros(data_size + 2, dtype=torch.uint8, device=device_descriptor) for _ in range(world_size)]
+    distributed_tensor = torch.zeros(data_size + 3, dtype=torch.uint8, device=device_descriptor)
+    gathered_tensors = [torch.zeros(data_size + 3, dtype=torch.uint8, device=device_descriptor) for _ in range(world_size)]
 
 
     serialized_data = dumps(data)
     serialized_data_size = len(serialized_data)
     assert serialized_data_size <= data_size, f'Data size ({serialized_data_size}) exceeds data_size: {data_size}'
 
-    quotient, remainder = divmod(serialized_data_size, 256)
-    distributed_tensor[0] = quotient
-    distributed_tensor[1] = remainder
-    distributed_tensor[2:2+serialized_data_size] = torch.tensor(list(serialized_data), dtype=torch.uint8, device=device_descriptor)
+    first_second, third = divmod(serialized_data_size, 256)
+    first, second = divmod(first_second, 256)
+    distributed_tensor[0] = first
+    distributed_tensor[1] = second
+    distributed_tensor[2] = third
+    distributed_tensor[3:3+serialized_data_size] = torch.tensor(list(serialized_data), dtype=torch.uint8, device=device_descriptor)
 
     torch.distributed.all_gather(gathered_tensors, distributed_tensor)
 
     for gathered_tensor in gathered_tensors:
-        quotient = gathered_tensor[0].item()
-        remainder = gathered_tensor[1].item()
-        serialized_data_size = quotient * 256 + remainder
-        serialized_data = bytes(gathered_tensor[2:2+serialized_data_size].tolist())
+        first = gathered_tensor[0].item()
+        second = gathered_tensor[1].item()
+        third = gathered_tensor[2].item()
+        serialized_data_size = first * 256 * 256 + second * 256 + third
+        serialized_data = bytes(gathered_tensor[3:3+serialized_data_size].tolist())
         gathered_data = loads(serialized_data)
         gathered_datas.append(gathered_data)
 
