@@ -18,7 +18,7 @@ from ynmt.factories import register_factory, Factory
 from ynmt.factories.mixins import SeqMixin
 
 from ynmt.data.vocabulary import Vocabulary
-from ynmt.data.iterator import Iterator, RawTextIterator
+from ynmt.data.iterator import Iterator, RawIterator
 from ynmt.data.instance import Instance
 
 from ynmt.utilities.sequence import tokenize, numericalize
@@ -101,8 +101,9 @@ class BilingualWithAuxinf(Factory, SeqMixin):
         )
 
     def testing_batches(self, args):
-        return RawTextIterator(
+        return RawIterator(
             [args.raw_data.testing.source, args.raw_data.testing.target, args.raw_data.testing.auxinf],
+            ['text', 'text', 'text'],
             self.build_instance,
             args.testing_batches.batch_size,
             instance_size_calculator = get_instance_size_calculator(args.testing_batches.batch_type)
@@ -182,9 +183,8 @@ class BilingualWithAuxinf(Factory, SeqMixin):
     def build_instance(self, aligned_raw_data_item):
         source_line, target_line, auxinf_line = aligned_raw_data_item
 
-        instance = Instance(self.structure)
-        instance['source'] = numericalize(tokenize(source_line), self.vocabularies['source'], add_bos=True, add_eos=True)
-        instance['target'] = numericalize(tokenize(target_line), self.vocabularies['target'], add_bos=True, add_eos=True)
-        instance['auxinf'] = numericalize(tokenize(auxinf_line), self.vocabularies['auxinf'], add_bos=True, add_eos=True)
+        source_attribute = numericalize(tokenize(source_line), self.vocabularies['source'], add_bos=True, add_eos=True)
+        target_attribute = numericalize(tokenize(target_line), self.vocabularies['target'], add_bos=True, add_eos=True)
+        auxinf_attribute = numericalize(tokenize(auxinf_line), self.vocabularies['auxinf'], add_bos=True, add_eos=True)
  
-        return instance
+        return Instance(source=source_attribute, target=target_attribute)
