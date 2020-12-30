@@ -26,7 +26,7 @@ from ynmt.models import build_model
 from ynmt.testers import build_tester
 
 
-def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_descriptor, workshop_semaphore, rank):
+def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_queue, device_descriptor, workshop_semaphore, rank):
     import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
@@ -36,7 +36,7 @@ def process_main(args, checkpoint_names, checkpoint_paths, batch_queue, device_d
     else:
         logger.disabled = True
 
-    testing_batches = distributed_data_receiver('list', batch_queue, workshop_semaphore)
+    testing_batches = distributed_data_receiver(batch_queue, workshop_semaphore, data_scale)
 
     ## Building Something
 
@@ -91,23 +91,36 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
     factory = build_factory(args.factory, logger)
     factory.load_ancillary_datasets(args.factory.args)
 
-    distributed_data_sender(factory.testing_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks, order_index=True)
+    distributed_data_sender(factory.testing_batches(args.factory.args), batch_queues, workshop_semaphore, world_size, ranks)
 
 
 def test(args):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     # Find checkpoints
-    assert os.path.isdir(args.checkpoints.directory), f'Checkpoint directory \'{args.checkpoints.directory}\' does not exist!'
+    if args.checkpoint.single:
+        assert os.path.isfile(args.checkpoint.path), f'Checkpoint path \'{args.checkpoint.path}\' does not exist!'
+        checkpoint_path = args.checkpoint.path
+        checkpoint_name = os.path.splitext(os.path.split(checkpoint_path)[1])[0]
 
-    checkpoints = find_all_checkpoints(args.checkpoints.directory, args.checkpoints.name)
+        checkpoint_paths = [checkpoint_path, ]
+        checkpoint_names = [checkpoint_name, ]
 
-    checkpoint_names = list()
-    checkpoint_paths = list()
-    for step, checkpoint_path in checkpoints.items():
-        checkpoint_name = os.path.split(checkpoint_path)[1]
-        checkpoint_names.append(checkpoint_name)
-        checkpoint_paths.append(checkpoint_path)
+        data_scale = 'large'
+
+    else:
+        assert os.path.isdir(args.checkpoint.directory), f'Checkpoint directory \'{args.checkpoints.directory}\' does not exist!'
+
+        checkpoints = find_all_checkpoints(args.checkpoint.directory, args.checkpoint.name)
+
+        checkpoint_names = list()
+        checkpoint_paths = list()
+        for step, checkpoint_path in checkpoints.items():
+            checkpoint_name = os.path.split(checkpoint_path)[1]
+            checkpoint_names.append(checkpoint_name)
+            checkpoint_paths.append(checkpoint_path)
+
+        data_scale = 'small'
 
     # Distribution Testing
     device = args.distribution.device
@@ -136,7 +149,7 @@ def test(args):
         device_descriptor = get_device_descriptor(device, process_index)
         batch_queue = torch.multiprocessing.Queue(workshop_capacity)
 
-        main_args = [args, checkpoint_names, checkpoint_paths, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index]]
+        main_args = [args, checkpoint_names, checkpoint_paths, data_scale, batch_queue, device_descriptor, workshop_semaphore, ranks[process_index]]
         init_args = [device, master_ip, master_port, world_size, ranks[process_index]]
         consumer = torch.multiprocessing.Process(
             target=distributed_main,
