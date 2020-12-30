@@ -54,8 +54,8 @@ class TransformerDecoder(torch.nn.Module):
 
     def forward(self, target, codes, self_attention_weight_mask, cross_attention_weight_mask):
         # target: [Batch_Size x Target_Length],
-        # codes: [Batch_Size x Source_Length],
-        # self_attention_weight_mask: [Batch_Size x Target_Length x Target_Length]
+        # codes: [Batch_Size x Source_Length x Dimension],
+        # self_attention_weight_mask: [Batch_Size x Target_Length x Target_Length],
         # cross_attention_weight_mask: [Batch_Size x Target_Length x Source_Length]
         x = self.embed(target)
 
