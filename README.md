@@ -91,6 +91,7 @@ Please use the following command to make the most of the system:
 1. ynmt-preprocess --help
 2. ynmt-train --help
 3. ynmt-test --help
+4. ynmt-serve --help
 ```
 
 ## Arguments
