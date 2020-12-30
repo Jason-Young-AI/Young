@@ -12,11 +12,20 @@
 
 import random
 
-from yoolkit.cio import load_datas
+from yoolkit.cio import load_lines, load_datas
 from yoolkit.statistics import Statistics
 
 from ynmt.data.batch import Batch
+from ynmt.data.dataset import Dataset
+from ynmt.data.instance import Instance
 from ynmt.utilities.random import shuffled
+
+
+def build_batch(instances):
+    batch = Batch(instances[0].structure)
+    for instance in instances:
+        batch.add(instance)
+    return batch
 
 
 class Iterator(object):
@@ -61,9 +70,10 @@ class Iterator(object):
     @property
     def instances(self):
         for dataset in load_datas(self.dataset_path):
+            assert isinstance(dataset, Dataset)
             if self.shuffle:
                 dataset = shuffled(dataset)
-            for index, instance in enumerate(dataset):
+            for instance in dataset:
                 if self.instance_filter is None or not self.instance_filter(instance):
                     yield instance
 
@@ -79,8 +89,8 @@ class Iterator(object):
                 containers = shuffled(list(containers))
 
             for container in containers:
-                assert len(container) != 0, f'Container size is too small, packed no instance, please size up!{container}'
-                yield Batch(container[-1].structure, container)
+                assert len(container) != 0, f'Container size is too small, packed no instance, please size up!'
+                yield build_batch(container)
 
     def __iter__(self):
         original_random_state = random.getstate()
@@ -100,25 +110,32 @@ class Iterator(object):
         random.setstate(original_random_state)
 
 
-class RawTextIterator(object):
-    def __init__(self, raw_text_paths, instance_handler, batch_size, instance_size_calculator):
-        assert isinstance(raw_text_paths, list), f'raw_text_paths must be a list of path.'
-        self.raw_text_paths = raw_text_paths
+class RawIterator(object):
+    def __init__(self, raw_paths, raw_modes, instance_handler, batch_size, instance_size_calculator):
+        assert isinstance(raw_paths, list), f'raw_paths must be a list of path.'
+        assert isinstance(raw_modes, list), f'raw_modes must be a list of mode.'
+        for raw_mode in raw_modes:
+            assert raw_mode in {'text', 'binary'}
+
+        self.raw_paths = raw_paths
+        self.raw_modes = raw_modes
         self.instance_handler = instance_handler
         self.batch_size = batch_size
         self.instance_size_calculator = instance_size_calculator
 
     @property
     def instances(self):
-        raw_text_files = list()
-        for raw_text_path in self.raw_text_paths:
-            raw_text_files.append(open(raw_text_path, 'r', encoding='utf-8'))
+        raw_files = list()
+        for raw_path, raw_mode in zip(self.raw_paths, self.raw_modes):
+            if raw_mode == 'text':
+                raw_files.append(load_lines(raw_path))
+            if raw_mode == 'binary':
+                raw_files.append(load_datas(raw_path))
 
-        for lines in zip(*raw_text_files):
-            yield self.instance_handler(lines)
-
-        for raw_text_file in raw_text_files:
-            raw_text_file.close()
+        for attributes in zip(*raw_files):
+            instance = self.instance_handler(attributes)
+            assert isinstance(instance, Instance)
+            yield instance
 
     @property
     def batches(self):
@@ -130,21 +147,21 @@ class RawTextIterator(object):
             current_batch_size = self.instance_size_calculator(current_instances)
 
             if current_batch_size > self.batch_size:
-                yield Batch(instance.structure, current_instances[:-1])
+                yield build_batch(current_instances[:-1])
                 current_instances = current_instances[-1:]
                 current_batch_size = self.instance_size_calculator(current_instances)
 
             if current_batch_size == self.batch_size:
-                yield Batch(instance.structure, current_instances)
+                yield build_batch(current_instances)
                 current_instances = list()
                 current_batch_size = 0
 
         if len(current_instances) != 0:
-            yield Batch(current_instances[-1].structure, current_instances)
+            yield build_batch(current_instances)
 
     def __iter__(self):
-        for batch in self.batches:
+        for index, batch in enumerate(self.batches):
             if len(batch) == 0:
                 raise ValueError('Batch size too small, so batching no instance, please size up!')
             else:
-                yield batch
+                yield index, batch
