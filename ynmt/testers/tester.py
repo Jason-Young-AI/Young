@@ -13,7 +13,7 @@
 import os
 import torch
 
-from yoolkit.cio import load_data, dump_data
+from yoolkit.cio import mk_temp, rm_temp, load_data, dump_data, dump_datas
 from yoolkit.timer import Timer
 
 from ynmt.utilities.distributed import gather_all
@@ -32,12 +32,14 @@ class Tester(object):
         self.device_descriptor = device_descriptor
         self.logger = logger
 
-        self.world_size = torch.distributed.get_world_size()
-        self.rank = torch.distributed.get_rank()
         self.timer = Timer()
 
     def launch(self, output_label, indexed_testing_batches):
+        self.rank = torch.distributed.get_rank()
+
+        indexed_testing_batches = iter(indexed_testing_batches)
         self.logger.info(f' + Run Tester ...')
+        self.result_path = mk_temp('ynmt-tester_', temp_type='file')
 
         self.timer.reset()
         self.timer.launch()
@@ -45,53 +47,61 @@ class Tester(object):
         if self.rank == 0:
             self.initialize(output_label)
 
-        self.test_indexed_batches(indexed_testing_batches)
+        total_instance_number = 0
+        while True:
+            try:
+                index, testing_batch = next(indexed_testing_batches)
+                instance_number = len(testing_batch)
+            except:
+                index, testing_batch = None, None
+                instance_number = 0
+
+            if testing_batch is None:
+                result = None
+            else:
+                result = self.test(testing_batch)
+
+            self.output(index, result)
+            gathered_instance_number = gather_all(instance_number, self.device_descriptor)
+            instance_number = sum(gathered_instance_number)
+
+            if instance_number == 0:
+                break
+            else:
+                total_instance_number += instance_number
+                self.logger.info(f'   {total_instance_number} instances has been tested. (Take: {self.timer.elapsed_time:2.0f}s)')
 
         if self.rank == 0:
             self.report()
 
         self.timer.reset()
 
+        rm_temp(self.result_path)
         self.logger.info(f'   Test complete.')
 
-    def test_indexed_batches(self, indexed_testing_batches):
-        batch_number = len(indexed_testing_batches)
-        batch_number_list = gather_all(batch_number, self.device_descriptor)
-        max_batch_number = max(batch_number_list)
-
+    def test(self, testing_batch):
         self.model.train(False)
         with torch.no_grad():
-            for iteration in range(max_batch_number):
-                self.logger.info(f'   Testing iteration-{iteration} ...')
-                if iteration < batch_number:
-                    index, batch = indexed_testing_batches[iteration]
-                    result = self.test(self.customize_batch(batch))
-                else:
-                    index = None
-                    result = None
+            result = self.test_batch(self.customize_batch(testing_batch))
+        return result
 
-                indexed_results = gather_all((index, result), self.device_descriptor, data_size=65536)
-                if self.rank == 0:
-                    self.output_indexed_batches(indexed_results)
+    def output(self, index, result):
+        dump_data(self.result_path, (index, result))
 
-    def output_indexed_batches(self, indexed_results):
+        gathered_result_path = gather_all(self.result_path, self.device_descriptor)
 
-        def get_indexed_results():
-            for indexed_result in indexed_results:
-                if indexed_result[0] is None:
+        if self.rank == 0:
+            indexed_results = list()
+            for result_path in gathered_result_path:
+                index, result = load_data(result_path)
+                if index is None:
                     continue
                 else:
-                    yield indexed_result
+                    indexed_results.append((index, result))
 
-        indexed_results = sorted(
-            get_indexed_results(),
-            key=lambda indexed_result: indexed_result[0],
-            reverse=False
-        )
-
-        for index, result in indexed_results:
-            self.output(result)
-        self.logger.info(f'   {len(indexed_results)} batch has been tested. (Take: {self.timer.elapsed_time:2.0f}s)')
+            indexed_results = sorted(indexed_results, key=lambda x: x[0])
+            for index, result in indexed_results:
+                self.output_result(result)
 
     @classmethod
     def setup(cls, settings, factory, model, device_descriptor, logger):
@@ -103,10 +113,10 @@ class Tester(object):
     def customize_batch(self, batch):
         raise NotImplementedError
 
-    def test(self, customized_batch):
+    def test_batch(self, customized_testing_batch):
         raise NotImplementedError
 
-    def output(self, result):
+    def output_result(self, result):
         raise NotImplementedError
 
     def report(self):

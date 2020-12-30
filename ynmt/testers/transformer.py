@@ -17,7 +17,6 @@ from ynmt.testers.ancillaries import BeamSearcher
 
 from ynmt.data.batch import Batch
 from ynmt.data.instance import Instance
-from ynmt.data.iterator import RawTextIterator
 from ynmt.data.attribute import pad_attribute
 
 from ynmt.utilities.metrics import BLEUScorer
@@ -82,13 +81,12 @@ class Transformer(Tester):
             detailed_trans_file.truncate()
 
     def customize_batch(self, batch):
-        padded_batch = Batch(set({'source', }))
         padded_source_attributes, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
-        padded_batch.source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
-        return padded_batch
+        source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
+        return source
 
-    def test(self, customized_batch):
-        original_source = customized_batch.source
+    def test_batch(self, customized_batch):
+        original_source = customized_batch
         parallel_line_number, max_source_length = original_source.size()
 
         source_mask = self.model.get_source_mask(original_source)
@@ -100,6 +98,9 @@ class Transformer(Tester):
         self.beam_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.beam_searcher.finished:
+            source_mask = source_mask.index_select(0, self.beam_searcher.path_offset.reshape(-1))
+            codes = codes.index_select(0, self.beam_searcher.path_offset.reshape(-1))
+
             target = self.beam_searcher.found_nodes.reshape(
                 self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
                 -1
@@ -123,12 +124,9 @@ class Transformer(Tester):
             self.beam_searcher.search(prediction_distribution)
             self.beam_searcher.update()
 
-            source_mask = source_mask.index_select(0, self.beam_searcher.path_offset.reshape(-1))
-            codes = codes.index_select(0, self.beam_searcher.path_offset.reshape(-1))
-
         return self.beam_searcher.candidate_paths
 
-    def output(self, result):
+    def output_result(self, result):
         candidate_paths = result
         parallel_line_number = len(candidate_paths)
 
@@ -155,7 +153,7 @@ class Transformer(Tester):
 
                     # Final Trans
                     if self.remove_bpe:
-                        trans_sentence = (trans_sentence + ' ').replace(self.bpe_symbol, '').strip()
+                        trans_sentence = (trans_sentence + ' ').replace(f'{self.bpe_symbol} ', '').strip()
                     if self.dehyphenate:
                         trans_sentence = dehyphenate(trans_sentence)
                     if path_index == 0:

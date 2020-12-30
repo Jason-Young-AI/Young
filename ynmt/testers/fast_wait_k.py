@@ -17,7 +17,6 @@ from ynmt.testers.ancillaries import GreedySearcher
 
 from ynmt.data.batch import Batch
 from ynmt.data.instance import Instance
-from ynmt.data.iterator import RawTextIterator
 from ynmt.data.attribute import pad_attribute
 
 from ynmt.utilities.metrics import BLEUScorer
@@ -79,13 +78,12 @@ class FastWaitK(Tester):
             trans_file.truncate()
 
     def customize_batch(self, batch):
-        padded_batch = Batch(set({'source', }))
         padded_source_attributes, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
-        padded_batch.source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
-        return padded_batch
+        source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
+        return source
 
-    def test(self, customized_batch):
-        original_source = customized_batch.source
+    def test_batch(self, customized_batch):
+        original_source = customized_batch
         parallel_line_number, max_source_length = original_source.size()
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
@@ -114,7 +112,7 @@ class FastWaitK(Tester):
 
         return self.greedy_searcher.result
 
-    def output(self, result):
+    def output_result(self, result):
         parallel_line_number = len(result)
 
         with open(self.trans_path, 'a', encoding='utf-8') as trans_file:
@@ -127,7 +125,7 @@ class FastWaitK(Tester):
 
                 # Final Trans
                 if self.remove_bpe:
-                    trans_sentence = (trans_sentence + ' ').replace(self.bpe_symbol, '').strip()
+                    trans_sentence = (trans_sentence + ' ').replace(f'{self.bpe_symbol} ', '').strip()
                 if self.dehyphenate:
                     trans_sentence = dehyphenate(trans_sentence)
                 trans_file.writelines(trans_sentence + '\n')
