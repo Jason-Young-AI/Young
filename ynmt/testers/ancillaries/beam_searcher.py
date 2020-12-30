@@ -17,6 +17,7 @@ class BeamSearcher(object):
     def __init__(self,
                  reserved_path_number, candidate_path_number, search_space_size, initial_node, terminal_node,
                  min_depth=0, max_depth=512, alpha=0.0, beta=0.0):
+        assert reserved_path_number >= candidate_path_number, f'candidate_path_number {candidate_path_number} should be less than reserved_path_number {reserved_path_number}!'
         self.reserved_path_number = reserved_path_number
         self.candidate_path_number = candidate_path_number
         self.search_space_size = search_space_size
@@ -117,25 +118,27 @@ class BeamSearcher(object):
                         path = self.reserved_paths[line_index, finished_path_index, 1:].tolist()
                     )
                 )
-            if self.line_finished_flags[line_index] and len(self.candidate_paths[line_original_index]) >= self.candidate_path_number:
+                self.reserved_path_log_probs[line_index, finished_path_index] = float('-inf')
+                self.reserved_path_scores[line_index, finished_path_index] = float('-inf')
+            if self.line_finished_flags[line_index] and len(self.candidate_paths[line_original_index]) >= self.reserved_path_number:
                 self.candidate_paths[line_original_index] = sorted(self.candidate_paths[line_original_index], key=lambda x: x['score'], reverse=True)
                 self.candidate_paths[line_original_index] = self.candidate_paths[line_original_index][:self.candidate_path_number]
                 self.parallel_line_number -= 1
             else:
                 active_line_indices.append(line_index)
 
-        active_line_indices = torch.tensor(
+        self.active_line_indices = torch.tensor(
             active_line_indices,
             dtype=torch.long,
             device=self.line_original_indices.device
         )
 
-        self.line_original_indices = torch.index_select(self.line_original_indices, 0, active_line_indices)
-        self.reserved_path_log_probs = torch.index_select(self.reserved_path_log_probs, 0, active_line_indices)
-        self.reserved_path_scores = torch.index_select(self.reserved_path_scores, 0, active_line_indices)
-        self.reserved_paths = torch.index_select(self.reserved_paths, 0, active_line_indices)
-        self.line_finished_flags = torch.index_select(self.line_finished_flags, 0, active_line_indices)
-        self.path_offset = torch.index_select(self.path_offset, 0, active_line_indices)
+        self.line_original_indices = torch.index_select(self.line_original_indices, 0, self.active_line_indices)
+        self.reserved_path_log_probs = torch.index_select(self.reserved_path_log_probs, 0, self.active_line_indices)
+        self.reserved_path_scores = torch.index_select(self.reserved_path_scores, 0, self.active_line_indices)
+        self.reserved_paths = torch.index_select(self.reserved_paths, 0, self.active_line_indices)
+        self.line_finished_flags = torch.index_select(self.line_finished_flags, 0, self.active_line_indices)
+        self.path_offset = torch.index_select(self.path_offset, 0, self.active_line_indices)
 
     def search(self, adjacent_node_log_probs):
         assert adjacent_node_log_probs.size(0) == self.parallel_line_number
