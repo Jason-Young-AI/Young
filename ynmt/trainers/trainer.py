@@ -117,7 +117,7 @@ class Trainer(object):
         self.timer.restart()
         return
 
-    def launch(self, accumulated_training_batches, accumulated_validation_batches, testing_batches):
+    def launch(self, accumulated_training_batches, accumulated_validation_batches, indexed_testing_batches):
         self.training_statistics.clear()
         self.timer.reset()
         self.timer.launch()
@@ -136,7 +136,7 @@ class Trainer(object):
                 self.validate(accumulated_validation_batches)
 
             if self.step % self.testing_period == 0:
-                self.test(testing_batches)
+                self.test(indexed_testing_batches)
 
             # save
             if self.step % self.training_period == 0:
@@ -175,9 +175,9 @@ class Trainer(object):
 
         self.timer.restart()
 
-    def test(self, testing_batches):
+    def test(self, indexed_testing_batches):
         self.timer.standby()
-        self.tester.launch(f'step_{self.step}', testing_batches)
+        self.tester.launch(f'step_{self.step}', indexed_testing_batches)
         self.timer.restart()
 
     def report(self, handle_name, reduced_statistics, step_time_cost, total_time_cost):
