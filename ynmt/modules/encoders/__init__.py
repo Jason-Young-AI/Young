@@ -11,3 +11,4 @@
 
 
 from ynmt.modules.encoders.transformer_encoder import TransformerEncoder
+from ynmt.modules.encoders.transformer_encoder import TransformerEncoderLayer

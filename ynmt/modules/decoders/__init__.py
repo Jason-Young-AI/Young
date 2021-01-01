@@ -11,3 +11,4 @@
 
 
 from ynmt.modules.decoders.transformer_decoder import TransformerDecoder
+from ynmt.modules.decoders.transformer_decoder import TransformerDecoderLayer
