@@ -30,7 +30,7 @@ class FastWaitK(Tester):
         factory, model,
         greedy_searcher,
         bpe_symbol, remove_bpe, dehyphenate,
-        reference_path,
+        reference_paths,
         wait_source_time,
         output_directory, output_name,
         device_descriptor, logger
@@ -41,7 +41,7 @@ class FastWaitK(Tester):
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
         self.dehyphenate = dehyphenate
-        self.reference_path = reference_path
+        self.reference_paths = reference_paths
 
         self.wait_source_time = wait_source_time
 
@@ -60,7 +60,7 @@ class FastWaitK(Tester):
             factory, model,
             greedy_searcher,
             args.bpe_symbol, args.remove_bpe, args.dehyphenate,
-            args.reference_path,
+            args.reference_paths,
             args.wait_source_time,
             args.outputs.directory, args.outputs.name,
             device_descriptor, logger
@@ -133,9 +133,19 @@ class FastWaitK(Tester):
     def report(self):
         bleu_scorer = BLEUScorer()
         bleu_scorer.initialize()
-        with open(self.trans_path, 'r', encoding='utf-8') as trans_file, open(self.reference_path, 'r', encoding='utf-8') as reference_file:
-            for trans_sentence, reference_sentence in zip(trans_file, reference_file):
-                bleu_scorer.add(trans_sentence.lower().split(), [reference_sentence.lower().split(), ])
+        trans_file = open(self.trans_path, 'r', encoding='utf-8')
+        reference_files = list()
+        for reference_path in self.reference_paths:
+            reference_file = open(reference_path, 'r', encoding='utf-8')
+            reference_files.append(reference_file)
+
+        for trans_sentence, reference_sentences in zip(trans_file, zip(*reference_files)):
+            ref_list = [reference_sentence.lower().split() for reference_sentence in reference_sentences]
+            bleu_scorer.add(trans_sentence.lower().split(), ref_list)
+
+        trans_file.close()
+        for reference_file in reference_files:
+            reference_file.close()
 
         bleu_score = bleu_scorer.result_string
         self.logger.info('   ' + bleu_score)
