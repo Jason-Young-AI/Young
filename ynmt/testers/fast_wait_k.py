@@ -95,7 +95,7 @@ class FastWaitK(Tester):
 
             target = self.greedy_searcher.found_nodes
             target_mask = self.model.get_target_mask(target)
-            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(target, source, self.wait_source_time + 1) # +1 for bos
+            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(target, source, self.wait_source_time)
 
             hidden, cross_attention_weight = self.model.decoder(
                 target,

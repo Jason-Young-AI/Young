@@ -116,7 +116,7 @@ class FastWaitK(Trainer):
             target_input = target[:, :-1]
             target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time + 1) # +1 for bos
+            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time)
             loss = self.training_criterion(logits, target_output)
             self.training_statistics += self.training_criterion.statistics
 
@@ -132,7 +132,7 @@ class FastWaitK(Trainer):
             target_input = target[:, :-1]
             target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time + 1) # +1 for bos
+            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time)
             loss = self.validation_criterion(logits, target_output)
             self.validation_statistics += self.validation_criterion.statistics
 
