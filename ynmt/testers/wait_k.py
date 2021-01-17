@@ -88,7 +88,7 @@ class WaitK(Tester):
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
-        read_length = self.wait_source_time + 1 # + 1 for bos
+        read_length = self.wait_source_time + 1 + 1 # + 1 for bos, + 1 for current write time
         while not self.greedy_searcher.finished:
             source = torch.index_select(original_source, 0, self.greedy_searcher.line_original_indices)
 
