@@ -31,6 +31,11 @@ def serve_web(args):
     import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
+    logger.info(
+        f'\n The following is the arguments:'
+        f'\n{args}'
+    )
+
     # Build Server
     logger.info(f' 1.Building Server [\'{args.server.name}\'] ...')
     server = build_server(args.server, None, logger)
@@ -44,6 +49,11 @@ def serve_web(args):
 def serve_app(args):
     import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+
+    logger.info(
+        f'\n The following is the arguments:'
+        f'\n{args}'
+    )
 
     if args.device == 'CPU':
         logger.info(' * Serve on CPU ...')

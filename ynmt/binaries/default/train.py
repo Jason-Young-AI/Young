@@ -186,6 +186,11 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 def train(args):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
+    logger.info(
+        f'\n The following is the arguments:'
+        f'\n{args}'
+    )
+
     device = args.distribution.device
     master_ip = args.distribution.master_ip
     master_port = args.distribution.master_port

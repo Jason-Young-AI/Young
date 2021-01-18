@@ -28,6 +28,11 @@ def preprocess(args):
 
     fix_random_procedure(args.random_seed)
 
+    logger.info(
+        f'\n The following is the arguments:'
+        f'\n{args}'
+    )
+
     logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
     factory = build_factory(args.factory, logger)
     logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')

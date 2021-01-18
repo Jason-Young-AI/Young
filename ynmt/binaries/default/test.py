@@ -97,6 +97,11 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 def test(args):
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
+    logger.info(
+        f'\n The following is the arguments:'
+        f'\n{args}'
+    )
+
     # Find checkpoints
     if args.checkpoint.single:
         assert os.path.isfile(args.checkpoint.path), f'Checkpoint path \'{args.checkpoint.path}\' does not exist!'
