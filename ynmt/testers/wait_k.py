@@ -88,7 +88,7 @@ class WaitK(Tester):
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
-        read_length = self.wait_source_time + 1 + 1 # + 1 for bos, + 1 for current write time
+        read_length = self.wait_source_time + 1 # + 1 for bos
         while not self.greedy_searcher.finished:
             source = torch.index_select(original_source, 0, self.greedy_searcher.line_original_indices)
 
@@ -98,13 +98,12 @@ class WaitK(Tester):
 
             target = self.greedy_searcher.found_nodes
             target_mask = self.model.get_target_mask(target)
-            cross_attention_weight_mask = self.model.get_cross_attention_weight_mask(target, source, self.wait_source_time)
 
             hidden, cross_attention_weight = self.model.decoder(
                 target,
                 codes,
                 target_mask,
-                cross_attention_weight_mask
+                source_mask,
             )
 
             logits = self.model.generator(hidden)

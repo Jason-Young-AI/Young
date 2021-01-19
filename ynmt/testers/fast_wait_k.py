@@ -88,6 +88,7 @@ class FastWaitK(Tester):
 
         self.greedy_searcher.initialize(parallel_line_number, self.device_descriptor)
 
+        read_length = self.wait_source_time + 1 # + 1 for bos
         while not self.greedy_searcher.finished:
             source = torch.index_select(original_source, 0, self.greedy_searcher.line_original_indices)
             source_mask = self.model.get_source_mask(source)
