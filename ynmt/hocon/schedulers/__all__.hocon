@@ -1,3 +1,6 @@
 noam = {
-    include file("noam.hocon") 
+    include file("noam.hocon")
+}
+fixed = {
+    include file("fixed.hocon")
 }

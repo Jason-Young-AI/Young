@@ -1,3 +1,6 @@
+sgd = {
+    include file("sgd.hocon")
+}
 adam = {
-    include file("adam.hocon") 
+    include file("adam.hocon")
 }

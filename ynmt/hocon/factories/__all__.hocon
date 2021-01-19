@@ -1,6 +1,6 @@
 bilingual = {
-    include file("bilingual.hocon") 
+    include file("bilingual.hocon")
 }
 bilingual_with_auxinf = {
-    include file("bilingual_with_auxinf.hocon") 
+    include file("bilingual_with_auxinf.hocon")
 }

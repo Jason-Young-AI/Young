@@ -1,4 +1,4 @@
-wait_source_time = 7
+wait_source_time = 1
 
 normalization_type = "token"
 life_cycle = 200000

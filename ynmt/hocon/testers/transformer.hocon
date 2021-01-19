@@ -12,7 +12,9 @@ beam_searcher = {
     }
 }
 
-reference_path = "Corpora/Gold/newstest2013.en-de.de"
+reference_paths = [
+    "Corpora/Gold/newstest2013.en-de.de"
+]
 
 outputs = {
     name = "wmt16ende_transformer"
