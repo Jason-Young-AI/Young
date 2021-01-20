@@ -62,6 +62,8 @@ def main():
         print(f'4. ynmt-serve --help')
         print()
 
+    sys.stdout.flush()
+
 
 if __name__ == '__main__':
     main()

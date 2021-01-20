@@ -75,6 +75,7 @@ class BLEUScorer(object):
     def brevity_penalty(self):
         if self.total_hypothesis_length == 0:
             print('In computation of brevity penalty, division by zero, brevity_penalty set to 1e-5!')
+            sys.stdout.flush()
             return 1e-5
         else:
             return min(1, math.exp(1 - self.total_closest_reference_length / self.total_hypothesis_length))
@@ -134,6 +135,7 @@ class BLEUScorer(object):
         for index in range(self.gram_number):
             if self.ngram_statistics[index].total_ngram == 0:
                 print('In computation of precision, division by zero, precision set to 1e-5!')
+                sys.stdout.flush()
                 precisions.append(1e-5)
             else:
                 precisions.append(self.ngram_statistics[index].correct_ngram / self.ngram_statistics[index].total_ngram)
@@ -143,6 +145,7 @@ class BLEUScorer(object):
     def length_ratio(self):
         if self.total_closest_reference_length == 0:
             print('In computation of length_ratio, division by zero, length_ratio set to inf!')
+            sys.stdout.flush()
             return float('inf')
         else:
             return self.total_hypothesis_length / self.total_closest_reference_length

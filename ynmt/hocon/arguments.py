@@ -121,4 +121,6 @@ def get_arguments(phase_name):
     if config_save_path != '':
         sys.exit(0)
 
+    sys.stdout.flush()
+
     return user_arguments
