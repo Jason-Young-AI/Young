@@ -35,8 +35,10 @@ class MultiHeadAttention(torch.nn.Module):
 
         self.initialize()
 
-    def forward(self, query, key, value, attention_weight_mask):
+    def forward(self, query, key, value, attention_weight_mask, attention_type='self', cache=None):
         # query, key, value: [Batch_Size x X_Length x Head_Number * Head_Dimension]
+
+        assert attention_type in {'self', 'cross'}, f'Wrong type of attention: \'{attention_type}\''
 
         batch_size = query.size(0)
 
@@ -46,13 +48,52 @@ class MultiHeadAttention(torch.nn.Module):
         def merge(x):
             return x.transpose(1, 2).reshape(batch_size, -1, self.head_number * self.head_dimension)
 
+        # Query Special, Do Linear Transform Alone
         query = self.query_linear(query)
-        key = self.key_linear(key)
-        value = self.value_linear(value)
 
+        # This Part is for Incremental Decoding, the X_Length of Query should be 1
+        if cache is not None:
+            if attention_type == 'self':
+                key = self.key_linear(key)
+                value = self.value_linear(value)
+
+                key = split(key)
+                value = split(value)
+
+                if cache['self_keys'] is not None:
+                    key = torch.cat((cache['self_keys'], key), dim=2)
+
+                if cache['self_values'] is not None:
+                    value = torch.cat((cache['self_values'], value), dim=2)
+
+                cache['self_keys'] = key
+                cache['self_values'] = value
+
+            if attention_type == 'cross':
+                if cache['cross_keys'] is not None:
+                    key = cache['cross_keys']
+                else:
+                    key = self.key_linear(key)
+                    key = split(key)
+
+                if cache['cross_values'] is not None:
+                    value = cache['cross_values']
+                else:
+                    value = self.value_linear(value)
+                    value = split(value)
+
+                cache['cross_keys'] = key
+                cache['cross_values'] = value
+
+        else:
+            key = self.key_linear(key)
+            value = self.value_linear(value)
+
+            key = split(key)
+            value = split(value)
+
+        # Query Special, Do Dimension Split Transform Alone
         query = split(query)
-        key = split(key)
-        value = split(value)
 
         attention_weight = torch.matmul(query, key.transpose(2, 3)) / math.sqrt(self.head_dimension)
         attention_weight = attention_weight.masked_fill(attention_weight_mask.unsqueeze(1), float("-inf"))

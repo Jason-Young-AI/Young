@@ -91,7 +91,7 @@ class TransformerEncoderLayer(torch.nn.Module):
         # self attention sublayer
         residual = x
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'before')
-        x, _ = self.self_attention(query=x, key=x, value=x, attention_weight_mask=attention_weight_mask)
+        x, _ = self.self_attention(query=x, key=x, value=x, attention_weight_mask=attention_weight_mask, attention_type='self')
         x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'after')

@@ -33,7 +33,10 @@ class TrigonometricPositionalEmbedding(torch.nn.Module):
 
         self.register_buffer('weight', weight)
 
-    def forward(self, x):
+    def forward(self, x, index=None):
         # x: [* x 1] or [* x Dimension]
-        x = x + self.weight[0:x.size(-2)]
+        if index is None:
+            x = x + self.weight[0:x.size(-2)]
+        else:
+            x = x + self.weight[index]
         return x

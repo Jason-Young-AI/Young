@@ -43,24 +43,42 @@ class TransformerDecoder(torch.nn.Module):
         )
         self.final_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
+        self.clear_caches()
+
         self.initialize()
 
-    def embed(self, x):
+    def embed(self, x, using_cache):
+        if using_cache:
+            index = self.caches['step']
+        else:
+            index = None
+
         x = self.embed_token(x)
         x = x * math.sqrt(self.dimension)
-        x = self.embed_position(x)
+        x = self.embed_position(x, index)
         x = self.dropout(x)
         return x
 
-    def forward(self, target, codes, self_attention_weight_mask, cross_attention_weight_mask):
+    def forward(self, target, codes, self_attention_weight_mask, cross_attention_weight_mask, using_step_cache=False, using_self_cache=False, using_cross_cache=False):
         # target: [Batch_Size x Target_Length],
         # codes: [Batch_Size x Source_Length x Dimension],
         # self_attention_weight_mask: [Batch_Size x Target_Length x Target_Length],
         # cross_attention_weight_mask: [Batch_Size x Target_Length x Source_Length]
-        x = self.embed(target)
+
+        using_cache = using_step_cache or using_self_cache or using_cross_cache
+
+        if using_cache:
+            self.initialize_caches()
+
+        x = self.embed(target, using_cache=using_step_cache)
 
         for index, transformer_decoder_layer in enumerate(self.transformer_decoder_layers):
-            x, cross_attention_weight  = transformer_decoder_layer(x, codes, self_attention_weight_mask, cross_attention_weight_mask)
+            if using_cache:
+                attention_cache = self.caches['attention'][f'layer_{index}']
+            else:
+                attention_cache = None
+
+            x, cross_attention_weight  = transformer_decoder_layer(x, codes, self_attention_weight_mask, cross_attention_weight_mask, cache=attention_cache, using_self_cache=using_self_cache, using_cross_cache=using_cross_cache)
 
         x = self.final_normalization(x)
 
@@ -69,6 +87,40 @@ class TransformerDecoder(torch.nn.Module):
     def initialize(self):
         torch.nn.init.normal_(self.embed_token.weight, mean=0, std=self.embed_token.embedding_dim ** -0.5)
         torch.nn.init.constant_(self.embed_token.weight[self.embed_token.padding_idx], 0.0)
+
+    def clear_caches(self):
+        self.caches = None
+
+    def initialize_caches(self):
+        if self.caches is None:
+            self.caches = dict(
+                step = 0,
+                attention = dict(),
+            )
+
+            for index, transformer_decoder_layer in enumerate(self.transformer_decoder_layers):
+                attention_cache = dict(
+                    self_keys = None,
+                    self_values = None,
+                    cross_keys = None,
+                    cross_values = None,
+                )
+
+                self.caches['attention'][f'layer_{index}'] = attention_cache
+
+    def update_caches(self, order):
+
+        def recursive_reorder(cache):
+            for key, value in cache.items():
+                if value is not None:
+                    if isinstance(value, dict):
+                        recursive_reorder(value)
+                    else:
+                        cache[key] = value.index_select(0, order)
+
+        if self.caches is not None:
+            self.caches['step'] += 1
+            recursive_reorder(self.caches['attention'])
 
 
 class TransformerDecoderLayer(torch.nn.Module):
@@ -92,11 +144,14 @@ class TransformerDecoderLayer(torch.nn.Module):
         self.positionwise_feedforward = PositionWiseFeedForward(dimension, feedforward_dimension, feedforward_dropout_probability)
         self.positionwise_feedforward_normalization = torch.nn.LayerNorm(dimension, eps=1e-6)
 
-    def forward(self, x, codes, self_attention_weight_mask, cross_attention_weight_mask):
+    def forward(self, x, codes, self_attention_weight_mask, cross_attention_weight_mask, cache=None, using_self_cache=False, using_cross_cache=False):
         # self attention sublayer
         residual = x
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'before')
-        x, _ = self.self_attention(query=x, key=x, value=x, attention_weight_mask=self_attention_weight_mask)
+        x, _ = self.self_attention(
+            query=x, key=x, value=x, attention_weight_mask=self_attention_weight_mask,
+            attention_type='self', cache=cache if using_self_cache else None
+        )
         x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.self_attention_normalization, self.normalize_position == 'after')
@@ -104,7 +159,10 @@ class TransformerDecoderLayer(torch.nn.Module):
         # cross attention sublayer
         residual = x
         x = layer_normalize(x, self.cross_attention_normalization, self.normalize_position == 'before')
-        x, cross_attention_weight = self.cross_attention(query=x, key=codes, value=codes, attention_weight_mask=cross_attention_weight_mask)
+        x, cross_attention_weight = self.cross_attention(
+            query=x, key=codes, value=codes, attention_weight_mask=cross_attention_weight_mask,
+            attention_type='cross', cache=cache if using_cross_cache else None
+        )
         x = self.dropout(x)
         x = x + residual
         x = layer_normalize(x, self.cross_attention_normalization, self.normalize_position == 'after')

@@ -18,7 +18,10 @@ class LearnedPositionalEmbedding(torch.nn.Module):
         super(LearnedPositionalEmbedding, self).__init__()
         self.weight = torch.nn.Parameter(torch.Tensor(embedding_number, dimension))
 
-    def forward(self, x):
+    def forward(self, x, index=None):
         # x: [* x 1] or [* x Dimension]
-        x = x + self.weight[0:x.size(-2)]
+        if index is None:
+            x = x + self.weight[0:x.size(-2)]
+        else:
+            x = x + self.weight[index]
         return x
