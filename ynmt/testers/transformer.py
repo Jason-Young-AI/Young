@@ -29,6 +29,7 @@ class Transformer(Tester):
     def __init__(self,
         factory, model,
         beam_searcher,
+        using_cache,
         bpe_symbol, remove_bpe, dehyphenate,
         reference_paths,
         output_directory, output_name,
@@ -36,6 +37,8 @@ class Transformer(Tester):
     ):
         super(Transformer, self).__init__(factory, model, output_directory, output_name, device_descriptor, logger)
         self.beam_searcher = beam_searcher
+
+        self.using_cache = using_cache
 
         self.bpe_symbol = bpe_symbol
         self.remove_bpe = remove_bpe
@@ -59,6 +62,7 @@ class Transformer(Tester):
         tester = cls(
             factory, model,
             beam_searcher,
+            args.using_cache,
             args.bpe_symbol, args.remove_bpe, args.dehyphenate,
             args.reference_paths,
             args.outputs.directory, args.outputs.name,
@@ -95,23 +99,36 @@ class Transformer(Tester):
         source_mask = get_tiled_tensor(source_mask, 0, self.beam_searcher.reserved_path_number)
         codes = get_tiled_tensor(codes, 0, self.beam_searcher.reserved_path_number)
 
+        if self.using_cache:
+            self.model.decoder.clear_caches()
+
         self.beam_searcher.initialize(parallel_line_number, self.device_descriptor)
 
         while not self.beam_searcher.finished:
             source_mask = source_mask.index_select(0, self.beam_searcher.path_offset.reshape(-1))
             codes = codes.index_select(0, self.beam_searcher.path_offset.reshape(-1))
+            if self.using_cache:
+                self.model.decoder.update_caches(self.beam_searcher.path_offset.reshape(-1))
+                target = self.beam_searcher.current_nodes.reshape(
+                    self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
+                    -1
+                )
+            else:
+                target = self.beam_searcher.found_nodes.reshape(
+                    self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
+                    -1
+                )
 
-            target = self.beam_searcher.found_nodes.reshape(
-                self.beam_searcher.parallel_line_number * self.beam_searcher.reserved_path_number,
-                -1
-            )
             target_mask = self.model.get_target_mask(target)
 
             hidden, cross_attention_weight = self.model.decoder(
                 target,
                 codes,
                 target_mask,
-                source_mask
+                source_mask,
+                using_step_cache=self.using_cache,
+                using_self_cache=self.using_cache,
+                using_cross_cache=self.using_cache,
             )
 
             logits = self.model.generator(hidden)
