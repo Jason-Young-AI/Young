@@ -20,3 +20,5 @@ outputs = {
     name = "wmt16ende_transformer"
     directory = "Outputs"
 }
+
+using_cache = true
