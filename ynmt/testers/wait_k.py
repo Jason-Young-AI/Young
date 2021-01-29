@@ -100,8 +100,7 @@ class WaitK(Tester):
     def test_batch(self, customized_batch):
         original_source = customized_batch
         parallel_line_number, max_source_length = original_source.size()
-        source_lengths = (~get_padding_mask(original_source, self.factory.vocabularies['source'].pad_index)).sum(-1) - 2
-        source_lengths.tolist()
+        source_lengths = ((~get_padding_mask(original_source, self.factory.vocabularies['source'].pad_index)).sum(-1) - 2).tolist()
 
         if self.using_cache:
             self.model.decoder.clear_caches()
