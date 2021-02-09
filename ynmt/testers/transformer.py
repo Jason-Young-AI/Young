@@ -21,7 +21,7 @@ from ynmt.data.attribute import pad_attribute
 
 from ynmt.utilities.metrics import BLEUScorer
 from ynmt.utilities.sequence import stringize, numericalize, tokenize, dehyphenate
-from ynmt.utilities.extractor import get_tiled_tensor
+from ynmt.utilities.extractor import get_tiled_tensor, get_foresee_mask, get_padding_mask
 
 
 @register_tester('transformer')
@@ -84,6 +84,10 @@ class Transformer(Tester):
         with open(self.detailed_trans_path, 'w', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.truncate()
 
+        self.rw_path = output_basepath + '.rw'
+        with open(self.rw_path, 'w', encoding='utf-8') as rw_file:
+            rw_file.truncate()
+
     def customize_batch(self, batch):
         padded_source_attributes, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
         source = torch.tensor(padded_source_attributes, dtype=torch.long, device=self.device_descriptor)
@@ -92,6 +96,7 @@ class Transformer(Tester):
     def test_batch(self, customized_batch):
         original_source = customized_batch
         parallel_line_number, max_source_length = original_source.size()
+        source_lengths = ((~get_padding_mask(original_source, self.factory.vocabularies['source'].pad_index)).sum(-1) - 2).tolist()
 
         source_mask = self.model.get_source_mask(original_source)
         codes = self.model.encoder(original_source, source_mask)
@@ -141,13 +146,18 @@ class Transformer(Tester):
             self.beam_searcher.search(prediction_distribution)
             self.beam_searcher.update()
 
-        return self.beam_searcher.candidate_paths
+        return source_lengths, self.beam_searcher.candidate_paths
 
     def output_result(self, result):
-        candidate_paths = result
-        parallel_line_number = len(candidate_paths)
+        #candidate_paths = result
+        #parallel_line_number = len(candidate_paths)
 
-        with open(self.trans_path, 'a', encoding='utf-8') as trans_file, open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
+        source_lengths, candidate_paths = result
+        parallel_line_number = len(candidate_paths)
+        assert len(source_lengths) == parallel_line_number
+
+        with open(self.trans_path, 'a', encoding='utf-8') as trans_file, open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file, \
+            open(self.rw_path, 'a', encoding='utf-8') as rw_file:
             for line_index in range(parallel_line_number):
 
                 detailed_trans_file.writelines(f'No.{self.total_sentence_number}:\n')
@@ -167,6 +177,14 @@ class Transformer(Tester):
                     # Detailed Trans
                     detailed_trans_file.writelines(f'Cand.{path_index}: log_prob={lprob:.3f}, score={score:.3f}\n')
                     detailed_trans_file.writelines(trans_sentence + '\n')
+
+                    if path_index == 0:
+                        initial_rw = ['0' for i in range(source_lengths[line_index])]
+                        rw = list(initial_rw)
+                        for _ in range(len(trans_tokens)):
+                            rw.append('1')
+                        rw_sequence = ' '.join(rw)
+                        rw_file.writelines(rw_sequence + '\n')
 
                     # Final Trans
                     if self.remove_bpe:
