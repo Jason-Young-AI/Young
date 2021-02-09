@@ -161,11 +161,11 @@ class WaitK(Tester):
         parallel_line_number = len(result)
         assert len(source_lengths) == parallel_line_number
 
-        initial_rw = ['0' for i in range(self.wait_source_time)]
         with open(self.trans_path, 'a', encoding='utf-8') as trans_file, \
             open(self.rw_path, 'a', encoding='utf-8') as rw_file:
             for line_index in range(parallel_line_number):
                 trans = result[line_index]['path']
+                initial_rw = ['0' for i in range(min(self.wait_source_time, source_lengths[line_index]))]
 
                 trans_tokens = stringize(trans, self.factory.vocabularies['target'])
 
@@ -216,6 +216,6 @@ class WaitK(Tester):
             tt+=t
             tn+=n
 
-        self.logger.info(f'   Speed: {tt/tn} token/sec')
+        self.logger.info(f'   Speed: {tt/tn} sec/token')
         self.logger.info(f'   Total_Token = {tn} token')
         self.logger.info(f'   Total_Time = {tt} sec')
