@@ -19,8 +19,10 @@ import setuptools
 # ------------------Package Meta-Data------------------
 PACKAGE_INFO = {}
 
+with open(os.path.join("ynmt", "version")) as version_file:
+    PACKAGE_INFO['Version'] = version_file.read().strip()
+
 PACKAGE_INFO['Name'] = 'YoungNMT'
-PACKAGE_INFO['Version'] = '0.1.1'
 PACKAGE_INFO['Author'] = 'Jason-Young-AI'
 PACKAGE_INFO['EMail'] = 'AI.Jason.Young@gmail.com'
 PACKAGE_INFO['Source_URL'] = 'https://github.com/Jason-Young-AI/YoungNMT.git'
