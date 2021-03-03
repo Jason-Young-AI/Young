@@ -29,8 +29,8 @@ from youngs.data.instance import Instance
 from youngs.utilities.sequence import stringize, tokenize, numericalize, dehyphenate
 
 
-@register_server('transformer')
-class Transformer(Server):
+@register_server('translation')
+class Translation(Server):
     def __init__(self,
         apply_bpe, bpe_codes,
         web_secret_key, app_secret_key,
@@ -38,7 +38,7 @@ class Transformer(Server):
         app_host, app_port,
         tester, logger
     ):
-        super(Transformer, self).__init__(
+        super(Translation, self).__init__(
             web_host, web_port,
             app_host, app_port,
             tester, logger
@@ -99,7 +99,7 @@ class Transformer(Server):
                 target = 'Translation'
 
             return flask.render_template(
-                'transformer.html',
+                'translation.html',
                 form=form,
                 source_language=source_language,
                 target_language=target_language,

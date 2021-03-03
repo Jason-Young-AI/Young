@@ -25,19 +25,18 @@ from youngs.utilities.metrics import perplexity
 from youngs.utilities.distributed import gather_all
 
 
-@register_trainer('fast_wait_k')
-class FastWaitK(Trainer):
+@register_trainer('translation')
+class Translation(Trainer):
     def __init__(self,
         life_cycle,
         factory, model, scheduler, optimizer, tester,
         checkpoint_directory, checkpoint_name, checkpoint_keep_number,
         training_period, validation_period, testing_period, report_period,
-        wait_source_time,
         training_criterion, validation_criterion,
         normalization_type,
         device_descriptor, logger, visualizer
     ):
-        super(FastWaitK, self).__init__(
+        super(Translation, self).__init__(
             life_cycle,
             factory, model, scheduler, optimizer, tester,
             checkpoint_directory, checkpoint_name, checkpoint_keep_number,
@@ -48,8 +47,6 @@ class FastWaitK(Trainer):
         self.validation_criterion = validation_criterion
 
         self.normalization_type = normalization_type
-
-        self.wait_source_time = wait_source_time
 
     @classmethod
     def setup(cls, settings, factory, model, scheduler, optimizer, tester, device_descriptor, logger, visualizer):
@@ -73,7 +70,6 @@ class FastWaitK(Trainer):
             factory, model, scheduler, optimizer, tester,
             args.checkpoints.directory, args.checkpoints.name, args.checkpoints.keep_number,
             args.training_period, args.validation_period, args.testing_period, args.report_period,
-            args.wait_source_time,
             training_criterion, validation_criterion,
             args.normalization_type,
             device_descriptor, logger, visualizer,
@@ -116,7 +112,7 @@ class FastWaitK(Trainer):
             target_input = target[:, :-1]
             target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time)
+            logits, cross_attention_weight = self.model(source, target_input)
             loss = self.training_criterion(logits, target_output)
             self.training_statistics += self.training_criterion.statistics
 
@@ -132,7 +128,7 @@ class FastWaitK(Trainer):
             target_input = target[:, :-1]
             target_output = target[:, 1:]
 
-            logits, cross_attention_weight = self.model(source, target_input, self.wait_source_time)
+            logits, cross_attention_weight = self.model(source, target_input)
             loss = self.validation_criterion(logits, target_output)
             self.validation_statistics += self.validation_criterion.statistics
 

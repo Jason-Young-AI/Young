@@ -24,8 +24,8 @@ from youngs.utilities.sequence import stringize, numericalize, tokenize, dehyphe
 from youngs.utilities.extractor import get_tiled_tensor, get_foresee_mask, get_padding_mask
 
 
-@register_tester('transformer')
-class Transformer(Tester):
+@register_tester('translation')
+class Translation(Tester):
     def __init__(self,
         factory, model,
         beam_searcher,
@@ -35,7 +35,7 @@ class Transformer(Tester):
         output_directory, output_name,
         device_descriptor, logger
     ):
-        super(Transformer, self).__init__(factory, model, output_directory, output_name, device_descriptor, logger)
+        super(Translation, self).__init__(factory, model, output_directory, output_name, device_descriptor, logger)
         self.beam_searcher = beam_searcher
 
         self.using_cache = using_cache
