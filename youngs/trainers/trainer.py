@@ -149,6 +149,7 @@ class Trainer(object):
 
     def train(self, accumulated_training_batch):
         self.model.train(True) # Set to training mode may take some time, but it can aviod wrong operation of subclasses.
+        self.timer.lap()
         self.training_statistics.clear()
         self.train_accumulated_batch(self.customize_accumulated_batch(accumulated_training_batch))
 
