@@ -163,6 +163,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f'   Saving checkpoint every {trainer.training_period} steps;')
     logger.info(f'   Validate every {trainer.validation_period} steps;')
     logger.info(f'   Test every {trainer.testing_period} steps.')
+    logger.info(f'   Report every {trainer.report_period} steps.')
 
     trainer.launch(training_batches, validation_batches, testing_batches)
 
