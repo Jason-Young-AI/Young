@@ -10,16 +10,16 @@ factory = {
     args = { include "../../factories/bilingual.hocon" }
 }
 tester = {
-    name = "transformer"
-    args = { include "../../testers/transformer.hocon" }
+    name = "translation"
+    args = { include "../../testers/translation.hocon" }
 }
 server = {
-    name = "transformer"
-    args = { include "../../servers/transformer.hocon" }
+    name = "translation"
+    args = { include "../../servers/translation.hocon" }
 }
 logger = {
-    name = "wmt16ende_serve_transformer"
-    path = "wmt16ende_serve_transformer.log"
+    name = "wmt16ende_serve_translation_transformer"
+    path = "wmt16ende_serve_translation_transformer.log"
     off = False
     console_report = True
 }

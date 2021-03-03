@@ -1,6 +1,3 @@
-transformer = {
-    include file("transformer.hocon")
-}
-fast_wait_k = {
-    include file("fast_wait_k.hocon")
+translation = {
+    include file("translation.hocon")
 }

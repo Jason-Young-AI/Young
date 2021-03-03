@@ -2,8 +2,8 @@ user_defined_modules_directory = ""
 
 checkpoint = {
     single = True
-    path = "Checkpoints/wmt16ende_transformer_best.cp"
-    name = "wmt16ende_transformer"
+    path = "Checkpoints/wmt16ende_translation_transformer_best.cp"
+    name = "wmt16ende_translation_transformer"
     directory = "Checkpoints"
 }
 
@@ -12,13 +12,13 @@ factory = {
     args = { include "../../factories/bilingual.hocon" }
 }
 tester = {
-    name = "transformer"
-    args = { include "../../testers/transformer.hocon" }
+    name = "translation"
+    args = { include "../../testers/translation.hocon" }
 }
 
 logger = {
-    name = "wmt16ende_test_transformer"
-    path = "wmt16ende_test_transformer.log"
+    name = "wmt16ende_test_translation_transformer"
+    path = "wmt16ende_test_translation_transformer.log"
     off = False
     console_report = True
 }
