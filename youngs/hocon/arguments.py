@@ -121,6 +121,10 @@ def get_arguments(phase_name):
     if config_save_path != '':
         sys.exit(0)
 
+    if binary_name == 'user_defined' and user_arguments.user_defined_modules_directory == '':
+        print(f'[EXIT] The directory of user defined modules are not found.')
+        sys.exit(1)
+
     sys.stdout.flush()
 
     return user_arguments
