@@ -131,7 +131,7 @@ class Translation(Server):
             return batch
 
         def postprocess(result):
-            candidate_paths = result
+            source_lengths, candidate_paths = result
             parallel_line_number = len(candidate_paths)
 
             candidate_translations = list()
