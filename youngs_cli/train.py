@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from youngs.binaries.default.train import main
+from youngs.binaries.train import main
 
 
 if __name__ == '__main__':
