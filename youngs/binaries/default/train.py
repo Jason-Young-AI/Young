@@ -16,24 +16,24 @@ from yoolkit.logging import setup_logger, logging_level
 from yoolkit.visualizing import setup_visualizer
 from yoolkit.registration import import_modules
 
-import ynmt.hocon.arguments as harg
+import youngs.hocon.arguments as harg
 
-from ynmt.utilities.apex import get_apex, mix_precision
-from ynmt.utilities.random import fix_random_procedure
-from ynmt.utilities.checkpoint import load_checkpoint
-from ynmt.utilities.extractor import get_model_parameters_number
-from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
+from youngs.utilities.apex import get_apex, mix_precision
+from youngs.utilities.random import fix_random_procedure
+from youngs.utilities.checkpoint import load_checkpoint
+from youngs.utilities.extractor import get_model_parameters_number
+from youngs.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
-from ynmt.factories import build_factory
-from ynmt.models import build_model, model_registration
-from ynmt.schedulers import build_scheduler
-from ynmt.optimizers import build_optimizer
-from ynmt.trainers import build_trainer
-from ynmt.testers import build_tester
+from youngs.factories import build_factory
+from youngs.models import build_model, model_registration
+from youngs.schedulers import build_scheduler
+from youngs.optimizers import build_optimizer
+from youngs.trainers import build_trainer
+from youngs.testers import build_tester
 
 
 def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
     fix_random_procedure(args.random_seed)
 
@@ -60,9 +60,9 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     ## Building Something
     
     # Build factory
-    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
+    logger.info(f' + Building Factory ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Factory [\'{args.factory.name}\' : \'{factory.__class__.__name__}\'] is complete.')
 
     # Load Ancillary Datasets
     logger.info(f' + Loading Ancillary Datasets ...')
@@ -70,8 +70,9 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f'   Ancillary Datasets has been loaded.')
 
     # Build Model
-    logger.info(f' + Building Model: [\'{args.model.name}\'] ...')
+    logger.info(f' + Building Model ...')
     model = build_model(args.model, factory)
+    logger.info(f'   The construction of Model [\'{args.model.name}\' : \'{model.__class__.__name__}\'] is complete.')
     parameters_number = get_model_parameters_number(model)
     parameters_number_str = str()
     for name, number in parameters_number.items():
@@ -89,14 +90,14 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
     logger.info(f'   Complete.')
 
     # Build Scheduler
-    logger.info(f' + Building Scheduler [\'{args.scheduler.name}\'] ...')
+    logger.info(f' + Building Scheduler ...')
     scheduler = build_scheduler(args.scheduler, model)
-    logger.info(f'   The construction of Scheduler [\'{scheduler.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Scheduler [\'{args.scheduler.name}\' : \'{scheduler.__class__.__name__}\'] is complete.')
 
     # Build Optimizer
-    logger.info(f' + Building Optimizer [\'{args.optimizer.name}\'] ...')
+    logger.info(f' + Building Optimizer ...')
     optimizer = build_optimizer(args.optimizer, model)
-    logger.info(f'   The construction of Optimizer [\'{optimizer.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Optimizer [\'{args.optimizer.name}\' : \'{optimizer.__class__.__name__}\'] is complete.')
 
     model, optimizer = mix_precision(model, optimizer, mix_precision=args.mix_precision.on, optimization_level=args.mix_precision.optimization_level)
     if args.mix_precision.on:
@@ -128,12 +129,12 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         logger.info(f'   Loaded.')
 
     # Build Tester
-    logger.info(f' + Building Tester [\'{args.tester.name}\'] ...')
+    logger.info(f' + Building Tester ...')
     tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-    logger.info(f'   The construction of Tester [\'{tester.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Tester [\'{args.tester.name}\' : \'{tester.__class__.__name__}\'] is complete.')
 
     # Build Trainer
-    logger.info(f' + Building Trainer [\'{args.trainer.name}\'] ...')
+    logger.info(f' + Building Trainer ...')
     trainer = build_trainer(args.trainer, factory, model, scheduler, optimizer, tester, device_descriptor, logger, visualizer)
 
     if checkpoint is not None:
@@ -142,7 +143,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
         else:
             trainer.step = checkpoint['step']
 
-    logger.info(f'   The construction of Trainer [\'{trainer.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Trainer [\'{args.trainer.name}\' : \'{trainer.__class__.__name__}\'] is complete.')
 
     if visualizer.disabled:
         logger.info(f' * Visualizer Disabled.')
@@ -169,7 +170,7 @@ def process_main(args, batch_queue, device_descriptor, workshop_semaphore, rank)
 
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
     logger.disabled = True
 

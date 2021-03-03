@@ -34,10 +34,10 @@ def find_all_checkpoints(checkpoint_directory, name):
 
 
 def load_checkpoint(checkpoint_directory_or_path, name=""):
+    checkpoint = None
     if os.path.isfile(checkpoint_directory_or_path):
         checkpoint = torch.load(checkpoint_directory_or_path, map_location=torch.device('cpu'))
 
-        return checkpoint
     elif os.path.isdir(checkpoint_directory_or_path):
         assert len(name) != 0, f'Invalid checkpoint name \'{name}\'.'
         checkpoints = find_all_checkpoints(checkpoint_directory_or_path, name)
@@ -53,9 +53,9 @@ def load_checkpoint(checkpoint_directory_or_path, name=""):
             else:
                 latest_checkpoint = None
 
-        return latest_checkpoint
-    else:
-        return None
+        checkpoint = latest_checkpoint
+
+    return checkpoint
 
 
 def save_checkpoint(checkpoint, checkpoint_directory_or_path, name="", keep_number=0):

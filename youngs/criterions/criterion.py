@@ -18,6 +18,7 @@ from yoolkit.statistics import Statistics
 class Criterion(torch.nn.Module):
     def __init__(self, label_number, ignore_index=-1):
         super(Criterion, self).__init__()
+        assert label_number > ignore_index, f'Out of range: ignore_index:{ignore_index} out of [0: {label_number}].'
         self.label_number = label_number
         self.ignore_index = ignore_index
         self.statistics = Statistics(set())

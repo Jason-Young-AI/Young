@@ -12,7 +12,7 @@
 
 import torch
 
-from ynmt.criterions import Criterion
+from youngs.criterions import Criterion
 
 
 class CrossEntropy(Criterion):

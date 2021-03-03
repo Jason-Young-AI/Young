@@ -19,14 +19,14 @@ import setuptools
 # ------------------Package Meta-Data------------------
 PACKAGE_INFO = {}
 
-with open(os.path.join("ynmt", "version")) as version_file:
+with open(os.path.join("youngs", "version")) as version_file:
     PACKAGE_INFO['Version'] = version_file.read().strip()
 
-PACKAGE_INFO['Name'] = 'Young'
+PACKAGE_INFO['Name'] = 'YoungS'
 PACKAGE_INFO['Author'] = 'Jason-Young-AI'
 PACKAGE_INFO['EMail'] = 'AI.Jason.Young@gmail.com'
-PACKAGE_INFO['Source_URL'] = 'https://github.com/Jason-Young-AI/Young.git'
-PACKAGE_INFO['Description'] = 'Young Neural Machine Translation System'
+PACKAGE_INFO['Source_URL'] = 'https://github.com/Jason-Young-AI/YoungS.git'
+PACKAGE_INFO['Description'] = 'A Young Sequence Modeling System'
 
 # This Package's directory absolute path is set here.
 PACKAGE_DIR_ABSOLUTE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -136,11 +136,11 @@ def setup_my_package():
         },
         entry_points={
             'console_scripts': [
-                'ynmt = ynmt_cli.main:main',
-                'ynmt-preprocess = ynmt_cli.default.preprocess:main',
-                'ynmt-train = ynmt_cli.default.train:main',
-                'ynmt-test = ynmt_cli.default.test:main',
-                'ynmt-serve = ynmt_cli.default.serve:main',
+                'youngs = youngs_cli.main:main',
+                'youngs-preprocess = youngs_cli.default.preprocess:main',
+                'youngs-train = youngs_cli.default.train:main',
+                'youngs-test = youngs_cli.default.test:main',
+                'youngs-serve = youngs_cli.default.serve:main',
             ],
         },
     )

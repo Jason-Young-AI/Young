@@ -10,7 +10,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.binaries.default.serve import main
+from youngs.binaries.default.serve import main
 
 
 if __name__ == '__main__':

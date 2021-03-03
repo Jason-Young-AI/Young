@@ -13,15 +13,15 @@
 from yoolkit.logging import setup_logger, logging_level
 from yoolkit.registration import import_modules
 
-import ynmt.hocon.arguments as harg
+import youngs.hocon.arguments as harg
 
-from ynmt.factories import build_factory
+from youngs.factories import build_factory
 
-from ynmt.utilities.random import fix_random_procedure
+from youngs.utilities.random import fix_random_procedure
 
 
 def preprocess(args):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.disabled = args.logger.off
@@ -33,9 +33,9 @@ def preprocess(args):
         f'\n{args}'
     )
 
-    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
+    logger.info(f' + Building Factory ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Factory [\'{args.factory.name}\' : \'{factory.__class__.__name__}\'] is complete.')
 
     logger.info(f' + Building Ancillary Datasets ...')
     factory.build_ancillary_datasets(args.factory.args)

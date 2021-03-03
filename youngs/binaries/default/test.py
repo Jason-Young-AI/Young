@@ -16,18 +16,18 @@ import torch
 from yoolkit.logging import setup_logger, logging_level
 from yoolkit.registration import import_modules
 
-import ynmt.hocon.arguments as harg
+import youngs.hocon.arguments as harg
 
-from ynmt.utilities.checkpoint import find_all_checkpoints, load_checkpoint
-from ynmt.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
+from youngs.utilities.checkpoint import find_all_checkpoints, load_checkpoint
+from youngs.utilities.distributed import DistributedManager, distributed_main, distributed_data_sender, distributed_data_receiver, get_device_descriptor
 
-from ynmt.factories import build_factory
-from ynmt.models import build_model
-from ynmt.testers import build_tester
+from youngs.factories import build_factory
+from youngs.models import build_model
+from youngs.testers import build_tester
 
 
 def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_queue, device_descriptor, workshop_semaphore, rank):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     is_station = rank == 0
@@ -41,9 +41,9 @@ def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_que
     ## Building Something
 
     # Build Factory
-    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
+    logger.info(f' + Building Factory ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Factory [\'{args.factory.name}\' : \'{factory.__class__.__name__}\'] is complete.')
 
     # Load Ancillary Datasets
     logger.info(f' + Loading Ancillary Datasets ...')
@@ -59,9 +59,9 @@ def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_que
         checkpoint = load_checkpoint(checkpoint_path)
         logger.info(f'   Checkpoint has been loaded from [\'{checkpoint_path}\']')
         model_settings = checkpoint["model_settings"]
-        logger.info(f' 1.Building Model [\'{model_settings.name}\'] ...')
+        logger.info(f' 1.Building Model ...')
         model = build_model(model_settings, factory)
-        logger.info(f'   The construction of Model [\'{model.__class__.__name__}\'] is complete.')
+        logger.info(f'   The construction of Model [\'{model_settings.name}\' : \'{model.__class__.__name__}\'] is complete.')
 
         logger.info(f' 2.Loading Parameters ...')
         model.load_state_dict(checkpoint['model_state'], strict=True)
@@ -72,9 +72,9 @@ def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_que
         logger.info(f'   Complete.')
 
         # Build Tester
-        logger.info(f' 4.Building Tester [\'{args.tester.name}\'] ...')
+        logger.info(f' 4.Building Tester ...')
         tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-        logger.info(f'   The construction of Tester [\'{tester.__class__.__name__}\'] is complete.')
+        logger.info(f'   The construction of Tester [\'{args.tester.name}\' : \'{tester.__class__.__name__}\'] is complete.')
 
         # Launch Tester
         logger.info(f' 5.Launch Tester ...')
@@ -84,7 +84,7 @@ def process_main(args, checkpoint_names, checkpoint_paths, data_scale, batch_que
         logger.info(f'   Finished testing checkpoint [\'{checkpoint_name}\']')
 
 def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
     logger.disabled = True
 

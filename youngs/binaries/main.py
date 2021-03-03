@@ -12,7 +12,7 @@
 
 import os
 import argparse
-from ynmt.hocon.arguments import constant, load_arguments
+from youngs.hocon.arguments import constant, load_arguments
 
 
 def get_command_line_argument_parser():
@@ -51,15 +51,15 @@ def main():
         arguments.save(config_save_path, output_type=config_type)
         print(f'Saving configuration file: {config_save_path}, type={config_type}')
     else:
-        print(f'                >   Welcome to use YoungNMT!   <                ')
+        print(f'                >   Welcome to use YoungS!   <                ')
         print(f'----------------------------------------------------------------')
         print()
         print(f'Please use the following command to make the most of the system:')
-        print(f'0. ynmt --help')
-        print(f'1. ynmt-preprocess --help')
-        print(f'2. ynmt-train --help')
-        print(f'3. ynmt-test --help')
-        print(f'4. ynmt-serve --help')
+        print(f'0. youngs --help')
+        print(f'1. youngs-preprocess --help')
+        print(f'2. youngs-train --help')
+        print(f'3. youngs-test --help')
+        print(f'4. youngs-serve --help')
         print()
 
     sys.stdout.flush()

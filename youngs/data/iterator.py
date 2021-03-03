@@ -15,10 +15,10 @@ import random
 from yoolkit.cio import load_lines, load_datas
 from yoolkit.statistics import Statistics
 
-from ynmt.data.batch import Batch
-from ynmt.data.dataset import Dataset
-from ynmt.data.instance import Instance
-from ynmt.utilities.random import shuffled
+from youngs.data.batch import Batch
+from youngs.data.dataset import Dataset
+from youngs.data.instance import Instance
+from youngs.utilities.random import shuffled
 
 
 def build_batch(instances):

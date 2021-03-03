@@ -16,19 +16,19 @@ import torch
 from yoolkit.logging import setup_logger, logging_level
 from yoolkit.registration import import_modules
 
-import ynmt.hocon.arguments as harg
+import youngs.hocon.arguments as harg
 
-from ynmt.utilities.checkpoint import load_checkpoint
-from ynmt.utilities.distributed import get_device_descriptor
+from youngs.utilities.checkpoint import load_checkpoint
+from youngs.utilities.distributed import get_device_descriptor
 
-from ynmt.factories import build_factory
-from ynmt.models import build_model
-from ynmt.servers import build_server
-from ynmt.testers import build_tester
+from youngs.factories import build_factory
+from youngs.models import build_model
+from youngs.servers import build_server
+from youngs.testers import build_tester
 
 
 def serve_web(args):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.info(
@@ -37,9 +37,9 @@ def serve_web(args):
     )
 
     # Build Server
-    logger.info(f' 1.Building Server [\'{args.server.name}\'] ...')
+    logger.info(f' 1.Building Server ...')
     server = build_server(args.server, None, logger)
-    logger.info(f'   The construction of Server [\'{server.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Server [\'{args.server.name}\' : \'{server.__class__.__name__}\'] is complete.')
 
     # Launch Server
     logger.info(f' 2.Launch Server ...')
@@ -47,7 +47,7 @@ def serve_web(args):
 
 
 def serve_app(args):
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
     logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
 
     logger.info(
@@ -62,15 +62,15 @@ def serve_app(args):
         assert torch.cuda.device_count() >= 1, f'Insufficient GPU!'
     device_descriptor = get_device_descriptor(args.device, 0)
 
-    import_modules(args.user_defined_modules_directory, 'ynmt.user_defined')
+    import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
 
     # Find checkpoint
     assert os.path.isfile(args.checkpoint_path), f'Checkpoint \'{args.checkpoint_path}\' does not exist!'
 
     # Build Factory
-    logger.info(f' + Building Factory: [\'{args.factory.name}\'] ...')
+    logger.info(f' + Building Factory ...')
     factory = build_factory(args.factory, logger)
-    logger.info(f'   The construction of Factory [\'{factory.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Factory [\'{args.factory.name}\' : \'{factory.__class__.__name__}\'] is complete.')
 
     # Load Ancillary Datasets
     logger.info(f' + Loading Ancillary Datasets ...')
@@ -81,9 +81,9 @@ def serve_app(args):
     checkpoint = load_checkpoint(args.checkpoint_path)
     logger.info(f'   Checkpoint has been loaded from [\'{args.checkpoint_path}\']')
     model_settings = checkpoint["model_settings"]
-    logger.info(f' 1.Building Model [\'{model_settings.name}\'] ...')
+    logger.info(f' 1.Building Model ...')
     model = build_model(model_settings, factory)
-    logger.info(f'   The construction of Model [\'{model.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Model [\'{model_settings.name}\' : \'{model.__class__.__name__}\'] is complete.')
 
     logger.info(f' 2.Loading Parameters ...')
     model.load_state_dict(checkpoint['model_state'], strict=True)
@@ -94,17 +94,17 @@ def serve_app(args):
     logger.info(f'   Complete.')
 
     # Build Tester
-    logger.info(f' 4.Building Tester [\'{args.tester.name}\'] ...')
+    logger.info(f' 4.Building Tester ...')
     tester = build_tester(args.tester, factory, model, device_descriptor, logger)
-    logger.info(f'   The construction of Tester [\'{tester.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Tester [\'{args.tester.name}\' : \'{tester.__class__.__name__}\'] is complete.')
 
     # Build Server
-    logger.info(f' 4.Building Server [\'{args.server.name}\'] ...')
+    logger.info(f' 5.Building Server ...')
     server = build_server(args.server, tester, logger)
-    logger.info(f'   The construction of Server [\'{server.__class__.__name__}\'] is complete.')
+    logger.info(f'   The construction of Server [\'{args.server.name}\' : \'{server.__class__.__name__}\'] is complete.')
 
     # Launch Server
-    logger.info(f' 5.Launch Server ...')
+    logger.info(f' 6.Launch Server ...')
     server.launch('app')
 
 

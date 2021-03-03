@@ -1,5 +1,5 @@
 include version
 
-recursive-include ynmt/hocon *.hocon
-recursive-include ynmt/servers/static
-recursive-include ynmt/servers/templates
+recursive-include youngs/hocon *.hocon
+recursive-include youngs/servers/static
+recursive-include youngs/servers/templates
