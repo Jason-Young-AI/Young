@@ -149,9 +149,6 @@ class Translation(Tester):
         return source_lengths, self.beam_searcher.candidate_paths
 
     def output_result(self, result):
-        #candidate_paths = result
-        #parallel_line_number = len(candidate_paths)
-
         source_lengths, candidate_paths = result
         parallel_line_number = len(candidate_paths)
         assert len(source_lengths) == parallel_line_number
