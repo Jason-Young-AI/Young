@@ -137,10 +137,10 @@ def setup_my_package():
         entry_points={
             'console_scripts': [
                 'youngs = youngs_cli.main:main',
-                'youngs-preprocess = youngs_cli.default.preprocess:main',
-                'youngs-train = youngs_cli.default.train:main',
-                'youngs-test = youngs_cli.default.test:main',
-                'youngs-serve = youngs_cli.default.serve:main',
+                'youngs-preprocess = youngs_cli.preprocess:main',
+                'youngs-train = youngs_cli.train:main',
+                'youngs-test = youngs_cli.test:main',
+                'youngs-serve = youngs_cli.serve:main',
             ],
         },
     )
