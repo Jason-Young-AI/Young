@@ -10,5 +10,5 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.modules.embeddings.learned_positional_embedding import LearnedPositionalEmbedding
-from ynmt.modules.embeddings.trigonometric_positional_embedding import TrigonometricPositionalEmbedding
+from youngs.modules.embeddings.learned_positional_embedding import LearnedPositionalEmbedding
+from youngs.modules.embeddings.trigonometric_positional_embedding import TrigonometricPositionalEmbedding

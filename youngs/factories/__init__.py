@@ -14,7 +14,7 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.factories.factory import Factory
+from youngs.factories.factory import Factory
 
 
 factory_registration = Registration(Factory)
@@ -28,4 +28,4 @@ def register_factory(registration_name):
     return factory_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), package='ynmt.factories')
+import_modules(os.path.dirname(__file__), package='youngs.factories')

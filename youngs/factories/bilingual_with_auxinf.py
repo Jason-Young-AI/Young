@@ -14,14 +14,14 @@ import collections
 
 from yoolkit.cio import load_plain, load_data, dump_data
 
-from ynmt.factories import register_factory, Factory
-from ynmt.factories.mixins import SeqMixin
+from youngs.factories import register_factory, Factory
+from youngs.factories.mixins import SeqMixin
 
-from ynmt.data.vocabulary import Vocabulary
-from ynmt.data.iterator import Iterator, RawIterator
-from ynmt.data.instance import Instance
+from youngs.data.vocabulary import Vocabulary
+from youngs.data.iterator import Iterator, RawIterator
+from youngs.data.instance import Instance
 
-from ynmt.utilities.sequence import tokenize, numericalize
+from youngs.utilities.sequence import tokenize, numericalize
 
 
 def get_instance_size_calculator(batch_type):

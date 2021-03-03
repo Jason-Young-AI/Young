@@ -14,7 +14,7 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.servers.server import Server
+from youngs.servers.server import Server
 
 
 server_registration = Registration(Server)
@@ -28,4 +28,4 @@ def register_server(registration_name):
     return server_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), 'ynmt.servers')
+import_modules(os.path.dirname(__file__), 'youngs.servers')

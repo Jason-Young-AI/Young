@@ -16,7 +16,7 @@ import torch
 from yoolkit.cio import mk_temp, rm_temp, load_data, dump_data, dump_datas
 from yoolkit.timer import Timer
 
-from ynmt.utilities.distributed import gather_all
+from youngs.utilities.distributed import gather_all
 
 
 class Tester(object):
@@ -39,7 +39,7 @@ class Tester(object):
 
         indexed_testing_batches = iter(indexed_testing_batches)
         self.logger.info(f' + Run Tester ...')
-        self.result_path = mk_temp('ynmt-tester_', temp_type='file')
+        self.result_path = mk_temp('youngs-tester_', temp_type='file')
 
         self.timer.reset()
         self.timer.launch()

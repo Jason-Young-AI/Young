@@ -14,7 +14,7 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.optimizers.optimizer import Optimizer
+from youngs.optimizers.optimizer import Optimizer
 
 
 optimizer_registration = Registration(Optimizer)
@@ -28,4 +28,4 @@ def register_optimizer(registration_name):
     return optimizer_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), 'ynmt.optimizers')
+import_modules(os.path.dirname(__file__), 'youngs.optimizers')

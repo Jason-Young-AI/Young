@@ -14,7 +14,7 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.trainers.trainer import Trainer
+from youngs.trainers.trainer import Trainer
 
 
 trainer_registration = Registration(Trainer)
@@ -28,4 +28,4 @@ def register_trainer(registration_name):
     return trainer_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), 'ynmt.trainers')
+import_modules(os.path.dirname(__file__), 'youngs.trainers')

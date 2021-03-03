@@ -12,13 +12,13 @@
 
 import torch
 
-from ynmt.models import register_model, Model
+from youngs.models import register_model, Model
 
-from ynmt.modules.encoders import TransformerEncoder
-from ynmt.modules.decoders import TransformerDecoder
-from ynmt.modules.perceptrons import MultilayerPerceptron
+from youngs.modules.encoders import TransformerEncoder
+from youngs.modules.decoders import TransformerDecoder
+from youngs.modules.perceptrons import MultilayerPerceptron
 
-from ynmt.utilities.extractor import get_padding_mask, get_foresee_mask
+from youngs.utilities.extractor import get_padding_mask, get_foresee_mask
 
 
 @register_model('transformer')

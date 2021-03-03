@@ -13,9 +13,9 @@
 import math
 import torch
 
-from ynmt.modules.embeddings import TrigonometricPositionalEmbedding
-from ynmt.modules.attentions import MultiHeadAttention
-from ynmt.modules.perceptrons import PositionWiseFeedForward
+from youngs.modules.embeddings import TrigonometricPositionalEmbedding
+from youngs.modules.attentions import MultiHeadAttention
+from youngs.modules.perceptrons import PositionWiseFeedForward
 
 
 class TransformerDecoder(torch.nn.Module):

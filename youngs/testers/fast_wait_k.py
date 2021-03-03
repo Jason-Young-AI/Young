@@ -12,16 +12,16 @@
 
 import torch
 
-from ynmt.testers import register_tester, Tester
-from ynmt.testers.ancillaries import GreedySearcher
+from youngs.testers import register_tester, Tester
+from youngs.testers.ancillaries import GreedySearcher
 
-from ynmt.data.batch import Batch
-from ynmt.data.instance import Instance
-from ynmt.data.attribute import pad_attribute
+from youngs.data.batch import Batch
+from youngs.data.instance import Instance
+from youngs.data.attribute import pad_attribute
 
-from ynmt.utilities.metrics import BLEUScorer
-from ynmt.utilities.sequence import stringize, numericalize, tokenize, dehyphenate
-from ynmt.utilities.extractor import get_tiled_tensor
+from youngs.utilities.metrics import BLEUScorer
+from youngs.utilities.sequence import stringize, numericalize, tokenize, dehyphenate
+from youngs.utilities.extractor import get_tiled_tensor
 
 
 @register_tester('fast_wait_k')

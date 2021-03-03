@@ -16,8 +16,8 @@ import torch
 from yoolkit.timer import Timer
 from yoolkit.statistics import Statistics
 
-from ynmt.utilities.checkpoint import save_checkpoint
-from ynmt.utilities.distributed import reduce_all, gather_all
+from youngs.utilities.checkpoint import save_checkpoint
+from youngs.utilities.distributed import reduce_all, gather_all
 
 
 class Trainer(object):

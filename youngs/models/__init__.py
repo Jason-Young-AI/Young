@@ -14,7 +14,7 @@ import os
 
 from yoolkit.registration import Registration, import_modules
 
-from ynmt.models.model import Model
+from youngs.models.model import Model
 
 
 model_registration = Registration(Model)
@@ -28,4 +28,4 @@ def register_model(registration_name):
     return model_registration.register(registration_name)
 
 
-import_modules(os.path.dirname(__file__), 'ynmt.models')
+import_modules(os.path.dirname(__file__), 'youngs.models')

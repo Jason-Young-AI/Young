@@ -10,5 +10,5 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.modules.decoders.transformer_decoder import TransformerDecoder
-from ynmt.modules.decoders.transformer_decoder import TransformerDecoderLayer
+from youngs.modules.decoders.transformer_decoder import TransformerDecoder
+from youngs.modules.decoders.transformer_decoder import TransformerDecoderLayer

@@ -10,15 +10,15 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.schedulers import register_scheduler, Scheduler
+from youngs.schedulers import register_scheduler, Scheduler
 
 
 @register_scheduler('noam')
 class Noam(Scheduler):
     def __init__(self, dimension, warmup_step):
+        super(Noam, self).__init__()
         self.dimension = dimension
         self.warmup_step = warmup_step
-        super(Noam, self).__init__()
 
     def learning_rate(self, step):
         learning_rate = min(step ** (-0.5), step * self.warmup_step ** (-1.5)) * (self.dimension ** (-0.5))

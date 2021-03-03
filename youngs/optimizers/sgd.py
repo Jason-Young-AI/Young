@@ -12,7 +12,7 @@
 
 import torch
 
-from ynmt.optimizers import register_optimizer, Optimizer
+from youngs.optimizers import register_optimizer, Optimizer
 
 
 @register_optimizer('sgd')

@@ -10,5 +10,5 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.modules.perceptrons.positionwise_feedforward import PositionWiseFeedForward
-from ynmt.modules.perceptrons.multilayer_perceptron import MultilayerPerceptron
+from youngs.modules.perceptrons.positionwise_feedforward import PositionWiseFeedForward
+from youngs.modules.perceptrons.multilayer_perceptron import MultilayerPerceptron

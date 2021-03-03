@@ -10,14 +10,14 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.schedulers import register_scheduler, Scheduler
+from youngs.schedulers import register_scheduler, Scheduler
 
 
 @register_scheduler('fixed')
 class Fixed(Scheduler):
     def __init__(self, fixed_learning_rate):
-        self.fixed_learning_rate = fixed_learning_rate
         super(Fixed, self).__init__()
+        self.fixed_learning_rate = fixed_learning_rate
 
     def learning_rate(self, step):
         return self.fixed_learning_rate

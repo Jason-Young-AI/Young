@@ -13,7 +13,7 @@
 from yoolkit.cio import mk_temp, rm_temp, load_data, dump_data, dump_datas
 from yoolkit.multiprocessing import multi_process
 
-from ynmt.data.dataset import Dataset
+from youngs.data.dataset import Dataset
 
 
 class Factory(object):
@@ -113,7 +113,7 @@ class Factory(object):
             instance = self.build_instance(aligned_raw_data_item)
             semi_dataset.add(instance)
 
-        semi_dataset_path = mk_temp('ynmt-datasets_', temp_type='file')
+        semi_dataset_path = mk_temp('youngs-datasets_', temp_type='file')
         dump_data(semi_dataset_path, semi_dataset)
 
         return semi_dataset_path

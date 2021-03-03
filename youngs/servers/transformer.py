@@ -21,12 +21,12 @@ import flask_wtf
 
 from subword_nmt.apply_bpe import BPE
 
-from ynmt.servers import register_server, Server
+from youngs.servers import register_server, Server
 
-from ynmt.data.batch import Batch
-from ynmt.data.instance import Instance
+from youngs.data.batch import Batch
+from youngs.data.instance import Instance
 
-from ynmt.utilities.sequence import stringize, tokenize, numericalize, dehyphenate
+from youngs.utilities.sequence import stringize, tokenize, numericalize, dehyphenate
 
 
 @register_server('transformer')

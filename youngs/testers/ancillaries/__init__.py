@@ -10,5 +10,5 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.testers.ancillaries.beam_searcher import BeamSearcher
-from ynmt.testers.ancillaries.greedy_searcher import GreedySearcher
+from youngs.testers.ancillaries.beam_searcher import BeamSearcher
+from youngs.testers.ancillaries.greedy_searcher import GreedySearcher

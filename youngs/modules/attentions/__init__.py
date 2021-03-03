@@ -10,4 +10,4 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.modules.attentions.multihead_attention import MultiHeadAttention
+from youngs.modules.attentions.multihead_attention import MultiHeadAttention

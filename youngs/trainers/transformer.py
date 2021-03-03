@@ -14,15 +14,15 @@ import torch
 
 from yoolkit.statistics import Statistics
 
-from ynmt.trainers import register_trainer, Trainer
+from youngs.trainers import register_trainer, Trainer
 
-from ynmt.criterions import CrossEntropy, LabelSmoothingCrossEntropy
+from youngs.criterions import CrossEntropy, LabelSmoothingCrossEntropy
 
-from ynmt.data.batch import Batch
-from ynmt.data.attribute import pad_attribute
+from youngs.data.batch import Batch
+from youngs.data.attribute import pad_attribute
 
-from ynmt.utilities.metrics import perplexity
-from ynmt.utilities.distributed import gather_all
+from youngs.utilities.metrics import perplexity
+from youngs.utilities.distributed import gather_all
 
 
 @register_trainer('transformer')

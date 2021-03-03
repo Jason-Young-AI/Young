@@ -10,5 +10,5 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.modules.encoders.transformer_encoder import TransformerEncoder
-from ynmt.modules.encoders.transformer_encoder import TransformerEncoderLayer
+from youngs.modules.encoders.transformer_encoder import TransformerEncoder
+from youngs.modules.encoders.transformer_encoder import TransformerEncoderLayer
