@@ -10,5 +10,13 @@
 # LICENSE file in the root directory of this source tree.
 
 
-with open("version") as version_file:
+import os
+from yoolkit.constant import Constant
+
+
+constant = Constant()
+constant.VERSION_FILE_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'version')
+
+
+with open(constant.VERSION_FILE_PATH, 'r', encoding='utf-8') as version_file:
     __version__ = version_file.read().strip()
