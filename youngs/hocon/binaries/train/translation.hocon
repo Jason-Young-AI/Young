@@ -8,7 +8,7 @@ factory = {
 }
 model = {
     name = "transformer"
-    args = { include "../../models/transformer_base.hocon"}
+    args = { include "../../models/transformer/base.hocon"}
 }
 trainer = {
     name = "translation"

@@ -17,7 +17,7 @@ reference_paths = [
 ]
 
 outputs = {
-    name = "wmt16ende_transformer"
+    name = "wmt16ende_translation_transformer"
     directory = "Outputs"
 }
 

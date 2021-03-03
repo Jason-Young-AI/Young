@@ -1,7 +1,7 @@
 user_defined_modules_directory = ""
 
 checkpoint = {
-    single = True
+    single = False
     path = "Checkpoints/wmt16ende_translation_transformer_best.cp"
     name = "wmt16ende_translation_transformer"
     directory = "Checkpoints"
