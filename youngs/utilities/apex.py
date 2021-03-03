@@ -24,12 +24,12 @@ def get_apex():
     return apex
 
 
-def mix_precision(ynmt_model, ynmt_optimizer, mix_precision=False, optimization_level='O0'):
+def mix_precision(youngs_model, youngs_optimizer, mix_precision=False, optimization_level='O0'):
     apex = get_apex()
     if apex is not None and mix_precision:
-        ynmt_model, ynmt_optimizer.optimizer = apex.amp.initialize(ynmt_model, ynmt_optimizer.optimizer, opt_level=optimization_level)
-        ynmt_optimizer.mix_precision = mix_precision
-    return ynmt_model, ynmt_optimizer
+        youngs_model, youngs_optimizer.optimizer = apex.amp.initialize(youngs_model, youngs_optimizer.optimizer, opt_level=optimization_level)
+        youngs_optimizer.mix_precision = mix_precision
+    return youngs_model, youngs_optimizer
 
 
 def backward(loss, optimizer, mix_precision=False):

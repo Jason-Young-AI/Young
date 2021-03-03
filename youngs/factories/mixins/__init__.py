@@ -10,4 +10,4 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from ynmt.factories.mixins.seq import SeqMixin
+from youngs.factories.mixins.seq import SeqMixin

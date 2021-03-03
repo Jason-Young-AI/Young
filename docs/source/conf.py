@@ -18,7 +18,7 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-with open(os.path.join("ynmt", "version")) as version_file:
+with open(os.path.join("youngs", "version")) as version_file:
     version = version_file.read().strip()
 
 project = 'YoungNMT'
