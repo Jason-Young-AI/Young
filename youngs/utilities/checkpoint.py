@@ -59,9 +59,7 @@ def load_checkpoint(checkpoint_directory_or_path, name=""):
 
 
 def save_checkpoint(checkpoint, checkpoint_directory_or_path, name="", keep_number=0):
-    if os.path.isfile(checkpoint_directory_or_path):
-        torch.save(checkpoint, checkpoint_directory_or_path)
-    elif os.path.isdir(checkpoint_directory_or_path):
+    if os.path.isdir(checkpoint_directory_or_path):
         assert len(name) != 0, f'Invalid checkpoint name \'{name}\'.'
         step = checkpoint['step']
         checkpoint_filename = f'{name}_step_{step}.cp'
@@ -73,7 +71,7 @@ def save_checkpoint(checkpoint, checkpoint_directory_or_path, name="", keep_numb
         for step in steps[keep_number:]:
             remove_checkpoint(checkpoints[step])
     else:
-        raise IOError(f'Invalid saved address: {checkpoint_directory_or_path}')
+        torch.save(checkpoint, checkpoint_directory_or_path)
 
 
 def remove_checkpoint(checkpoint_path):
