@@ -106,7 +106,7 @@ def get_arguments(phase_name):
     config_type = command_line_arguments.config_type
 
     if os.path.isfile(config_load_path):
-        print(f'User configuration found -> Using user configuration [\'{config_load_path}\'].')
+        print(f'User configuration found -> Using user configuration [\'{os.path.abspath(config_load_path)}\'].')
         user_arguments = update_arguments(binary_arguments, config_load_path)
     else:
         print(f'No user configuration found -> Using default configuration.')
@@ -116,13 +116,17 @@ def get_arguments(phase_name):
         print(f'Configuration saving path not specified ! Saving no configuration.')
     else:
         user_arguments.save(config_save_path, output_type=config_type)
-        print(f'Saving user configuration file: [\'{config_save_path}\'], type=[\'{config_type}\'].')
+        print(f'Saving user configuration file: [\'{os.path.abspath(config_save_path)}\'], type=[\'{config_type}\'].')
 
     if config_save_path != '':
         sys.exit(0)
 
     if binary_name == 'user_defined' and user_arguments.user_defined_modules_directory == '':
-        print(f'[EXIT] The directory of user defined modules are not found.')
+        print(
+            f'[EXIT] The directory of user defined modules are not found.\n'
+            f'       Maybe that Command Line Argument --name is set as \'user_defined\'\n'
+            f'       and HOCON Argument user_defined_modules_directory is set as a empty string \'\'!'
+        )
         sys.exit(1)
 
     sys.stdout.flush()
