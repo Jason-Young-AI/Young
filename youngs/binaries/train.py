@@ -186,7 +186,7 @@ def build_batches(args, batch_queues, workshop_semaphore, world_size, ranks):
 
 
 def train(args):
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report, clean_logging_file=True)
 
     logger.info(
         f'\n The following is the arguments:'

@@ -22,7 +22,7 @@ from youngs.utilities.random import fix_random_procedure
 
 def preprocess(args):
     import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report, clean_logging_file=True)
 
     logger.disabled = args.logger.off
 

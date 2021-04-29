@@ -29,7 +29,7 @@ from youngs.testers import build_tester
 
 def serve_web(args):
     import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path+'-web', logging_level=logging_level['INFO'], to_console=args.logger.console_report, clean_logging_file=True)
 
     logger.info(
         f'\n The following is the arguments:'
@@ -48,7 +48,7 @@ def serve_web(args):
 
 def serve_app(args):
     import_modules(args.user_defined_modules_directory, 'youngs.user_defined')
-    logger = setup_logger(args.logger.name, logging_path=args.logger.path, logging_level=logging_level['INFO'], to_console=args.logger.console_report)
+    logger = setup_logger(args.logger.name, logging_path=args.logger.path+'-app', logging_level=logging_level['INFO'], to_console=args.logger.console_report, clean_logging_file=True)
 
     logger.info(
         f'\n The following is the arguments:'
