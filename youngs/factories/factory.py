@@ -55,8 +55,7 @@ class Factory(object):
                         self.logger.info(f'    No.{shard_number} dataset shard (size: {len(dataset_shard)}) has been produced;')
                         yield dataset_shard
                         dataset_shard = Dataset(self.structure)
-                    else:
-                        dataset_shard.add(instance)
+                    dataset_shard.add(instance)
             if len(dataset_shard) != 0:
                 dataset_size += len(dataset_shard)
                 shard_number += 1
