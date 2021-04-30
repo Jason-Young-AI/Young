@@ -40,7 +40,3 @@ def numericalize(token_list, vocabulary, add_bos=True, add_eos=True):
         index_list = index_list + [ vocabulary.eos_index ]
 
     return index_list
-
-
-def dehyphenate(sequence):
-    return re.sub(r'(\S)-(\S)', r'\1 ##AT##-##AT## \2', sequence).replace('##AT##', '@')
