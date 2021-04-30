@@ -225,13 +225,13 @@ class Translation(Tester):
 
         sacrebleu_temp_path = mk_temp('youngs-sacrebleu_', temp_type='file')
         os.system(f'cat {self.detokenized_trans_path} | sacrebleu {self.sacrebleu_command} > {sacrebleu_temp_path}')
-        os.system(f'cat {sacrebleu_temp_path}')
         sacrebleu_signature = ""
         with open(sacrebleu_temp_path, 'r', encoding='utf-8') as sacrebleu_temp_file:
             sacrebleu_signature = sacrebleu_temp_file.readlines()[-1].strip()
+            self.logger.info('   ' + sacrebleu_signature)
+
+        rm_temp(sacrebleu_temp_path)
 
         with open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.writelines(bleu_score)
             detailed_trans_file.writelines(sacrebleu_signature)
-
-        rm_temp(sacrebleu_temp_path)
