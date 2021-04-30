@@ -1,6 +1,7 @@
 bpe_symbol = "@@"
 remove_bpe = True
 dehyphenate = True
+sacrebleu_command = "-t wmt13 -l en-de"
 beam_searcher = {
     beam_size = 4
     n_best = 1
