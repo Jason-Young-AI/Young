@@ -10,7 +10,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os
 import torch
+import sacrebleu
 
 from youngs.testers import register_tester, Tester
 from youngs.testers.ancillaries import BeamSearcher
@@ -20,8 +22,14 @@ from youngs.data.instance import Instance
 from youngs.data.attribute import pad_attribute
 
 from youngs.utilities.metrics import BLEUScorer
-from youngs.utilities.sequence import stringize, numericalize, tokenize, dehyphenate
+from youngs.utilities.sequence import stringize, numericalize, tokenize
 from youngs.utilities.extractor import get_tiled_tensor, get_foresee_mask, get_padding_mask
+
+from compora.tokenize import split_aggressive_hyphen
+from compora.detokenize import merge_aggressive_hyphen, detokenize
+
+from yoolkit.xmlscape import encode
+from yoolkit.cio import mk_temp, rm_temp
 
 
 @register_tester('translation')
@@ -32,6 +40,7 @@ class Translation(Tester):
         using_cache,
         bpe_symbol, remove_bpe, dehyphenate,
         reference_paths,
+        sacrebleu_command,
         output_directory, output_name,
         device_descriptor, logger
     ):
@@ -44,6 +53,7 @@ class Translation(Tester):
         self.remove_bpe = remove_bpe
         self.dehyphenate = dehyphenate
         self.reference_paths = reference_paths
+        self.sacrebleu_command = sacrebleu_command
 
     @classmethod
     def setup(cls, settings, factory, model, device_descriptor, logger):
@@ -65,6 +75,7 @@ class Translation(Tester):
             args.using_cache,
             args.bpe_symbol, args.remove_bpe, args.dehyphenate,
             args.reference_paths,
+            args.sacrebleu_command,
             args.outputs.directory, args.outputs.name,
             device_descriptor, logger
         )
@@ -80,13 +91,13 @@ class Translation(Tester):
         with open(self.trans_path, 'w', encoding='utf-8') as trans_file:
             trans_file.truncate()
 
+        self.detokenized_trans_path = output_basepath + '.detokenized_trans'
+        with open(self.detokenized_trans_path, 'w', encoding='utf-8') as detokenized_trans_file:
+            detokenized_trans_file.truncate()
+
         self.detailed_trans_path = output_basepath + '.detailed_trans'
         with open(self.detailed_trans_path, 'w', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.truncate()
-
-        self.rw_path = output_basepath + '.rw'
-        with open(self.rw_path, 'w', encoding='utf-8') as rw_file:
-            rw_file.truncate()
 
     def customize_batch(self, batch):
         padded_source_attributes, _ = pad_attribute(batch.source, self.factory.vocabularies['source'].pad_index)
@@ -153,8 +164,9 @@ class Translation(Tester):
         parallel_line_number = len(candidate_paths)
         assert len(source_lengths) == parallel_line_number
 
-        with open(self.trans_path, 'a', encoding='utf-8') as trans_file, open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file, \
-            open(self.rw_path, 'a', encoding='utf-8') as rw_file:
+        with open(self.trans_path, 'a', encoding='utf-8') as trans_file, \
+            open(self.detokenized_trans_path, 'a', encoding='utf-8') as detokenized_trans_file, \
+            open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
             for line_index in range(parallel_line_number):
 
                 detailed_trans_file.writelines(f'No.{self.total_sentence_number}:\n')
@@ -175,21 +187,20 @@ class Translation(Tester):
                     detailed_trans_file.writelines(f'Cand.{path_index}: log_prob={lprob:.3f}, score={score:.3f}\n')
                     detailed_trans_file.writelines(trans_sentence + '\n')
 
-                    if path_index == 0:
-                        initial_rw = ['0' for i in range(source_lengths[line_index])]
-                        rw = list(initial_rw)
-                        for _ in range(len(trans_tokens)):
-                            rw.append('1')
-                        rw_sequence = ' '.join(rw)
-                        rw_file.writelines(rw_sequence + '\n')
-
                     # Final Trans
                     if self.remove_bpe:
                         trans_sentence = (trans_sentence + ' ').replace(f'{self.bpe_symbol} ', '').strip()
+
                     if self.dehyphenate:
-                        trans_sentence = dehyphenate(trans_sentence)
+                        trans_sentence = split_aggressive_hyphen(trans_sentence)
+
+                    detokenized_trans_sentence = merge_aggressive_hyphen(trans_sentence)
+                    detokenized_trans_sentence = encode(detokenized_trans_sentence)
+                    detokenized_trans_sentence = detokenize(detokenized_trans_sentence, self.factory.target_language)
+
                     if path_index == 0:
                         trans_file.writelines(trans_sentence + '\n')
+                        detokenized_trans_file.writelines(detokenized_trans_sentence + '\n')
                 detailed_trans_file.writelines(f'===================================\n')
 
     def report(self):
@@ -212,5 +223,15 @@ class Translation(Tester):
         bleu_score = bleu_scorer.result_string
         self.logger.info('   ' + bleu_score)
 
+        sacrebleu_temp_path = mk_temp('youngs-sacrebleu_', temp_type='file')
+        os.system(f'cat {self.detokenized_trans_path} | sacrebleu {self.sacrebleu_command} > {sacrebleu_temp_path}')
+        os.system(f'cat {sacrebleu_temp_path}')
+        sacrebleu_signature = ""
+        with open(sacrebleu_temp_path, 'r', encoding='utf-8') as sacrebleu_temp_file:
+            sacrebleu_signature = sacrebleu_temp_file.readlines()[-1].strip()
+
         with open(self.detailed_trans_path, 'a', encoding='utf-8') as detailed_trans_file:
             detailed_trans_file.writelines(bleu_score)
+            detailed_trans_file.writelines(sacrebleu_signature)
+
+        rm_temp(sacrebleu_temp_path)
