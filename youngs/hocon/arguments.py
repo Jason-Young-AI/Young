@@ -26,7 +26,7 @@ constant.ALL_SYSTEM_COMPONENTS_ARGUMENTS_PATH = os.path.join(constant.ARGUMENTS_
 constant.BINARIES_ARGUMENTS_DIR = os.path.join(constant.ARGUMENTS_DIR, 'binaries')
 
 def get_binary_names(phase_name):
-    assert phase_name in set({'preprocess', 'train', 'test', 'serve'}), f'Wrong choice of process phase: {phase_name}!'
+    assert phase_name in set({'preprocess', 'train', 'test', 'serve', 'inspect'}), f'Wrong choice of process phase: {phase_name}!'
 
     binary_names = list()
     phase_dir = os.path.join(constant.BINARIES_ARGUMENTS_DIR, phase_name)
