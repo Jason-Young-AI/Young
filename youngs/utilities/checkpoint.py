@@ -79,7 +79,3 @@ def remove_checkpoint(checkpoint_path):
         os.remove(checkpoint_path)
     else:
         raise IOError(f'Invalid address: {checkpoint_path}')
-
-
-def average_checkpoints(checkpoints):
-    pass
