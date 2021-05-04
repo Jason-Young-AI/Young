@@ -98,6 +98,7 @@ Please use the following command to make the most of the system:
 2. youngs-train --help
 3. youngs-test --help
 4. youngs-serve --help
+5. youngs-inspect --help
 ```
 
 ## Arguments
