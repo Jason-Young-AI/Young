@@ -141,6 +141,7 @@ def setup_my_package():
                 'youngs-train = youngs_cli.train:main',
                 'youngs-test = youngs_cli.test:main',
                 'youngs-serve = youngs_cli.serve:main',
+                'youngs-inspect = youngs_cli.inspect:main',
             ],
         },
     )
