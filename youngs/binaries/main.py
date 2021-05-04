@@ -61,6 +61,7 @@ def main():
         print(f'2. youngs-train --help')
         print(f'3. youngs-test --help')
         print(f'4. youngs-serve --help')
+        print(f'5. youngs-inspect --help')
         print()
 
     sys.stdout.flush()
