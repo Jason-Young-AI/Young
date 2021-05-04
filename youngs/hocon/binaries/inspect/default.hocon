@@ -1,0 +1,16 @@
+user_defined_modules_directory = ""
+
+option = "average_models"
+
+average_models = {
+    new_step = -1
+    checkpoint_paths = []
+    output_path = ""
+}
+
+logger = {
+    name = "inspect"
+    path = "inspect.log"
+    off = False
+    console_report = True
+}
